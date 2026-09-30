@@ -20,6 +20,8 @@ class User extends Authenticatable
         'email',
         'phone',
         'password',
+        'status',
+        'last_login_at',
     ];
 
     protected $hidden = [
@@ -31,6 +33,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -53,6 +56,11 @@ class User extends Authenticatable
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
     }
 
     public function ownedTenants(): HasMany

@@ -1,6 +1,22 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Address, CartPayload, Category, Paginated, ProductCard, Storefront, TenantApplication } from './models';
+import {
+  Address,
+  AdminOverview,
+  AdminUser,
+  AdminUserSummary,
+  CartPayload,
+  Category,
+  Invoice,
+  Paginated,
+  Plan,
+  ProductCard,
+  SettingField,
+  Storefront,
+  Subscription,
+  SubscriptionStats,
+  TenantApplication,
+} from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -268,5 +284,90 @@ export class ApiService {
 
   adminAiCosts() {
     return this.http.get<{ data: any[] }>('/api/admin/ai-costs');
+  }
+  // ---------------------------------------------------------- super admin
+
+  adminOverview(days = 30) {
+    return this.http.get<{ data: AdminOverview }>('/api/admin/overview', { params: { days } });
+  }
+
+  adminUsers(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<AdminUser[]> & { summary: AdminUserSummary }>('/api/admin/users', { params });
+  }
+
+  adminUser(id: number) {
+    return this.http.get<{ data: AdminUser }>(`/api/admin/users/${id}`);
+  }
+
+  createAdminUser(payload: Record<string, unknown>) {
+    return this.http.post<{ data: AdminUser }>('/api/admin/users', payload);
+  }
+
+  updateAdminUser(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: AdminUser }>(`/api/admin/users/${id}`, payload);
+  }
+
+  syncAdminUserRoles(id: number, roles: { role: string; tenant_id?: number | null }[]) {
+    return this.http.put<{ data: AdminUser }>(`/api/admin/users/${id}/roles`, { roles });
+  }
+
+  deleteAdminUser(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/users/${id}`);
+  }
+
+  adminPlans() {
+    return this.http.get<{ data: Plan[] }>('/api/admin/plans');
+  }
+
+  createPlan(payload: Partial<Plan>) {
+    return this.http.post<{ data: Plan }>('/api/admin/plans', payload);
+  }
+
+  updatePlan(id: number, payload: Partial<Plan>) {
+    return this.http.patch<{ data: Plan }>(`/api/admin/plans/${id}`, payload);
+  }
+
+  deletePlan(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/plans/${id}`);
+  }
+
+  adminSubscriptions(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<Subscription[]> & { stats: SubscriptionStats }>('/api/admin/subscriptions', { params });
+  }
+
+  adminSubscriptionStats() {
+    return this.http.get<{ data: SubscriptionStats }>('/api/admin/subscriptions/stats');
+  }
+
+  createSubscription(payload: { tenant_id: number; plan_id: number; status?: string; trial_days?: number }) {
+    return this.http.post<{ data: Subscription }>('/api/admin/subscriptions', payload);
+  }
+
+  updateSubscription(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: Subscription }>(`/api/admin/subscriptions/${id}`, payload);
+  }
+
+  renewSubscription(id: number) {
+    return this.http.post<{ data: any }>(`/api/admin/subscriptions/${id}/renew`, {});
+  }
+
+  adminInvoices(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<Invoice[]>>('/api/admin/invoices', { params });
+  }
+
+  updateInvoice(id: number, status: string) {
+    return this.http.patch<{ data: Invoice }>(`/api/admin/invoices/${id}`, { status });
+  }
+
+  adminSettings() {
+    return this.http.get<{ data: Record<string, SettingField[]> }>('/api/admin/settings');
+  }
+
+  saveSettings(settings: { key: string; value: unknown }[]) {
+    return this.http.put<{ data: Record<string, SettingField[]> }>('/api/admin/settings', { settings });
+  }
+
+  resetSettings(group: string) {
+    return this.http.post<{ data: Record<string, SettingField[]> }>('/api/admin/settings/reset', { group });
   }
 }

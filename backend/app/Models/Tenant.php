@@ -6,6 +6,7 @@ use App\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tenant extends Model
 {
@@ -126,6 +127,17 @@ class Tenant extends Model
     public function categories(): HasMany
     {
         return $this->hasMany(Category::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    /** The subscription the billing screens care about. */
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class)->latestOfMany();
     }
 
     public function isActive(): bool

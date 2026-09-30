@@ -44,6 +44,9 @@ export const routes: Routes = [
     children: [
       { path: '', loadComponent: () => import('./features/admin/dashboard.component').then((m) => m.AdminDashboardComponent) },
       { path: 'tenants', loadComponent: () => import('./features/admin/tenants.component').then((m) => m.AdminTenantsComponent) },
+      { path: 'users', loadComponent: () => import('./features/admin/users.component').then((m) => m.AdminUsersComponent) },
+      { path: 'subscriptions', loadComponent: () => import('./features/admin/subscriptions.component').then((m) => m.AdminSubscriptionsComponent) },
+      { path: 'settings', loadComponent: () => import('./features/admin/settings.component').then((m) => m.AdminSettingsComponent) },
       { path: 'orders', loadComponent: () => import('./features/admin/orders.component').then((m) => m.AdminOrdersComponent) },
       { path: 'audit', loadComponent: () => import('./features/admin/audit.component').then((m) => m.AdminAuditComponent) },
       { path: 'analytics', loadComponent: () => import('./features/admin/analytics.component').then((m) => m.AdminAnalyticsComponent) },
