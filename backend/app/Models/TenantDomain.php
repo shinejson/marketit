@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TenantDomain extends Model
 {
@@ -34,5 +35,10 @@ class TenantDomain extends Model
             'dns_verified_at' => 'datetime',
             'last_check_at' => 'datetime',
         ];
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
     }
 }

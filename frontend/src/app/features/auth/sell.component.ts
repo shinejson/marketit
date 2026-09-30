@@ -75,14 +75,15 @@ interface SocialLinks {
           </div>
 
           @if (app.status === 'pending') {
-            <p class="notice">Your application is with the platform team for review. We will notify you once it is approved — store creation unlocks after approval.</p>
+            <p class="notice">Your application is with the platform team for review. You can prepare draft stores and products in the tenant console now — publishing unlocks after approval.</p>
+            <a routerLink="/tenant" class="btn ghost">Open tenant console</a>
           }
           @if (app.status === 'rejected' && app.rejection_reason) {
             <p class="notice bad"><strong>Changes needed:</strong> {{ app.rejection_reason }}</p>
           }
           @if (app.status === 'active') {
-            <p class="notice good">Approved. You can now manage your store from the seller console.</p>
-            <a routerLink="/seller" class="btn ok">Open seller console</a>
+            <p class="notice good">Approved. You can now manage and publish stores from the tenant console.</p>
+            <a routerLink="/tenant" class="btn ok">Open tenant console</a>
           }
           @if (app.status === 'suspended') {
             <p class="notice bad">This account is suspended. Contact the platform team.</p>

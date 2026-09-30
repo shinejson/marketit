@@ -8,7 +8,7 @@ import { MhChartComponent } from '../../shared/mh-chart.component';
   selector: 'app-seller-department',
   imports: [MhChartComponent, RouterLink],
   template: `
-    <p class="crumb"><a routerLink="/seller">Console</a> / {{ title() }}</p>
+    <p class="crumb"><a routerLink="/tenant">Console</a> / {{ title() }}</p>
     <h1>{{ title() }}</h1>
     <p class="muted">Live metrics, goal progress, and trend charts for this department.</p>
     @if (loading()) {

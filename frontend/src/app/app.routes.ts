@@ -1,9 +1,39 @@
 import { Routes } from '@angular/router';
-import { authGuard, roleGuard } from './core/auth.guard';
+import { authGuard, marketingPortalGuard, roleGuard } from './core/auth.guard';
+
+const tenantConsoleChildren: Routes = [
+  { path: '', loadComponent: () => import('./features/seller/dashboard.component').then((m) => m.SellerDashboardComponent) },
+  { path: 'stores', loadComponent: () => import('./features/seller/stores.component').then((m) => m.SellerStoresComponent) },
+  { path: 'products', loadComponent: () => import('./features/seller/products.component').then((m) => m.SellerProductsComponent) },
+  { path: 'orders', loadComponent: () => import('./features/seller/orders.component').then((m) => m.SellerOrdersComponent) },
+  { path: 'inventory', loadComponent: () => import('./features/seller/inventory.component').then((m) => m.SellerInventoryComponent) },
+  { path: 'ads', loadComponent: () => import('./features/seller/ads.component').then((m) => m.SellerAdsComponent) },
+  { path: 'domains', loadComponent: () => import('./features/seller/domains.component').then((m) => m.SellerDomainsComponent) },
+  { path: 'api-keys', loadComponent: () => import('./features/seller/api-keys.component').then((m) => m.SellerApiKeysComponent) },
+  { path: 'webhooks', loadComponent: () => import('./features/seller/webhooks.component').then((m) => m.SellerWebhooksComponent) },
+  { path: 'ai', loadComponent: () => import('./features/seller/ai.component').then((m) => m.SellerAiComponent) },
+  { path: 'analytics', loadComponent: () => import('./features/seller/analytics.component').then((m) => m.SellerAnalyticsComponent) },
+  { path: 'departments/:dept', loadComponent: () => import('./features/seller/department.component').then((m) => m.SellerDepartmentComponent) },
+  { path: 'users', loadComponent: () => import('./features/seller/users.component').then((m) => m.SellerUsersComponent) },
+  { path: 'settings', loadComponent: () => import('./features/seller/settings.component').then((m) => m.SellerSettingsComponent) },
+  { path: 'backups', loadComponent: () => import('./features/seller/backups.component').then((m) => m.SellerBackupsComponent) },
+];
 
 export const routes: Routes = [
   {
+    path: 'admin/login',
+    loadComponent: () => import('./features/auth/console-login.component').then((m) => m.ConsoleLoginComponent),
+    data: { portal: 'admin' },
+  },
+  {
+    path: 'tenant/login',
+    loadComponent: () => import('./features/auth/console-login.component').then((m) => m.ConsoleLoginComponent),
+    data: { portal: 'tenant' },
+  },
+  { path: 'seller/login', redirectTo: 'tenant/login' },
+  {
     path: '',
+    canActivate: [marketingPortalGuard],
     loadComponent: () => import('./layout/shell.component').then((m) => m.ShellComponent),
     children: [
       { path: '', loadComponent: () => import('./features/marketplace/home.component').then((m) => m.HomeComponent) },
@@ -21,25 +51,16 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'tenant',
+    canActivate: [roleGuard('tenant_owner', 'store_staff')],
+    loadComponent: () => import('./layout/seller-shell.component').then((m) => m.SellerShellComponent),
+    children: tenantConsoleChildren,
+  },
+  {
     path: 'seller',
     canActivate: [roleGuard('tenant_owner', 'store_staff')],
     loadComponent: () => import('./layout/seller-shell.component').then((m) => m.SellerShellComponent),
-    children: [
-      { path: '', loadComponent: () => import('./features/seller/dashboard.component').then((m) => m.SellerDashboardComponent) },
-      { path: 'products', loadComponent: () => import('./features/seller/products.component').then((m) => m.SellerProductsComponent) },
-      { path: 'orders', loadComponent: () => import('./features/seller/orders.component').then((m) => m.SellerOrdersComponent) },
-      { path: 'inventory', loadComponent: () => import('./features/seller/inventory.component').then((m) => m.SellerInventoryComponent) },
-      { path: 'ads', loadComponent: () => import('./features/seller/ads.component').then((m) => m.SellerAdsComponent) },
-      { path: 'domains', loadComponent: () => import('./features/seller/domains.component').then((m) => m.SellerDomainsComponent) },
-      { path: 'api-keys', loadComponent: () => import('./features/seller/api-keys.component').then((m) => m.SellerApiKeysComponent) },
-      { path: 'webhooks', loadComponent: () => import('./features/seller/webhooks.component').then((m) => m.SellerWebhooksComponent) },
-      { path: 'ai', loadComponent: () => import('./features/seller/ai.component').then((m) => m.SellerAiComponent) },
-      { path: 'analytics', loadComponent: () => import('./features/seller/analytics.component').then((m) => m.SellerAnalyticsComponent) },
-      { path: 'departments/:dept', loadComponent: () => import('./features/seller/department.component').then((m) => m.SellerDepartmentComponent) },
-      { path: 'users', loadComponent: () => import('./features/seller/users.component').then((m) => m.SellerUsersComponent) },
-      { path: 'settings', loadComponent: () => import('./features/seller/settings.component').then((m) => m.SellerSettingsComponent) },
-      { path: 'backups', loadComponent: () => import('./features/seller/backups.component').then((m) => m.SellerBackupsComponent) },
-    ],
+    children: tenantConsoleChildren,
   },
   {
     path: 'admin',

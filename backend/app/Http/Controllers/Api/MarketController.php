@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\Tenant;
 use App\Services\Ads\AdAuctionService;
 use App\Services\Integration\EventBus;
 use App\Support\TenantContext;
@@ -26,7 +27,9 @@ class MarketController extends Controller
             $q = Product::query()
                 ->with(['images', 'store', 'category', 'variants.inventory'])
                 ->where('status', Product::STATUS_ACTIVE)
-                ->whereHas('store', fn ($s) => $s->where('status', Store::STATUS_ACTIVE));
+                ->whereHas('store', fn ($s) => $s
+                    ->where('status', Store::STATUS_ACTIVE)
+                    ->whereHas('tenant', fn ($t) => $t->where('status', Tenant::STATUS_ACTIVE)));
 
             if ($request->filled('q')) {
                 $term = '%'.$request->string('q').'%';
@@ -96,6 +99,9 @@ class MarketController extends Controller
                 ->with(['images', 'store', 'category', 'variants.inventory'])
                 ->where('slug', $slug)
                 ->where('status', Product::STATUS_ACTIVE)
+                ->whereHas('store', fn ($s) => $s
+                    ->where('status', Store::STATUS_ACTIVE)
+                    ->whereHas('tenant', fn ($t) => $t->where('status', Tenant::STATUS_ACTIVE)))
                 ->firstOrFail();
 
             $this->events->emit($product->tenant_id, 'product.viewed', [
@@ -113,7 +119,9 @@ class MarketController extends Controller
     {
         TenantContext::bypass(true);
         try {
-            $q = Store::query()->where('status', Store::STATUS_ACTIVE);
+            $q = Store::query()
+                ->where('status', Store::STATUS_ACTIVE)
+                ->whereHas('tenant', fn ($t) => $t->where('status', Tenant::STATUS_ACTIVE));
             if ($request->filled('q')) {
                 $q->where('name', 'like', '%'.$request->string('q').'%');
             }
@@ -140,6 +148,7 @@ class MarketController extends Controller
             $store = Store::query()
                 ->where('slug', $slug)
                 ->where('status', Store::STATUS_ACTIVE)
+                ->whereHas('tenant', fn ($t) => $t->where('status', Tenant::STATUS_ACTIVE))
                 ->firstOrFail();
 
             $products = Product::query()

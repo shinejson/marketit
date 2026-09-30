@@ -18,7 +18,7 @@ class StorePolicy
         return $this->owns($user, $store);
     }
 
-    /** Only approved tenants may open a store. */
+    /** Tenant owners can prepare draft stores while pending; publishing requires tenant approval. */
     public function create(User $user): bool
     {
         if ($user->isSuperAdmin()) {
@@ -30,9 +30,9 @@ class StorePolicy
         }
 
         $tenantId = $user->tenantId();
+        $tenant = $tenantId ? Tenant::query()->find($tenantId) : null;
 
-        return $tenantId !== null
-            && Tenant::query()->whereKey($tenantId)->where('status', Tenant::STATUS_ACTIVE)->exists();
+        return (bool) $tenant?->canCreateStore();
     }
 
     public function update(User $user, Store $store): bool
