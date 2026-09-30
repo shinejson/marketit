@@ -93,6 +93,10 @@ export class ApiService {
     return this.http.post<{ data: any }>(`/api/orders/${id}/cancel`, {});
   }
 
+  tenant() {
+    return this.http.get<{ data: TenantApplication }>('/api/tenant');
+  }
+
   sellerDashboard() {
     return this.http.get<{ data: any }>('/api/tenant/dashboard/summary');
   }
@@ -167,6 +171,18 @@ export class ApiService {
 
   sellerStores() {
     return this.http.get<Paginated<any[]>>('/api/tenant/stores');
+  }
+
+  createStore(payload: any) {
+    return this.http.post<{ data: any }>('/api/tenant/stores', payload);
+  }
+
+  updateStore(id: number, payload: any) {
+    return this.http.patch<{ data: any }>(`/api/tenant/stores/${id}`, payload);
+  }
+
+  deleteStore(id: number) {
+    return this.http.delete<{ data: { ok: boolean } }>(`/api/tenant/stores/${id}`);
   }
 
   sellerCategories() {

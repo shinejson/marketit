@@ -5,6 +5,9 @@ export interface User {
   phone?: string | null;
   role: 'super_admin' | 'tenant_owner' | 'store_staff' | 'customer';
   tenant_id: number | null;
+  tenant_slug?: string | null;
+  tenant_name?: string | null;
+  tenant_status?: 'pending' | 'active' | 'suspended' | 'rejected' | null;
   department?: string | null;
   roles: { role: string; tenant_id: number | null; store_id: number | null; department?: string | null }[];
 }

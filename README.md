@@ -1,6 +1,6 @@
 # MarketHub — Phase 1
 
-Multi-tenant marketplace SaaS: Laravel API + Angular storefront, seller console, and super-admin.
+Multi-tenant marketplace SaaS: Laravel API + Angular storefront, tenant console, and super-admin.
 
 ## Stack
 
@@ -38,9 +38,28 @@ npm start
 
 The Angular dev server (port 4201) proxies `/api` and `/storage` to the Laravel app on port 8001.
 
+## Dashboard access and subdomains
+
+The app now separates public marketplace, tenant, and super-admin access points. The path routes still work on a single local host, but production should point different subdomains at the same Angular/Laravel deployment.
+
+| Portal | Preferred subdomain | Local path fallback | Login UI | Demo account |
+| --- | --- | --- | --- | --- |
+| Public marketplace | `www.<your-domain>` | `/` and `/login` | Customer marketplace login | `customer@markethub.test` |
+| Tenant console | `tenants.<your-domain>` or `{tenant-slug}.<your-domain>` | `/tenant/login` then `/tenant` (`/seller` remains as a legacy alias) | Tenant-branded login | `seller1@markethub.test` |
+| Super admin console | `admin.<your-domain>` | `/admin/login` then `/admin` | Platform-admin login | `admin@markethub.test` |
+
+Tenant owners and store staff cannot sign in on the super-admin login, and customer/admin accounts cannot sign in on the tenant login. The Angular app also redirects `admin.*` hosts to the super-admin UI and `tenant.*`, `seller.*`, or `{tenant-slug}.*` hosts to the tenant UI. Locally, use `admin.localhost:4201` and `tenants.localhost:4201` if your browser resolves wildcard localhost; otherwise use the path fallbacks.
+
+Tenant onboarding flow:
+
+1. A user registers a customer account, then submits the seller application at `/sell`.
+2. The account immediately receives a `tenant_owner` role and can open `/tenant` to prepare draft stores and products.
+3. Draft stores/products remain private. A super admin reviews the application in `/admin/tenants` and activates the tenant.
+4. Once activated, stores can be published and their active products appear in the marketplace.
+
 ## Super admin console
 
-Sign in as `admin@markethub.test` and open `/admin`.
+Sign in as `admin@markethub.test` at `/admin/login` (or `admin.<your-domain>`) and open `/admin`.
 
 | Screen | What it does |
 | --- | --- |

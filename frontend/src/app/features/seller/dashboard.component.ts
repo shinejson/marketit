@@ -24,7 +24,7 @@ import { LineChart } from '../../core/models';
     <h3>Departments</h3>
     <div class="grid depts">
       @for (dept of departments(); track dept.key) {
-        <a class="card pad dept" [routerLink]="'/seller/departments/' + dept.key">
+        <a class="card pad dept" [routerLink]="'/tenant/departments/' + dept.key">
           <strong>{{ dept.title }}</strong>
           <div class="mini">
             @for (k of dept.kpis?.slice(0,2) || []; track k.key) {

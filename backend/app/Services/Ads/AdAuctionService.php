@@ -10,6 +10,8 @@ use App\Models\AdImpression;
 use App\Models\AdSpendEntry;
 use App\Models\AdTarget;
 use App\Models\Product;
+use App\Models\Store;
+use App\Models\Tenant;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 
@@ -167,6 +169,12 @@ class AdAuctionService
 
     protected function eligible(AdCampaign $campaign): bool
     {
+        if ($campaign->store?->status !== Store::STATUS_ACTIVE) {
+            return false;
+        }
+        if (! Tenant::query()->whereKey($campaign->tenant_id)->where('status', Tenant::STATUS_ACTIVE)->exists()) {
+            return false;
+        }
         if (bccomp((string) $campaign->spent_total, (string) $campaign->total_budget, 2) >= 0) {
             return false;
         }

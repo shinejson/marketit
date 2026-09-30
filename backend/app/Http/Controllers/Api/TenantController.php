@@ -73,7 +73,7 @@ class TenantController extends Controller
 
         return response()->json([
             'data' => $tenant->fresh(['stores', 'owner']),
-            'message' => 'Application submitted. You can create and publish your store once it is approved.',
+            'message' => 'Application submitted. You can access the tenant console now to prepare draft stores and products; publishing unlocks after approval.',
         ], 201);
     }
 
@@ -157,7 +157,7 @@ class TenantController extends Controller
     public function stores(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Store::class);
-        $stores = Store::query()->orderBy('name')->paginate($request->integer('per_page', 15));
+        $stores = Store::query()->withCount('products')->orderBy('name')->paginate($request->integer('per_page', 15));
 
         return response()->json($this->paginate($stores));
     }
@@ -171,8 +171,8 @@ class TenantController extends Controller
         if ($tenant && ! $tenant->canCreateStore()) {
             return response()->json([
                 'error' => [
-                    'code' => 'tenant_not_approved',
-                    'message' => 'Your store application is still under review. Store creation unlocks once it is approved.',
+                    'code' => 'tenant_not_ready',
+                    'message' => 'This tenant cannot create stores right now. Check the seller application for details.',
                     'fields' => null,
                 ],
             ], 403);
@@ -193,11 +193,12 @@ class TenantController extends Controller
             'country' => ['nullable', 'string', 'size:2'],
         ]);
 
-        $slug = $data['slug'] ?? Str::slug($data['name']);
+        $tenantId = (int) $user->tenantId();
+        $slug = $this->uniqueStoreSlug($data['slug'] ?? $data['name'], $tenantId);
         $store = Store::query()->create([
             ...$data,
             'slug' => $slug,
-            'tenant_id' => $user->tenantId(),
+            'tenant_id' => $tenantId,
             'status' => Store::STATUS_DRAFT,
         ]);
 
@@ -221,9 +222,22 @@ class TenantController extends Controller
             'city' => ['nullable', 'string'],
             'country' => ['nullable', 'string', 'size:2'],
         ]);
+        if (($data['status'] ?? null) === Store::STATUS_ACTIVE) {
+            $tenant = Tenant::query()->find($store->tenant_id);
+            if (! $tenant?->canPublishStore()) {
+                return response()->json([
+                    'error' => [
+                        'code' => 'tenant_not_approved',
+                        'message' => 'Only approved tenants can publish active stores. Keep this store in draft until approval.',
+                        'fields' => null,
+                    ],
+                ], 403);
+            }
+        }
+
         $store->update($data);
 
-        return response()->json(['data' => $store->fresh()]);
+        return response()->json(['data' => $store->fresh()->loadCount('products')]);
     }
 
     public function destroyStore(Store $store): JsonResponse
@@ -368,6 +382,19 @@ class TenantController extends Controller
         ];
 
         return $documents;
+    }
+
+    protected function uniqueStoreSlug(string $name, int $tenantId): string
+    {
+        $slug = Str::slug($name) ?: 'store';
+        $base = $slug;
+        $i = 1;
+
+        while (Store::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('slug', $slug)->exists()) {
+            $slug = $base.'-'.$i++;
+        }
+
+        return $slug;
     }
 
     protected function uniqueSlug(string $name): string
