@@ -15,26 +15,70 @@ polyfills.js        | polyfills          | 144 bytes |
                     | Initial total      |  14.21 kB
 
 Lazy chunk files    | Names              |  Raw size
-chunk-3EG65UUI.js   | home-component     |  35.66 kB | 
+chunk-6KY5IUXW.js   | sell-component     |  91.62 kB | 
+chunk-N2I3KOJE.js   | tenants-component  |  57.89 kB | 
+chunk-WBTZQIZM.js   | home-component     |  35.66 kB | 
 chunk-DWKFYHA5.js   | shell-component    |  29.17 kB | 
-chunk-KOIRDVKT.js   | ads-component      |  18.43 kB | 
-chunk-6MT6ECTC.js   | products-component |  14.06 kB | 
-chunk-4MQZRR2J.js   | checkout-component |  13.60 kB | 
-chunk-QVBUP7HV.js   | catalog-component  |  13.13 kB | 
-chunk-N74NEYUR.js   | ai-component       |  10.48 kB | 
-chunk-RY3G2SEB.js   | cart-component     |  10.44 kB | 
-chunk-TCVUK3AS.js   | product-component  |  10.29 kB | 
-chunk-NEEFJW4W.js   | webhooks-component |   9.13 kB | 
-chunk-XEOZL3GL.js   | register-component |   9.11 kB | 
-chunk-5EO22UHN.js   | api-keys-component |   9.10 kB | 
-chunk-APY2T6HA.js   | sell-component     |   8.71 kB | 
-chunk-X6A6E23Z.js   | orders-component   |   8.58 kB | 
-chunk-DBKON5GD.js   | domains-component  |   8.34 kB | 
+chunk-2S4ICFK7.js   | ads-component      |  18.43 kB | 
+chunk-CSV7ITTV.js   | products-component |  14.06 kB | 
+chunk-QFKI2PB6.js   | checkout-component |  13.60 kB | 
+chunk-U4RLVPMS.js   | catalog-component  |  13.13 kB | 
+chunk-SRCAB7BT.js   | ai-component       |  10.48 kB | 
+chunk-TWDUKQBA.js   | cart-component     |  10.44 kB | 
+chunk-WNWI5S56.js   | product-component  |  10.29 kB | 
+chunk-SR37EI5K.js   | register-component |   9.77 kB | 
+chunk-IONCEEL7.js   | webhooks-component |   9.13 kB | 
+chunk-JRHGQPXW.js   | api-keys-component |   9.10 kB | 
+chunk-CHEOXHPI.js   | orders-component   |   8.58 kB | 
 ...and 19 more lazy chunks files. Use "--verbose" to show all the files.
 
-Application bundle generation complete. [61.786 seconds] - 2026-09-30T11:13:15.925Z
+Application bundle generation complete. [13.419 seconds] - 2026-09-30T13:26:28.254Z
 
 Watch mode enabled. Watching for file changes...
 NOTE: Raw file sizes do not reflect development server per-request transformations.
   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m4201[22m/[39m
 [2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+> Changes detected. Rebuilding...
+√ Changes detected. Rebuilding...
+Application bundle generation failed. [1.126 seconds] - 2026-09-30T13:27:50.721Z
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2345: Argument of type 'TenantApplication | null' is not assignable to parameter of type 'TenantApplication'.
+  Type 'null' is not assignable to type 'TenantApplication'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/auth/sell.component.ts:420:36:
+[37m      420 │ ...t: (res) => { this.hydrate([32mres.data[37m); this.loadingApp.set(fals...
+          ╵                               [32m~~~~~~~~[0m
+
+
+> Changes detected. Rebuilding...
+√ Changes detected. Rebuilding...
+Initial chunk files | Names              |  Raw size
+main.js             | main               |   7.74 kB | 
+chunk-SZYN5X5P.js   | -                  |   2.72 kB | 
+styles.css          | styles             |   2.62 kB | 
+chunk-VUJOFXKG.js   | -                  | 987 bytes | 
+polyfills.js        | polyfills          | 144 bytes | 
+
+                    | Initial total      |  14.21 kB
+
+Lazy chunk files    | Names              |  Raw size
+chunk-5FSUDXN5.js   | sell-component     |  91.65 kB | 
+chunk-SSHWZ3QH.js   | tenants-component  |  57.89 kB | 
+chunk-32MD22SU.js   | home-component     |  35.66 kB | 
+chunk-DWKFYHA5.js   | shell-component    |  29.17 kB | 
+chunk-D5C3NN2W.js   | ads-component      |  18.43 kB | 
+chunk-DKNZGJWG.js   | products-component |  14.06 kB | 
+chunk-UUCW2ZGD.js   | checkout-component |  13.60 kB | 
+chunk-ZBJHDARB.js   | catalog-component  |  13.13 kB | 
+chunk-7MEIHZ4L.js   | ai-component       |  10.48 kB | 
+chunk-JRTLWZ4S.js   | cart-component     |  10.44 kB | 
+chunk-J7H2G3I2.js   | product-component  |  10.29 kB | 
+chunk-SR37EI5K.js   | register-component |   9.77 kB | 
+chunk-H54TIMZE.js   | webhooks-component |   9.13 kB | 
+chunk-KWBBRYRQ.js   | api-keys-component |   9.10 kB | 
+chunk-NVEQEI4G.js   | orders-component   |   8.58 kB | 
+...and 19 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [0.466 seconds] - 2026-09-30T13:27:58.922Z
+
+Page reload sent to client(s).

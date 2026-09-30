@@ -102,3 +102,83 @@ export interface Category {
   parent_id?: number | null;
   children?: Category[];
 }
+
+export interface TenantDocument {
+  key: string;
+  label: string;
+  path: string;
+  original_name: string;
+  mime: string;
+  size: number;
+  uploaded_at: string;
+}
+
+export interface TenantChecklist {
+  items: Record<string, boolean>;
+  complete: boolean;
+  missing: string[];
+}
+
+export type TenantStatus = 'pending' | 'active' | 'suspended' | 'rejected';
+
+export interface TenantApplication {
+  id: number;
+  name: string;
+  slug: string;
+  status: TenantStatus;
+  owner_user_id: number;
+  country?: string | null;
+  business_name?: string | null;
+  business_details?: string | null;
+
+  trading_name?: string | null;
+  business_type?: string | null;
+  registration_number?: string | null;
+  tax_id?: string | null;
+  year_established?: number | null;
+  website?: string | null;
+  permit_number?: string | null;
+  permit_expires_at?: string | null;
+
+  product_summary?: string | null;
+  categories_offered?: string[] | null;
+
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  region?: string | null;
+  postal_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+
+  social_links?: Record<string, string> | null;
+
+  owner_name?: string | null;
+  owner_email?: string | null;
+  owner_phone?: string | null;
+  owner_id_type?: string | null;
+  /** Only returned by the admin detail endpoint — hidden everywhere else. */
+  owner_id_number?: string | null;
+
+  documents?: TenantDocument[] | null;
+  documents_count?: number;
+  /** Summary flag: false when required review details are still missing. */
+  checklist_complete?: boolean;
+
+  payout_method?: string | null;
+  payout_account_name?: string | null;
+  payout_account_number?: string | null;
+  bank_name?: string | null;
+  mobile_money_provider?: string | null;
+  card_brand?: string | null;
+  card_last4?: string | null;
+
+  submitted_at?: string | null;
+  reviewed_at?: string | null;
+  review_notes?: string | null;
+  rejection_reason?: string | null;
+  checklist?: TenantChecklist;
+
+  stores?: { id: number; name: string; slug: string; status: string }[];
+  owner?: { id: number; name: string; email: string } | null;
+}

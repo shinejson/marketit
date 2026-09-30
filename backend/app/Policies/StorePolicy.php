@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Store;
+use App\Models\Tenant;
 use App\Models\User;
 
 class StorePolicy
@@ -17,9 +18,21 @@ class StorePolicy
         return $this->owns($user, $store);
     }
 
+    /** Only approved tenants may open a store. */
     public function create(User $user): bool
     {
-        return $user->isTenantOwner() || $user->isSuperAdmin();
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        if (! $user->isTenantOwner()) {
+            return false;
+        }
+
+        $tenantId = $user->tenantId();
+
+        return $tenantId !== null
+            && Tenant::query()->whereKey($tenantId)->where('status', Tenant::STATUS_ACTIVE)->exists();
     }
 
     public function update(User $user, Store $store): bool

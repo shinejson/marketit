@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Address, CartPayload, Category, Paginated, ProductCard, Storefront } from './models';
+import { Address, CartPayload, Category, Paginated, ProductCard, Storefront, TenantApplication } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -121,11 +121,24 @@ export class ApiService {
   }
 
   adminTenants(params: Record<string, string | number> = {}) {
-    return this.http.get<Paginated<any[]>>('/api/admin/tenants', { params });
+    return this.http.get<Paginated<TenantApplication[]>>('/api/admin/tenants', { params });
   }
 
-  updateTenantStatus(id: number, status: string) {
-    return this.http.patch<{ data: any }>(`/api/admin/tenants/${id}`, { status });
+  adminTenant(id: number) {
+    return this.http.get<{ data: TenantApplication }>(`/api/admin/tenants/${id}`);
+  }
+
+  adminTenantDocumentUrl(id: number, key: string) {
+    return `/api/admin/tenants/${id}/documents/${key}`;
+  }
+
+  /** Documents are private, so they are fetched with the token and saved as a blob. */
+  adminTenantDocument(id: number, key: string) {
+    return this.http.get(this.adminTenantDocumentUrl(id, key), { responseType: 'blob' });
+  }
+
+  updateTenantStatus(id: number, status: string, extra: { review_notes?: string; rejection_reason?: string } = {}) {
+    return this.http.patch<{ data: TenantApplication }>(`/api/admin/tenants/${id}`, { status, ...extra });
   }
 
   adminOrders() {
@@ -136,8 +149,17 @@ export class ApiService {
     return this.http.get<Paginated<any[]>>('/api/admin/audit-logs');
   }
 
-  registerTenant(payload: any) {
-    return this.http.post<{ data: any }>('/api/tenants/register', payload);
+  /** Store application: multipart so certificates/permits can be uploaded. */
+  applyForStore(form: FormData) {
+    return this.http.post<{ data: TenantApplication; message: string }>('/api/tenants/register', form);
+  }
+
+  myTenantApplication() {
+    return this.http.get<{ data: TenantApplication | null }>('/api/tenants/mine');
+  }
+
+  updateTenantApplication(form: FormData) {
+    return this.http.patch<{ data: TenantApplication; resubmitted: boolean }>('/api/tenant', form);
   }
 
   clickAd(impressionId: number) {

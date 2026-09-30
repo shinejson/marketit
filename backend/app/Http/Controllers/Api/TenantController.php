@@ -8,37 +8,52 @@ use App\Models\Tenant;
 use App\Models\UserRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class TenantController extends Controller
 {
+    /** Business fields collected from an applicant and copied onto the tenant. */
+    protected const APPLICATION_FIELDS = [
+        'business_name', 'trading_name', 'business_type', 'registration_number', 'tax_id', 'year_established',
+        'website', 'permit_number', 'permit_expires_at', 'product_summary', 'categories_offered',
+        'country', 'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'latitude', 'longitude',
+        'social_links', 'owner_name', 'owner_email', 'owner_phone', 'owner_id_type', 'owner_id_number',
+        'payout_method', 'payout_account_name', 'payout_account_number', 'bank_name',
+        'mobile_money_provider', 'card_brand', 'card_last4',
+    ];
+
+    /**
+     * Store application. Creates a pending tenant plus an optional draft store;
+     * nothing goes live until a super admin approves it.
+     */
     public function register(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'business_name' => ['nullable', 'string', 'max:255'],
-            'country' => ['nullable', 'string', 'size:2'],
-            'business_details' => ['nullable', 'string'],
-            'store_name' => ['nullable', 'string', 'max:255'],
-        ]);
-
         $user = $request->user();
-        $slug = Str::slug($data['name']);
-        $base = $slug;
-        $i = 1;
-        while (Tenant::query()->where('slug', $slug)->exists()) {
-            $slug = $base.'-'.$i++;
+
+        if (Tenant::query()->where('owner_user_id', $user->id)->exists()) {
+            return response()->json([
+                'error' => [
+                    'code' => 'application_exists',
+                    'message' => 'This account already has a store application.',
+                    'fields' => null,
+                ],
+            ], 422);
         }
 
+        $data = $request->validate($this->applicationRules());
+        $slug = $this->uniqueSlug($data['business_name']);
+
         $tenant = Tenant::query()->create([
-            'name' => $data['name'],
+            ...$this->applicationAttributes($data),
+            'name' => $data['business_name'],
             'slug' => $slug,
             'status' => Tenant::STATUS_PENDING,
             'owner_user_id' => $user->id,
-            'country' => $data['country'] ?? null,
-            'business_name' => $data['business_name'] ?? $data['name'],
-            'business_details' => $data['business_details'] ?? null,
+            'business_details' => $data['product_summary'],
+            'documents' => $this->storeDocuments($request, $slug),
+            'submitted_at' => now(),
         ]);
 
         UserRole::query()->firstOrCreate([
@@ -47,16 +62,19 @@ class TenantController extends Controller
             'tenant_id' => $tenant->id,
         ]);
 
-        if (! empty($data['store_name'])) {
+        if (! empty($data['preferred_store_name'])) {
             Store::withoutGlobalScopes()->create([
                 'tenant_id' => $tenant->id,
-                'name' => $data['store_name'],
-                'slug' => Str::slug($data['store_name']),
+                'name' => $data['preferred_store_name'],
+                'slug' => Str::slug($data['preferred_store_name']),
                 'status' => Store::STATUS_DRAFT,
             ]);
         }
 
-        return response()->json(['data' => $tenant->fresh('stores')], 201);
+        return response()->json([
+            'data' => $tenant->fresh(['stores', 'owner']),
+            'message' => 'Application submitted. You can create and publish your store once it is approved.',
+        ], 201);
     }
 
     public function show(Request $request): JsonResponse
@@ -71,22 +89,69 @@ class TenantController extends Controller
         return response()->json(['data' => $tenant]);
     }
 
+    /**
+     * Store application lookup for the applicant themselves. Returns null when the
+     * account has not applied yet, so the "sell" page can show its form without
+     * having to handle a 403 from the tenant-scoped endpoints.
+     */
+    public function mine(Request $request): JsonResponse
+    {
+        $user = $request->user()->load('roles');
+        $tenantId = $user->tenantId();
+
+        if (! $tenantId) {
+            return response()->json(['data' => null]);
+        }
+
+        return response()->json(['data' => Tenant::query()->with('stores')->find($tenantId)]);
+    }
+
     public function update(Request $request): JsonResponse
     {
         $user = $request->user()->load('roles');
         $tenant = Tenant::query()->findOrFail($user->tenantId());
         $this->authorize('update', $tenant);
 
-        $data = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'business_name' => ['nullable', 'string', 'max:255'],
-            'country' => ['nullable', 'string', 'size:2'],
-            'business_details' => ['nullable', 'string'],
+        if ($tenant->isActive()) {
+            return response()->json([
+                'error' => [
+                    'code' => 'application_locked',
+                    'message' => 'Approved business details can only be changed by the platform team.',
+                    'fields' => null,
+                ],
+            ], 422);
+        }
+
+        $data = $request->validate($this->relaxRules($this->applicationRules()));
+
+        $documents = $tenant->documents ?? [];
+        if ($request->hasFile('business_certificate') || $request->hasFile('operating_permit') || $request->hasFile('additional_documents')) {
+            $documents = $this->storeDocuments($request, $tenant->slug, $documents);
+        }
+
+        $tenant->update([
+            ...$this->applicationAttributes($data),
+            'business_details' => $data['product_summary'] ?? $tenant->business_details,
+            'documents' => $documents,
         ]);
 
-        $tenant->update($data);
+        $resubmitted = false;
+        if ($tenant->isRejected() && $request->boolean('resubmit')) {
+            $tenant->update([
+                'status' => Tenant::STATUS_PENDING,
+                'rejection_reason' => null,
+                'review_notes' => null,
+                'reviewed_at' => null,
+                'reviewed_by' => null,
+                'submitted_at' => now(),
+            ]);
+            $resubmitted = true;
+        }
 
-        return response()->json(['data' => $tenant->fresh()]);
+        return response()->json([
+            'data' => $tenant->fresh(['stores']),
+            'resubmitted' => $resubmitted,
+        ]);
     }
 
     public function stores(Request $request): JsonResponse
@@ -99,8 +164,21 @@ class TenantController extends Controller
 
     public function storeStore(Request $request): JsonResponse
     {
-        $this->authorize('create', Store::class);
         $user = $request->user()->load('roles');
+
+        // Checked before authorize() so applicants get an actionable message.
+        $tenant = Tenant::query()->find($user->tenantId());
+        if ($tenant && ! $tenant->canCreateStore()) {
+            return response()->json([
+                'error' => [
+                    'code' => 'tenant_not_approved',
+                    'message' => 'Your store application is still under review. Store creation unlocks once it is approved.',
+                    'fields' => null,
+                ],
+            ], 403);
+        }
+
+        $this->authorize('create', Store::class);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -154,6 +232,155 @@ class TenantController extends Controller
         $store->delete();
 
         return response()->json(['data' => ['ok' => true]]);
+    }
+
+    /** Everything a store applicant must provide. */
+    protected function applicationRules(): array
+    {
+        $method = (string) $this->currentPayoutMethod();
+
+        return [
+            'business_name' => ['required', 'string', 'max:255'],
+            'trading_name' => ['nullable', 'string', 'max:255'],
+            'business_type' => ['required', Rule::in(Tenant::BUSINESS_TYPES)],
+            'registration_number' => ['required', 'string', 'max:64'],
+            'tax_id' => ['nullable', 'string', 'max:64'],
+            'year_established' => ['nullable', 'integer', 'min:1800', 'max:'.date('Y')],
+            'website' => ['nullable', 'url', 'max:255'],
+            'product_summary' => ['required', 'string', 'min:20', 'max:2000'],
+            'categories_offered' => ['nullable', 'array', 'max:12'],
+            'categories_offered.*' => ['string', 'max:64'],
+            'country' => ['required', 'string', 'size:2'],
+            'address_line1' => ['required', 'string', 'max:255'],
+            'address_line2' => ['nullable', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:120'],
+            'region' => ['nullable', 'string', 'max:120'],
+            'postal_code' => ['nullable', 'string', 'max:32'],
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'social_links' => ['nullable', 'array'],
+            'social_links.*' => ['nullable', 'string', 'max:255'],
+            'owner_name' => ['required', 'string', 'max:255'],
+            'owner_email' => ['required', 'email', 'max:255'],
+            'owner_phone' => ['required', 'string', 'max:32'],
+            'owner_id_type' => ['required', Rule::in(Tenant::ID_TYPES)],
+            'owner_id_number' => ['required', 'string', 'max:64'],
+            'permit_number' => ['nullable', 'string', 'max:64'],
+            'permit_expires_at' => ['nullable', 'date'],
+            'preferred_store_name' => ['nullable', 'string', 'max:255'],
+            'business_certificate' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'operating_permit' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'additional_documents' => ['nullable', 'array', 'max:6'],
+            'additional_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'payout_method' => ['required', Rule::in(Tenant::PAYOUT_METHODS)],
+            'payout_account_name' => [Rule::requiredIf($method !== 'card'), 'nullable', 'string', 'max:255'],
+            'payout_account_number' => [
+                Rule::requiredIf(in_array($method, ['bank', 'mobile_money'], true)),
+                'nullable', 'string', 'max:64', 'regex:/^[0-9+\s-]{6,24}$/',
+            ],
+            'bank_name' => [Rule::requiredIf($method === 'bank'), 'nullable', 'string', 'max:120'],
+            'mobile_money_provider' => [Rule::requiredIf($method === 'mobile_money'), 'nullable', 'string', 'max:64'],
+            'card_brand' => [Rule::requiredIf($method === 'card'), 'nullable', 'string', 'max:32'],
+            'card_last4' => [Rule::requiredIf($method === 'card'), 'nullable', 'digits:4'],
+            'resubmit' => ['nullable', 'boolean'],
+        ];
+    }
+
+    protected function currentPayoutMethod(): ?string
+    {
+        $method = request()->input('payout_method');
+
+        return is_string($method) && in_array($method, Tenant::PAYOUT_METHODS, true) ? $method : null;
+    }
+
+    /** Turn "required" rules into "sometimes" so applicants can save partial edits. */
+    protected function relaxRules(array $rules): array
+    {
+        $relaxed = [];
+
+        foreach ($rules as $field => $fieldRules) {
+            $fieldRules = array_values(array_filter(
+                $fieldRules,
+                fn ($rule) => ! ($rule instanceof \Illuminate\Validation\Rules\RequiredIf),
+            ));
+            $relaxed[$field] = array_map(
+                fn ($rule) => $rule === 'required' ? 'sometimes' : $rule,
+                $fieldRules,
+            );
+        }
+
+        return $relaxed;
+    }
+
+    /** Copy only whitelisted business fields out of the validated payload. */
+    protected function applicationAttributes(array $data): array
+    {
+        $attributes = [];
+
+        foreach (self::APPLICATION_FIELDS as $field) {
+            if (array_key_exists($field, $data)) {
+                $attributes[$field] = $data[$field];
+            }
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Certificates and permits stay private: files are written to the local disk
+     * (outside public/) and only streamed to super admins via an authenticated
+     * endpoint, so they are never publicly reachable.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function storeDocuments(Request $request, string $slug, array $existing = []): array
+    {
+        $labelled = [
+            'business_certificate' => 'Business certificate',
+            'operating_permit' => 'Operating permit',
+        ];
+
+        foreach ($labelled as $field => $label) {
+            if ($request->hasFile($field)) {
+                $existing = $this->appendDocument($existing, $request->file($field), $label, $slug);
+            }
+        }
+
+        foreach ((array) $request->file('additional_documents', []) as $file) {
+            if ($file instanceof UploadedFile) {
+                $existing = $this->appendDocument($existing, $file, $file->getClientOriginalName() ?: 'Supporting document', $slug);
+            }
+        }
+
+        return array_values($existing);
+    }
+
+    protected function appendDocument(array $documents, UploadedFile $file, string $label, string $slug): array
+    {
+        $documents[] = [
+            'key' => Str::lower(Str::random(10)),
+            'label' => $label,
+            'path' => $file->store('tenant-documents/'.$slug, 'local'),
+            'original_name' => $file->getClientOriginalName(),
+            'mime' => $file->getClientMimeType(),
+            'size' => $file->getSize(),
+            'uploaded_at' => now()->toIso8601String(),
+        ];
+
+        return $documents;
+    }
+
+    protected function uniqueSlug(string $name): string
+    {
+        $slug = Str::slug($name) ?: 'store';
+        $base = $slug;
+        $i = 1;
+
+        while (Tenant::query()->where('slug', $slug)->exists()) {
+            $slug = $base.'-'.$i++;
+        }
+
+        return $slug;
     }
 
     protected function paginate($paginator): array

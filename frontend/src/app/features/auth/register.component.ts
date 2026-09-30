@@ -17,12 +17,14 @@ import { AuthService } from '../../core/auth.service';
         @if (error()) { <p class="err">{{ error() }}</p> }
         <button class="btn" [disabled]="busy()">Register</button>
         <p class="muted">Already here? <a routerLink="/login">Log in</a></p>
+        <p class="muted sell">Selling on MarketHub? <a routerLink="/sell">Apply to open a store →</a></p>
       </form>
     </div>
   `,
   styles: [`
     .page { padding: 48px 0; display:flex; justify-content:center; }
     .form { width: min(420px, 100%); padding: 28px; }
+    .sell { font-size: 13px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
   `],
 })
 export class RegisterComponent {

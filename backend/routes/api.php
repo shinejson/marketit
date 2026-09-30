@@ -47,6 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
 
     Route::post('/tenants/register', [TenantController::class, 'register']);
+    Route::get('/tenants/mine', [TenantController::class, 'mine']);
 
     Route::get('/addresses', [AddressController::class, 'index']);
     Route::post('/addresses', [AddressController::class, 'store']);
@@ -147,6 +148,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('role:super_admin')->prefix('admin')->group(function () {
         Route::get('/tenants', [AdminController::class, 'tenants']);
+        Route::get('/tenants/{tenant}', [AdminController::class, 'showTenant']);
+        Route::get('/tenants/{tenant}/documents/{document}', [AdminController::class, 'tenantDocument']);
         Route::patch('/tenants/{tenant}', [AdminController::class, 'updateTenant']);
         Route::get('/orders', [AdminController::class, 'orders']);
         Route::get('/metrics', [AdminController::class, 'metrics']);
