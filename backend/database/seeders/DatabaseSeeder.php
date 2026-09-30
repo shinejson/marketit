@@ -85,6 +85,8 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->seedPhase3();
+
+        $this->call(BillingSeeder::class);
     }
 
     protected function seedPhase3(): void

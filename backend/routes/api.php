@@ -3,7 +3,11 @@
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AdCampaignController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminOverviewController;
 use App\Http\Controllers\Api\AdminPhase3Controller;
+use App\Http\Controllers\Api\AdminSettingController;
+use App\Http\Controllers\Api\AdminSubscriptionController;
+use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\ApiKeyController;
@@ -153,6 +157,32 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/tenants/{tenant}', [AdminController::class, 'updateTenant']);
         Route::get('/orders', [AdminController::class, 'orders']);
         Route::get('/metrics', [AdminController::class, 'metrics']);
+        Route::get('/overview', AdminOverviewController::class);
+
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::post('/users', [AdminUserController::class, 'store']);
+        Route::get('/users/{user}', [AdminUserController::class, 'show']);
+        Route::patch('/users/{user}', [AdminUserController::class, 'update']);
+        Route::put('/users/{user}/roles', [AdminUserController::class, 'syncRoles']);
+        Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
+
+        Route::get('/plans', [AdminSubscriptionController::class, 'plans']);
+        Route::post('/plans', [AdminSubscriptionController::class, 'storePlan']);
+        Route::patch('/plans/{plan}', [AdminSubscriptionController::class, 'updatePlan']);
+        Route::delete('/plans/{plan}', [AdminSubscriptionController::class, 'destroyPlan']);
+
+        Route::get('/subscriptions', [AdminSubscriptionController::class, 'index']);
+        Route::post('/subscriptions', [AdminSubscriptionController::class, 'store']);
+        Route::get('/subscriptions/stats', [AdminSubscriptionController::class, 'statsEndpoint']);
+        Route::patch('/subscriptions/{subscription}', [AdminSubscriptionController::class, 'update']);
+        Route::post('/subscriptions/{subscription}/renew', [AdminSubscriptionController::class, 'renew']);
+
+        Route::get('/invoices', [AdminSubscriptionController::class, 'invoices']);
+        Route::patch('/invoices/{invoice}', [AdminSubscriptionController::class, 'updateInvoice']);
+
+        Route::get('/settings', [AdminSettingController::class, 'index']);
+        Route::put('/settings', [AdminSettingController::class, 'update']);
+        Route::post('/settings/reset', [AdminSettingController::class, 'reset']);
         Route::get('/audit-logs', [AdminController::class, 'auditLogs']);
         Route::get('/analytics', [AnalyticsController::class, 'platform']);
         Route::get('/insights', [AnalyticsController::class, 'platformInsights']);

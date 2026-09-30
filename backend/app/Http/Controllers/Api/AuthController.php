@@ -29,7 +29,14 @@ class AuthController extends Controller
             'tenant_id' => null,
         ]);
 
+        if ($user->isSuspended()) {
+            throw ValidationException::withMessages([
+                'email' => 'This account has been suspended. Contact support.',
+            ]);
+        }
+
         $token = $user->createToken('web')->plainTextToken;
+        $user->forceFill(['last_login_at' => now()])->saveQuietly();
         $user->load('roles');
 
         return response()->json([

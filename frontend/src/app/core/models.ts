@@ -182,3 +182,133 @@ export interface TenantApplication {
   stores?: { id: number; name: string; slug: string; status: string }[];
   owner?: { id: number; name: string; email: string } | null;
 }
+
+// ------------------------------------------------------------- super admin
+
+export interface Kpi {
+  value: number;
+  previous: number;
+  change: number;
+  direction: 'up' | 'down' | 'flat';
+  format: 'number' | 'currency';
+}
+
+export interface SeriesPoint {
+  date: string;
+  value: number;
+}
+
+export interface AdminOverview {
+  range: { days: number; start: string; end: string };
+  kpis: Record<string, Kpi>;
+  totals: Record<string, number>;
+  series: { revenue: SeriesPoint[]; orders: SeriesPoint[]; tenants: SeriesPoint[]; users: SeriesPoint[] };
+  tenant_status: Record<string, number>;
+  plan_distribution: { plan: string; slug: string; subscribers: number; mrr: number }[];
+  top_tenants: { tenant_id: number; name: string; orders: number; revenue: number; commission: number }[];
+  recent_activity: { id: number; action: string; entity: string; actor: string; created_at: string }[];
+}
+
+export interface AdminUserRole {
+  id: number;
+  role: string;
+  tenant_id: number | null;
+  tenant: string | null;
+}
+
+export interface AdminUser {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  status: 'active' | 'suspended';
+  primary_role: string;
+  last_login_at?: string | null;
+  created_at: string;
+  roles: AdminUserRole[];
+  orders_count?: number;
+  orders_total?: number;
+}
+
+export interface AdminUserSummary {
+  total: number;
+  active: number;
+  suspended: number;
+  by_role: Record<string, number>;
+}
+
+export interface Plan {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  price: string | number;
+  currency: string;
+  interval: 'monthly' | 'yearly';
+  trial_days: number;
+  commission_rate: string | number;
+  max_products?: number | null;
+  max_stores?: number | null;
+  max_staff?: number | null;
+  features?: string[] | null;
+  is_active: boolean;
+  sort_order: number;
+  subscribers_count?: number;
+}
+
+export interface Subscription {
+  id: number;
+  tenant_id: number;
+  plan_id: number;
+  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired';
+  amount: string | number;
+  currency: string;
+  interval: 'monthly' | 'yearly';
+  trial_ends_at?: string | null;
+  current_period_start?: string | null;
+  current_period_end?: string | null;
+  canceled_at?: string | null;
+  tenant?: { id: number; name: string; business_name?: string | null };
+  plan?: Plan;
+}
+
+export interface SubscriptionStats {
+  mrr: number;
+  arr: number;
+  arpa: number;
+  active: number;
+  trialing: number;
+  past_due: number;
+  canceled: number;
+  churn_rate: number;
+  outstanding: number;
+  collected: number;
+  by_status: Record<string, number>;
+  revenue_by_month: SeriesPoint[];
+}
+
+export interface Invoice {
+  id: number;
+  number: string;
+  tenant_id: number;
+  amount: string | number;
+  currency: string;
+  status: 'open' | 'paid' | 'failed' | 'void';
+  issued_at?: string | null;
+  paid_at?: string | null;
+  period_start?: string | null;
+  period_end?: string | null;
+  tenant?: { id: number; name: string; business_name?: string | null };
+  subscription?: { id: number; plan?: { id: number; name: string } };
+}
+
+export interface SettingField {
+  key: string;
+  group: string;
+  type: 'string' | 'number' | 'bool' | 'json';
+  label: string;
+  help: string;
+  value: string | number | boolean | null;
+  default: string | number | boolean | null;
+  updated_at?: string | null;
+}
