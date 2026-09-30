@@ -413,3 +413,34 @@ Application bundle generation failed. [93.196 seconds] - 2026-09-30T15:21:20.053
 
 
 > Changes detected. Rebuilding...
+√ Changes detected. Rebuilding...
+Initial chunk files | Names                   |  Raw size
+main.js             | main                    |   8.09 kB | 
+chunk-SZYN5X5P.js   | -                       |   2.72 kB | 
+styles.css          | styles                  |   2.62 kB | 
+chunk-VUJOFXKG.js   | -                       | 987 bytes | 
+polyfills.js        | polyfills               | 144 bytes | 
+
+                    | Initial total           |  14.56 kB
+
+Lazy chunk files    | Names                   |  Raw size
+chunk-PAJZBDGY.js   | sell-component          |  91.65 kB | 
+chunk-XUMKWP7M.js   | subscriptions-component |  75.98 kB | 
+chunk-3MQUBMAN.js   | tenants-component       |  57.89 kB | 
+chunk-HHAOP6UW.js   | users-component         |  45.18 kB | 
+chunk-QPC7QC3P.js   | -                       |  36.27 kB | 
+chunk-OCQR4643.js   | home-component          |  35.66 kB | 
+chunk-DWKFYHA5.js   | shell-component         |  29.17 kB | 
+chunk-WTBOGG3W.js   | dashboard-component     |  28.07 kB | 
+chunk-6W4G3EBW.js   | settings-component      |  21.91 kB | 
+chunk-L6VGJKNE.js   | ads-component           |  18.43 kB | 
+chunk-DLNHD6JC.js   | products-component      |  14.06 kB | 
+chunk-6QM3BHIK.js   | checkout-component      |  13.60 kB | 
+chunk-SUYPQ6L3.js   | catalog-component       |  13.13 kB | 
+chunk-QCN7K33M.js   | ai-component            |  10.48 kB | 
+chunk-6UI5JUKK.js   | cart-component          |  10.44 kB | 
+...and 23 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [6.978 seconds] - 2026-09-30T15:21:29.460Z
+
+Page reload sent to client(s).
