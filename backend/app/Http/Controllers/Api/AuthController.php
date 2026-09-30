@@ -95,10 +95,12 @@ class AuthController extends Controller
             'phone' => $user->phone,
             'role' => $user->primaryRole(),
             'tenant_id' => $user->tenantId(),
+            'department' => $user->roles->first(fn ($r) => in_array($r->role, ['tenant_owner', 'store_staff'], true))?->department,
             'roles' => $user->roles->map(fn ($r) => [
                 'role' => $r->role,
                 'tenant_id' => $r->tenant_id,
                 'store_id' => $r->store_id,
+                'department' => $r->department,
             ])->all(),
         ];
     }

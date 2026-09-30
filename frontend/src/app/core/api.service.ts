@@ -7,6 +7,7 @@ import {
   AdminUserSummary,
   CartPayload,
   Category,
+  DeptDashboard,
   Invoice,
   Paginated,
   Plan,
@@ -94,6 +95,54 @@ export class ApiService {
 
   sellerDashboard() {
     return this.http.get<{ data: any }>('/api/tenant/dashboard/summary');
+  }
+
+  departmentOverview() {
+    return this.http.get<{ data: { departments: any[] } }>('/api/tenant/dashboard/departments');
+  }
+
+  departmentDashboard(department: string) {
+    return this.http.get<{ data: DeptDashboard }>(`/api/tenant/dashboard/departments/${department}`);
+  }
+
+  tenantStaff() {
+    return this.http.get<{ data: any[]; meta: { departments: string[]; roles: string[] } }>('/api/tenant/staff');
+  }
+
+  createStaff(payload: any) {
+    return this.http.post<{ data: any; meta: { temporary_password?: string | null } }>('/api/tenant/staff', payload);
+  }
+
+  updateStaff(id: number, payload: any) {
+    return this.http.patch<{ data: any }>(`/api/tenant/staff/${id}`, payload);
+  }
+
+  removeStaff(id: number) {
+    return this.http.delete<{ data: { ok: boolean } }>(`/api/tenant/staff/${id}`);
+  }
+
+  tenantSettings() {
+    return this.http.get<{ data: any }>('/api/tenant/settings');
+  }
+
+  updateTenantSettings(payload: any) {
+    return this.http.patch<{ data: any }>('/api/tenant/settings', payload);
+  }
+
+  tenantBackups() {
+    return this.http.get<{ data: any[] }>('/api/tenant/backups');
+  }
+
+  createBackup() {
+    return this.http.post<{ data: any }>('/api/tenant/backups', {});
+  }
+
+  restoreBackup(id: number) {
+    return this.http.post<{ data: any }>(`/api/tenant/backups/${id}/restore`, {});
+  }
+
+  backupDownloadUrl(id: number) {
+    return `/api/tenant/backups/${id}/download`;
   }
 
   sellerProducts(params: Record<string, string | number> = {}) {

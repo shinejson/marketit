@@ -5,7 +5,59 @@ export interface User {
   phone?: string | null;
   role: 'super_admin' | 'tenant_owner' | 'store_staff' | 'customer';
   tenant_id: number | null;
-  roles: { role: string; tenant_id: number | null; store_id: number | null }[];
+  department?: string | null;
+  roles: { role: string; tenant_id: number | null; store_id: number | null; department?: string | null }[];
+}
+
+export interface ChartSeries {
+  key: string;
+  label: string;
+  color: string;
+}
+
+export interface LineChart {
+  type: 'line';
+  title: string;
+  points: Record<string, string | number>[];
+  series: ChartSeries[];
+}
+
+export interface BarChart {
+  type: 'bar';
+  title: string;
+  bars: { label: string; value: number; color: string }[];
+}
+
+export interface DonutChart {
+  type: 'donut';
+  title: string;
+  slices: { label: string; value: number; color: string }[];
+}
+
+export type MhChart = LineChart | BarChart | DonutChart;
+
+export interface DeptKpi {
+  key: string;
+  label: string;
+  value: string;
+  format: 'currency' | 'number' | 'percent';
+}
+
+export interface DeptProgress {
+  label: string;
+  current: string;
+  target: string;
+  percent: number;
+  format: string;
+}
+
+export interface DeptDashboard {
+  department: string;
+  title: string;
+  kpis: DeptKpi[];
+  progress: DeptProgress[];
+  charts: MhChart[];
+  table?: { title: string; columns: string[]; rows: string[][] };
 }
 
 export interface AuthResponse {

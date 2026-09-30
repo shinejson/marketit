@@ -140,6 +140,21 @@ class Tenant extends Model
         return $this->hasOne(Subscription::class)->latestOfMany();
     }
 
+    public function settings(): HasOne
+    {
+        return $this->hasOne(TenantSetting::class);
+    }
+
+    public function backups(): HasMany
+    {
+        return $this->hasMany(TenantBackup::class);
+    }
+
+    public function staffRoles(): HasMany
+    {
+        return $this->hasMany(UserRole::class);
+    }
+
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;

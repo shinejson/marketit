@@ -12,6 +12,7 @@ class UserRole extends Model
         'role',
         'tenant_id',
         'store_id',
+        'department',
     ];
 
     public function user(): BelongsTo

@@ -8,13 +8,18 @@ use App\Models\AdCampaign;
 use App\Models\AdTarget;
 use App\Models\Category;
 use App\Models\Inventory;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Models\SellerOrder;
+use App\Models\SellerSettlement;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantAiSetting;
 use App\Models\TenantDomain;
+use App\Models\TenantSetting;
 use App\Models\User;
 use App\Models\UserRole;
 use App\Support\PlaceholderImage;
@@ -85,7 +90,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->seedPhase3();
-
+        $this->seedTenantOps();
         $this->call(BillingSeeder::class);
     }
 
@@ -224,4 +229,152 @@ class DatabaseSeeder extends Seeder
             ]);
         }
     }
+
+    protected function seedTenantOps(): void
+    {
+        $customer = User::query()->where('email', 'customer@markethub.test')->first();
+        $address = Address::query()->where('user_id', $customer?->id)->first();
+        if (! $customer || ! $address) {
+            return;
+        }
+
+        foreach (Tenant::query()->get() as $tenant) {
+            TenantSetting::query()->firstOrCreate(
+                ['tenant_id' => $tenant->id],
+                [
+                    'timezone' => 'Africa/Accra',
+                    'currency' => 'USD',
+                    'support_email' => $tenant->owner?->email,
+                    'payout_email' => $tenant->owner?->email,
+                    'goals' => TenantSetting::DEFAULT_GOALS,
+                ]
+            );
+        }
+
+        $north = Tenant::query()->where('slug', 'northstar-gadgets')->first();
+        $store = Store::withoutGlobalScopes()->where('slug', 'northstar')->first();
+        if ($north && $store) {
+            $staff = [
+                ['email' => 'finance@markethub.test', 'name' => 'Kwame Finance', 'department' => 'finance'],
+                ['email' => 'sales@markethub.test', 'name' => 'Abena Sales', 'department' => 'sales'],
+                ['email' => 'ops@markethub.test', 'name' => 'Yaw Operations', 'department' => 'operations'],
+                ['email' => 'marketing@markethub.test', 'name' => 'Efua Marketing', 'department' => 'marketing'],
+            ];
+            foreach ($staff as $row) {
+                $user = User::query()->firstOrCreate(
+                    ['email' => $row['email']],
+                    [
+                        'name' => $row['name'],
+                        'password' => Hash::make('password'),
+                        'phone' => '+233200000111',
+                        'email_verified_at' => now(),
+                    ]
+                );
+                UserRole::query()->firstOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'role' => 'store_staff',
+                        'tenant_id' => $north->id,
+                    ],
+                    [
+                        'department' => $row['department'],
+                        'store_id' => $store->id,
+                    ]
+                );
+            }
+        }
+
+        $this->seedHistory($customer, $address);
+    }
+
+    protected function seedHistory(User $customer, Address $address): void
+    {
+        $catalog = Product::withoutGlobalScopes()
+            ->with(['variants.inventory', 'store'])
+            ->where('status', Product::STATUS_ACTIVE)
+            ->get();
+        if ($catalog->isEmpty()) {
+            return;
+        }
+
+        $statuses = [
+            SellerOrder::STATUS_AWAITING_FULFILLMENT,
+            SellerOrder::STATUS_PROCESSING,
+            SellerOrder::STATUS_SHIPPED,
+            SellerOrder::STATUS_DELIVERED,
+            SellerOrder::STATUS_COMPLETED,
+            SellerOrder::STATUS_COMPLETED,
+        ];
+
+        for ($day = 13; $day >= 0; $day--) {
+            $at = now()->subDays($day)->setTime(10 + ($day % 6), 15);
+            $batch = 1 + ($day % 3);
+            for ($n = 0; $n < $batch; $n++) {
+                $product = $catalog[($day + $n) % $catalog->count()];
+                $variant = $product->variants->first();
+                if (! $variant) {
+                    continue;
+                }
+                $qty = 1 + (($day + $n) % 3);
+                $price = (float) $product->price;
+                $subtotal = round($price * $qty, 2);
+                $delivery = (float) ($product->store?->delivery_fee ?? 5);
+                $commission = round($subtotal * 0.08, 2);
+                $net = round($subtotal + $delivery - $commission, 2);
+                $status = $statuses[($day + $n) % count($statuses)];
+
+                $order = Order::query()->create([
+                    'user_id' => $customer->id,
+                    'subtotal' => $subtotal,
+                    'delivery_total' => $delivery,
+                    'tax_total' => 0,
+                    'grand_total' => round($subtotal + $delivery, 2),
+                    'currency' => 'USD',
+                    'status' => in_array($status, [SellerOrder::STATUS_DELIVERED, SellerOrder::STATUS_COMPLETED], true)
+                        ? Order::STATUS_COMPLETED
+                        : Order::STATUS_PAID,
+                    'shipping_address_id' => $address->id,
+                    'placed_at' => $at,
+                ]);
+                $order->forceFill(['created_at' => $at, 'updated_at' => $at])->save();
+
+                $sellerOrder = SellerOrder::withoutGlobalScopes()->create([
+                    'order_id' => $order->id,
+                    'tenant_id' => $product->tenant_id,
+                    'store_id' => $product->store_id,
+                    'subtotal' => $subtotal,
+                    'delivery_fee' => $delivery,
+                    'commission' => $commission,
+                    'net_settlement' => $net,
+                    'status' => $status,
+                ]);
+                $sellerOrder->forceFill(['created_at' => $at, 'updated_at' => $at])->save();
+
+                OrderItem::query()->create([
+                    'seller_order_id' => $sellerOrder->id,
+                    'variant_id' => $variant->id,
+                    'product_name' => $product->name,
+                    'sku' => $variant->sku,
+                    'unit_price' => $price,
+                    'qty' => $qty,
+                    'line_tax' => 0,
+                    'options' => $variant->options,
+                ]);
+
+                $settlement = SellerSettlement::query()->create([
+                    'seller_order_id' => $sellerOrder->id,
+                    'gross' => $subtotal,
+                    'commission' => $commission,
+                    'delivery_fee' => $delivery,
+                    'refund_amount' => 0,
+                    'net' => $net,
+                    'status' => in_array($status, [SellerOrder::STATUS_DELIVERED, SellerOrder::STATUS_COMPLETED], true)
+                        ? SellerSettlement::STATUS_RELEASED
+                        : SellerSettlement::STATUS_PENDING,
+                ]);
+                $settlement->forceFill(['created_at' => $at, 'updated_at' => $at])->save();
+            }
+        }
+    }
+
 }

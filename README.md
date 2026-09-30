@@ -16,6 +16,10 @@ Password for all: `password`
 - Seller (Northstar): `seller1@markethub.test`
 - Seller (Kente Home): `seller2@markethub.test`
 - Super admin: `admin@markethub.test`
+- Finance (Northstar staff): `finance@markethub.test`
+- Sales: `sales@markethub.test`
+- Operations: `ops@markethub.test`
+- Marketing: `marketing@markethub.test`
 
 ## Run locally
 
@@ -71,3 +75,5 @@ tenants, subscriptions and six months of invoice history.
 - Seller fulfilment state machine and dashboard
 - Super admin tenant approval, metrics, audit log
 - Row-level `tenant_id` isolation (Eloquent global scope + policies)
+- Tenant department dashboards (finance, sales, operations, marketing) with charts and goal progress
+- Staff users, tenant settings, and JSON backups

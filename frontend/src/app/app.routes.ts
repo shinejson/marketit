@@ -35,6 +35,10 @@ export const routes: Routes = [
       { path: 'webhooks', loadComponent: () => import('./features/seller/webhooks.component').then((m) => m.SellerWebhooksComponent) },
       { path: 'ai', loadComponent: () => import('./features/seller/ai.component').then((m) => m.SellerAiComponent) },
       { path: 'analytics', loadComponent: () => import('./features/seller/analytics.component').then((m) => m.SellerAnalyticsComponent) },
+      { path: 'departments/:dept', loadComponent: () => import('./features/seller/department.component').then((m) => m.SellerDepartmentComponent) },
+      { path: 'users', loadComponent: () => import('./features/seller/users.component').then((m) => m.SellerUsersComponent) },
+      { path: 'settings', loadComponent: () => import('./features/seller/settings.component').then((m) => m.SellerSettingsComponent) },
+      { path: 'backups', loadComponent: () => import('./features/seller/backups.component').then((m) => m.SellerBackupsComponent) },
     ],
   },
   {

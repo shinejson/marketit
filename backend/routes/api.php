@@ -16,6 +16,10 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DepartmentDashboardController;
+use App\Http\Controllers\Api\StaffController;
+use App\Http\Controllers\Api\TenantBackupController;
+use App\Http\Controllers\Api\TenantSettingsController;
 use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\DomainController;
 use App\Http\Controllers\Api\InventoryController;
@@ -112,6 +116,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/orders/{order}/status', [SellerOrderController::class, 'updateStatus']);
 
         Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+        Route::get('/dashboard/departments', [DepartmentDashboardController::class, 'overview']);
+        Route::get('/dashboard/departments/{department}', [DepartmentDashboardController::class, 'show']);
+
+        Route::get('/staff', [StaffController::class, 'index']);
+        Route::post('/staff', [StaffController::class, 'store']);
+        Route::patch('/staff/{staff}', [StaffController::class, 'update']);
+        Route::delete('/staff/{staff}', [StaffController::class, 'destroy']);
+
+        Route::get('/settings', [TenantSettingsController::class, 'show']);
+        Route::patch('/settings', [TenantSettingsController::class, 'update']);
+
+        Route::get('/backups', [TenantBackupController::class, 'index']);
+        Route::post('/backups', [TenantBackupController::class, 'store']);
+        Route::get('/backups/{backup}/download', [TenantBackupController::class, 'download']);
+        Route::post('/backups/{backup}/restore', [TenantBackupController::class, 'restore']);
 
         Route::get('/domains', [DomainController::class, 'index']);
         Route::post('/domains', [DomainController::class, 'store']);
