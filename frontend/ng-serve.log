@@ -83,3 +83,333 @@ Application bundle generation complete. [0.466 seconds] - 2026-09-30T13:27:58.92
 
 Page reload sent to client(s).
 > Changes detected. Rebuilding...
+√ Changes detected. Rebuilding...
+Application bundle generation failed. [93.196 seconds] - 2026-09-30T15:21:20.053Z
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2305: Module '"../../core/models"' has no exported member 'AdminUser'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:5:9:
+[37m      5 │ import { [32mAdminUser[37m, AdminUserSummary, TenantApplication } from '../...
+        ╵          [32m~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2305: Module '"../../core/models"' has no exported member 'AdminUserSummary'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:5:20:
+[37m      5 │ import { AdminUser, [32mAdminUserSummary[37m, TenantApplication } from '../...
+        ╵                     [32m~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'adminUsers' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:213:13:
+[37m      213 │     this.api.[32madminUsers[37m(params).subscribe({
+          ╵              [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'res' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:214:13:
+[37m      214 │       next: ([32mres[37m) => {
+          ╵              [32m~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'updateAdminUser' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:246:17:
+[37m      246 │       ? this.api.[32mupdateAdminUser[37m(f.id, payload)
+          ╵                  [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'createAdminUser' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:247:17:
+[37m      247 │       : this.api.[32mcreateAdminUser[37m({ ...payload, password: f.passwo...
+          ╵                  [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:255:14:
+[37m      255 │       error: ([32me[37m) => {
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'updateAdminUser' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:264:13:
+[37m      264 │     this.api.[32mupdateAdminUser[37m(user.id, { status }).subscribe({
+          ╵              [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:266:14:
+[37m      266 │       error: ([32me[37m) => this.error.set(this.messageFrom(e)),
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'deleteAdminUser' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:272:13:
+[37m      272 │     this.api.[32mdeleteAdminUser[37m(user.id).subscribe({
+          ╵              [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/users.component.ts:274:14:
+[37m      274 │       error: ([32me[37m) => this.error.set(this.messageFrom(e)),
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2305: Module '"../../core/models"' has no exported member 'Invoice'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:5:9:
+[37m      5 │ import { [32mInvoice[37m, Plan, Subscription, SubscriptionStats, TenantAppl...
+        ╵          [32m~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2305: Module '"../../core/models"' has no exported member 'Plan'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:5:18:
+[37m      5 │ import { Invoice, [32mPlan[37m, Subscription, SubscriptionStats, TenantAppl...
+        ╵                   [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2305: Module '"../../core/models"' has no exported member 'Subscription'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:5:24:
+[37m      5 │ import { Invoice, Plan, [32mSubscription[37m, SubscriptionStats, TenantAppl...
+        ╵                         [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2305: Module '"../../core/models"' has no exported member 'SubscriptionStats'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:5:38:
+[37m      5 │ ...ce, Plan, Subscription, [32mSubscriptionStats[37m, TenantApplication } f...
+        ╵                            [32m~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'adminSubscriptions' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:313:13:
+[37m      313 │     this.api.[32madminSubscriptions[37m(params).subscribe({
+          ╵              [32m~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'res' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:314:13:
+[37m      314 │       next: ([32mres[37m) => {
+          ╵              [32m~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'adminPlans' does not exist on type 'ApiService'. Did you mean 'adminAds'?[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:323:13:
+[37m      323 │     this.api.[32madminPlans[37m().subscribe({
+          ╵              [32m~~~~~~~~~~[0m
+
+  'adminAds' is declared here.
+
+    C:/xampp/htdocs/market/frontend/src/app/core/api.service.ts:253:2:
+[37m      253 │   [32madminAds[37m() {
+          ╵   [32m~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'res' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:324:13:
+[37m      324 │       next: ([32mres[37m) => this.plans.set(res.data),
+          ╵              [32m~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'adminInvoices' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:330:13:
+[37m      330 │     this.api.[32madminInvoices[37m({ status: this.invoiceStatus }).subscr...
+          ╵              [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'res' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:331:13:
+[37m      331 │       next: ([32mres[37m) => this.invoices.set(res.data),
+          ╵              [32m~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'createSubscription' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:339:13:
+[37m      339 │     this.api.[32mcreateSubscription[37m({
+          ╵              [32m~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:350:14:
+[37m      350 │       error: ([32me[37m) => {
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'updateSubscription' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:358:13:
+[37m      358 │     this.api.[32mupdateSubscription[37m(subscription.id, { status }).subs...
+          ╵              [32m~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:360:14:
+[37m      360 │       error: ([32me[37m) => this.error.set(this.messageFrom(e)),
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'updateSubscription' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:366:13:
+[37m      366 │     this.api.[32mupdateSubscription[37m(subscription.id, { plan_id: planI...
+          ╵              [32m~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:368:14:
+[37m      368 │       error: ([32me[37m) => this.error.set(this.messageFrom(e)),
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'renewSubscription' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:373:13:
+[37m      373 │     this.api.[32mrenewSubscription[37m(subscription.id).subscribe({
+          ╵              [32m~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:375:14:
+[37m      375 │       error: ([32me[37m) => this.error.set(this.messageFrom(e)),
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'updatePlan' does not exist on type 'ApiService'. Did you mean 'updateAd'?[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:407:36:
+[37m      407 │ ...request = f.id ? this.api.[32mupdatePlan[37m(f.id, payload) : this.api...
+          ╵                              [32m~~~~~~~~~~[0m
+
+  'updateAd' is declared here.
+
+    C:/xampp/htdocs/market/frontend/src/app/core/api.service.ts:189:2:
+[37m      189 │   [32mupdateAd[37m(id: number, payload: any) {
+          ╵   [32m~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'createPlan' does not exist on type 'ApiService'. Did you mean 'createAd'?[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:407:73:
+[37m      407 │ ...his.api.updatePlan(f.id, payload) : this.api.[32mcreatePlan[37m(payload);
+          ╵                                                 [32m~~~~~~~~~~[0m
+
+  'createAd' is declared here.
+
+    C:/xampp/htdocs/market/frontend/src/app/core/api.service.ts:185:2:
+[37m      185 │   [32mcreateAd[37m(payload: any) {
+          ╵   [32m~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:414:14:
+[37m      414 │       error: ([32me[37m) => {
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'deletePlan' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:423:13:
+[37m      423 │     this.api.[32mdeletePlan[37m(plan.id).subscribe({
+          ╵              [32m~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:425:14:
+[37m      425 │       error: ([32me[37m) => this.error.set(this.messageFrom(e)),
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'updateInvoice' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:430:13:
+[37m      430 │     this.api.[32mupdateInvoice[37m(invoice.id, status).subscribe({
+          ╵              [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/subscriptions.component.ts:435:14:
+[37m      435 │       error: ([32me[37m) => this.error.set(this.messageFrom(e)),
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2305: Module '"../../core/models"' has no exported member 'SettingField'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/settings.component.ts:5:9:
+[37m      5 │ import { [32mSettingField[37m } from '../../core/models';
+        ╵          [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'adminSettings' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/settings.component.ts:104:13:
+[37m      104 │     this.api.[32madminSettings[37m().subscribe({
+          ╵              [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'res' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/settings.component.ts:105:13:
+[37m      105 │       next: ([32mres[37m) => {
+          ╵              [32m~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'saveSettings' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/settings.component.ts:129:13:
+[37m      129 │     this.api.[32msaveSettings[37m(payload).subscribe({
+          ╵              [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'res' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/settings.component.ts:130:13:
+[37m      130 │       next: ([32mres[37m) => {
+          ╵              [32m~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'e' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/settings.component.ts:136:14:
+[37m      136 │       error: ([32me[37m) => {
+          ╵               [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'resetSettings' does not exist on type 'ApiService'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/settings.component.ts:146:13:
+[37m      146 │     this.api.[32mresetSettings[37m(this.group()).subscribe({
+          ╵              [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS7006: Parameter 'res' implicitly has an 'any' type.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/features/admin/settings.component.ts:147:13:
+[37m      147 │       next: ([32mres[37m) => {
+          ╵              [32m~~~[0m
+
+
+> Changes detected. Rebuilding...
