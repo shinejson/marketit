@@ -444,3 +444,29 @@ chunk-6UI5JUKK.js   | cart-component          |  10.44 kB |
 Application bundle generation complete. [6.978 seconds] - 2026-09-30T15:21:29.460Z
 
 Page reload sent to client(s).
+> Changes detected. Rebuilding...
+√ Changes detected. Rebuilding...
+Initial chunk files | Names                   | Raw size
+main.js             | main                    |  8.57 kB | 
+
+Lazy chunk files    | Names                   | Raw size
+chunk-OWYSPRXS.js   | sell-component          | 91.65 kB | 
+chunk-7D6XAWZX.js   | subscriptions-component | 75.98 kB | 
+chunk-3VJC6MJY.js   | tenants-component       | 57.89 kB | 
+chunk-PNKKPE4V.js   | users-component         | 45.18 kB | 
+chunk-HQ6OIBXK.js   | home-component          | 35.66 kB | 
+chunk-FB5TDJVY.js   | settings-component      | 31.06 kB | 
+chunk-BPEP2TIN.js   | dashboard-component     | 28.07 kB | 
+chunk-DLZJGRFG.js   | settings-component      | 21.91 kB | 
+chunk-UDYE2Z6R.js   | users-component         | 21.25 kB | 
+chunk-OSNC4MSX.js   | ads-component           | 18.43 kB | 
+chunk-6TGL2W3G.js   | -                       | 15.29 kB | 
+chunk-JOXSY6E5.js   | department-component    | 15.10 kB | 
+chunk-VEDJPRJC.js   | products-component      | 14.06 kB | 
+chunk-YAHCEJJK.js   | checkout-component      | 13.60 kB | 
+chunk-LSJ65FYV.js   | catalog-component       | 13.13 kB | 
+...and 23 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [61.211 seconds] - 2026-09-30T21:37:45.205Z
+
+Page reload sent to client(s).
