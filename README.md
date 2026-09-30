@@ -20,18 +20,19 @@ Password for all: `password`
 ## Run locally
 
 ```bash
-# Backend
+# Backend (port 8001 — the Angular proxy targets 8001; 8000 may be taken by another local project)
 cd backend
 php artisan migrate:fresh --seed
-php artisan serve --host=127.0.0.1 --port=8000
+php artisan storage:link          # required: serves /storage/* (seeded product images)
+php artisan serve --host=127.0.0.1 --port=8001
 
 # Frontend
 cd frontend
 npm install
-npm start -- --host 0.0.0.0 --port 4200
+npm start
 ```
 
-The Angular dev server proxies `/api` and `/storage` to the Laravel app.
+The Angular dev server (port 4201) proxies `/api` and `/storage` to the Laravel app on port 8001.
 
 ## Phase 1 coverage
 

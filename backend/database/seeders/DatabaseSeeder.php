@@ -17,6 +17,7 @@ use App\Models\TenantAiSetting;
 use App\Models\TenantDomain;
 use App\Models\User;
 use App\Models\UserRole;
+use App\Support\PlaceholderImage;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -209,6 +210,8 @@ class DatabaseSeeder extends Seeder
                 'reserved' => 0,
                 'low_stock_threshold' => 5,
             ]);
+
+            PlaceholderImage::make($product->slug, $product->name);
 
             ProductImage::withoutGlobalScopes()->create([
                 'tenant_id' => $tenant->id,

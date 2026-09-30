@@ -14,8 +14,8 @@ export class ApiService {
     return this.http.get<{ data: ProductCard }>(`/api/market/products/${slug}`);
   }
 
-  marketStores() {
-    return this.http.get<Paginated<Storefront[]>>('/api/market/stores');
+  marketStores(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<Storefront[]>>('/api/market/stores', { params });
   }
 
   marketStore(slug: string) {
