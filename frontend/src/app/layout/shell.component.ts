@@ -210,7 +210,7 @@ export class ShellComponent {
     }
     const links: ActionLink[] = [];
     const staff = ['tenant_owner', 'store_staff'];
-    if (this.auth.hasRole(...staff)) links.push({ path: '/seller', label: 'Seller', ghost: true });
+    if (this.auth.hasRole(...staff)) links.push({ path: '/tenant', label: 'Tenant admin', ghost: true });
     if (this.auth.hasRole('super_admin')) links.push({ path: '/admin', label: 'Admin', ghost: true });
     if (!this.auth.hasRole(...staff, 'super_admin')) links.push({ path: '/sell', label: 'Sell', ghost: true });
     return links;

@@ -20,8 +20,8 @@ export class AuthService {
     return localStorage.getItem(TOKEN_KEY);
   }
 
-  login(email: string, password: string) {
-    return this.http.post<{ data: AuthResponse }>('/api/auth/login', { email, password }).pipe(
+  login(email: string, password: string, portal: 'marketplace' | 'tenant' | 'admin' = 'marketplace') {
+    return this.http.post<{ data: AuthResponse }>('/api/auth/login', { email, password, portal }).pipe(
       tap((res) => this.persist(res.data)),
     );
   }

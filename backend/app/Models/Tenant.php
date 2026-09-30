@@ -170,8 +170,13 @@ class Tenant extends Model
         return $this->status === self::STATUS_REJECTED;
     }
 
-    /** Stores only become visible on the marketplace once the tenant is approved. */
+    /** Tenants can prepare draft stores while pending; publishing still requires approval. */
     public function canCreateStore(): bool
+    {
+        return in_array($this->status, [self::STATUS_PENDING, self::STATUS_ACTIVE], true);
+    }
+
+    public function canPublishStore(): bool
     {
         return $this->isActive();
     }
