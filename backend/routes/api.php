@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AdCampaignController;
+use App\Http\Controllers\Api\AdminBackupController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AdminOverviewController;
 use App\Http\Controllers\Api\AdminPhase3Controller;
@@ -208,6 +209,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/settings', [AdminSettingController::class, 'index']);
         Route::put('/settings', [AdminSettingController::class, 'update']);
         Route::post('/settings/reset', [AdminSettingController::class, 'reset']);
+        Route::post('/settings/assets/{asset}', [AdminSettingController::class, 'uploadAsset']);
+        Route::delete('/settings/assets/{asset}', [AdminSettingController::class, 'destroyAsset']);
+        Route::post('/settings/email/test', [AdminSettingController::class, 'testEmail'])->middleware('throttle:6,1');
+        Route::post('/settings/sms/test', [AdminSettingController::class, 'testSms'])->middleware('throttle:6,1');
+
+        Route::get('/backups', [AdminBackupController::class, 'index']);
+        Route::post('/backups', [AdminBackupController::class, 'store']);
+        Route::get('/backups/{backup}/download', [AdminBackupController::class, 'download']);
+        Route::post('/backups/{backup}/restore', [AdminBackupController::class, 'restore']);
+        Route::delete('/backups/{backup}', [AdminBackupController::class, 'destroy']);
         Route::get('/audit-logs', [AdminController::class, 'auditLogs']);
         Route::get('/analytics', [AnalyticsController::class, 'platform']);
         Route::get('/insights', [AnalyticsController::class, 'platformInsights']);
