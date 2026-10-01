@@ -5,8 +5,10 @@ import {
   AdminAnalytics,
   AdminInsight,
   AdminOverview,
+  AdminRoleDefinition,
   AdminUser,
   AdminUserSummary,
+  PermissionGroup,
   CartPayload,
   Category,
   DeptDashboard,
@@ -374,12 +376,28 @@ export class ApiService {
     return this.http.patch<{ data: AdminUser }>(`/api/admin/users/${id}`, payload);
   }
 
-  syncAdminUserRoles(id: number, roles: { role: string; tenant_id?: number | null }[]) {
+  syncAdminUserRoles(id: number, roles: { role: string; tenant_id?: number | null; store_id?: number | null; department?: string | null }[]) {
     return this.http.put<{ data: AdminUser }>(`/api/admin/users/${id}/roles`, { roles });
   }
 
   deleteAdminUser(id: number) {
     return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/users/${id}`);
+  }
+
+  adminRoles() {
+    return this.http.get<{ data: AdminRoleDefinition[]; meta: { permission_groups: PermissionGroup[] } }>('/api/admin/roles');
+  }
+
+  createAdminRole(payload: { key: string; name: string; description?: string | null; permissions: string[] }) {
+    return this.http.post<{ data: AdminRoleDefinition }>('/api/admin/roles', payload);
+  }
+
+  updateAdminRole(id: number, payload: { name?: string; description?: string | null; permissions?: string[] }) {
+    return this.http.patch<{ data: AdminRoleDefinition }>(`/api/admin/roles/${id}`, payload);
+  }
+
+  deleteAdminRole(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/roles/${id}`);
   }
 
   adminPlans() {
