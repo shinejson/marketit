@@ -309,7 +309,8 @@ const MOBILE_BREAKPOINT = 900;
       transition: width .2s ease, transform .2s ease;
       z-index: 10;
     }
-    :root[data-theme="dark"] aside { background: #1a1712; }
+    /* Dark-chrome rules use :host-context, NOT :root[data-theme="dark"]: Angular's view encapsulation scopes :root inside component styles, so :root[data-theme] can never match and these rules used to be dead. */
+    :host-context([data-theme="dark"]) aside { background: #1a1712; }
     .brand-row { display: flex; align-items: center; }
     .brand { font-size: 22px; display: flex; align-items: center; gap: 2px; }
     .brand .mark {
@@ -327,7 +328,7 @@ const MOBILE_BREAKPOINT = 900;
     }
     nav a svg { width: 18px; height: 18px; flex: none; }
     nav a:hover { background: rgba(0,0,0,.06); }
-    :root[data-theme="dark"] nav a:hover { background: rgba(255,255,255,.07); }
+    :host-context([data-theme="dark"]) nav a:hover { background: rgba(255,255,255,.07); }
     nav a.on { background: var(--ink); color: var(--paper); }
     .logout {
       display: flex; align-items: center; gap: 10px; justify-content: flex-start;
@@ -368,7 +369,7 @@ const MOBILE_BREAKPOINT = 900;
       padding: 12px 24px; border-bottom: 1px solid var(--line);
       background: rgba(244,239,230,.92); backdrop-filter: blur(10px);
     }
-    :root[data-theme="dark"] .topnav { background: rgba(21,19,15,.92); }
+    :host-context([data-theme="dark"]) .topnav { background: rgba(21,19,15,.92); }
 
     .icon-btn {
       position: relative; display: inline-flex; align-items: center; justify-content: center;
