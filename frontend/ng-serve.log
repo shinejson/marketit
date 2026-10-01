@@ -470,3 +470,31 @@ chunk-LSJ65FYV.js   | catalog-component       | 13.13 kB |
 Application bundle generation complete. [61.211 seconds] - 2026-09-30T21:37:45.205Z
 
 Page reload sent to client(s).
+> Changes detected. Rebuilding...
+√ Changes detected. Rebuilding...
+Initial chunk files | Names                   | Raw size
+main.js             | main                    | 10.12 kB | 
+chunk-J6266RU7.js   | -                       |  4.40 kB | 
+chunk-K3XW3EUV.js   | -                       |  2.75 kB | 
+
+Lazy chunk files    | Names                   | Raw size
+chunk-ISTIRO5N.js   | sell-component          | 91.96 kB | 
+chunk-WOOFGW5H.js   | subscriptions-component | 75.98 kB | 
+chunk-6EXAK4JG.js   | tenants-component       | 57.89 kB | 
+chunk-KOBM3Z5O.js   | users-component         | 45.18 kB | 
+chunk-3KN6X2FA.js   | stores-component        | 42.19 kB | 
+chunk-DJZMZH23.js   | home-component          | 35.66 kB | 
+chunk-TTRMGWQK.js   | settings-component      | 31.06 kB | 
+chunk-M5SFAHUJ.js   | products-component      | 30.06 kB | 
+chunk-PTLFNAQX.js   | shell-component         | 29.17 kB | 
+chunk-VSJO5DBQ.js   | dashboard-component     | 28.07 kB | 
+chunk-6YHLXWOU.js   | console-login-component | 22.18 kB | 
+chunk-M2JHSZXR.js   | settings-component      | 21.91 kB | 
+chunk-VY4YJG45.js   | users-component         | 21.25 kB | 
+chunk-WYHEQOCM.js   | ads-component           | 18.43 kB | 
+chunk-VS2LW6E2.js   | department-component    | 15.10 kB | 
+...and 28 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [32.323 seconds] - 2026-09-30T23:23:59.684Z
+
+Page reload sent to client(s).
