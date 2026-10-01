@@ -300,8 +300,36 @@ export interface AdminInsight {
 export interface AdminUserRole {
   id: number;
   role: string;
+  role_name?: string;
+  permissions?: string[];
   tenant_id: number | null;
+  store_id?: number | null;
+  department?: string | null;
   tenant: string | null;
+}
+
+export interface PermissionDefinition {
+  key: string;
+  label: string;
+  description: string;
+}
+
+export interface PermissionGroup {
+  key: string;
+  label: string;
+  permissions: PermissionDefinition[];
+}
+
+export interface AdminRoleDefinition {
+  id: number;
+  key: string;
+  name: string;
+  description?: string | null;
+  permissions: string[];
+  is_system: boolean;
+  users_count: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface AdminUser {

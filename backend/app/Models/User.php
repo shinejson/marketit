@@ -120,7 +120,13 @@ class User extends Authenticatable
         if ($this->isStoreStaff()) {
             return 'store_staff';
         }
+        if ($this->isCustomer()) {
+            return 'customer';
+        }
 
-        return 'customer';
+        // Custom roles are managed from the platform console. They do not
+        // replace the built-in portal roles above, but should still surface as
+        // the user's primary role in administration responses.
+        return $this->roles->first()?->role ?? 'customer';
     }
 }
