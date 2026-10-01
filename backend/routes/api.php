@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AdCampaignController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AdminOverviewController;
 use App\Http\Controllers\Api\AdminPhase3Controller;
+use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AdminSubscriptionController;
 use App\Http\Controllers\Api\AdminUserController;
@@ -184,6 +185,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/users/{user}', [AdminUserController::class, 'update']);
         Route::put('/users/{user}/roles', [AdminUserController::class, 'syncRoles']);
         Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
+
+        Route::get('/roles', [AdminRoleController::class, 'index']);
+        Route::post('/roles', [AdminRoleController::class, 'store']);
+        Route::patch('/roles/{role}', [AdminRoleController::class, 'update']);
+        Route::delete('/roles/{role}', [AdminRoleController::class, 'destroy']);
 
         Route::get('/plans', [AdminSubscriptionController::class, 'plans']);
         Route::post('/plans', [AdminSubscriptionController::class, 'storePlan']);
