@@ -157,6 +157,7 @@ const MOBILE_BREAKPOINT = 900;
                   } @else {
                     <p class="empty-note muted">No unread notifications.</p>
                   }
+                  <a class="notif-footer" routerLink="/admin/orders" (click)="closeMenus()">Open notification center <span>→</span></a>
                 </div>
               }
             </div>
@@ -397,6 +398,8 @@ const MOBILE_BREAKPOINT = 900;
     .n-title { font-size: 13.5px; }
     .n-msg { font-size: 12.5px; margin-top: 2px !important; }
     .n-time { font-size: 11px; margin-top: 4px !important; }
+    .notif-footer { display: flex; justify-content: space-between; align-items: center; margin: 4px; padding: 10px; border-top: 1px solid var(--line); color: var(--accent); font-size: 12px; font-weight: 700; }
+    .notif-footer span { font-size: 16px; line-height: 1; }
 
     .profile-btn {
       display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px;
@@ -445,7 +448,7 @@ export class AdminShellComponent {
     { key: 'tenants', label: 'Tenants', icon: 'tenants' },
     { key: 'users', label: 'Users', icon: 'users' },
     { key: 'subscriptions', label: 'Subscriptions', icon: 'subscriptions' },
-    { key: 'orders', label: 'Orders', icon: 'orders' },
+    { key: 'orders', label: 'Notifications', icon: 'bell' },
   ];
 
   readonly platformItems: NavEntry[] = [

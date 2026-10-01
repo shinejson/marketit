@@ -16,7 +16,10 @@ class AdminPhase3Controller extends Controller
 {
     public function domains(): JsonResponse
     {
-        return response()->json(['data' => TenantDomain::withoutGlobalScopes()->orderByDesc('id')->get()]);
+        return response()->json(['data' => TenantDomain::withoutGlobalScopes()
+            ->with('tenant:id,name,business_name')
+            ->orderByDesc('id')
+            ->get()]);
     }
 
     public function forceRemoveDomain(TenantDomain $domain): JsonResponse
