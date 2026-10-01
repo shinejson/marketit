@@ -16,10 +16,14 @@ import {
   Paginated,
   BackupMeta,
   GatewayTestResult,
+  MarketingCampaign,
+  MarketingOverview,
   Plan,
   PlatformBackup,
   ProductCard,
   SettingsPayload,
+  SocialAccount,
+  SocialPost,
   Storefront,
   Subscription,
   SubscriptionStats,
@@ -356,6 +360,60 @@ export class ApiService {
 
   adminAiCosts() {
     return this.http.get<{ data: any[] }>('/api/admin/ai-costs');
+  }
+
+  // ---------------------------------------------------------- marketing hub
+
+  adminMarketingOverview() {
+    return this.http.get<{ data: MarketingOverview }>('/api/admin/marketing/overview');
+  }
+
+  adminSocialAccounts() {
+    return this.http.get<{ data: SocialAccount[] }>('/api/admin/marketing/accounts');
+  }
+
+  connectSocialAccount(payload: { platform: string; handle: string; display_name?: string }) {
+    return this.http.post<{ data: SocialAccount }>('/api/admin/marketing/accounts/connect', payload);
+  }
+
+  disconnectSocialAccount(id: number) {
+    return this.http.post<{ data: SocialAccount }>(`/api/admin/marketing/accounts/${id}/disconnect`, {});
+  }
+
+  adminMarketingCampaigns() {
+    return this.http.get<{ data: MarketingCampaign[] }>('/api/admin/marketing/campaigns');
+  }
+
+  createMarketingCampaign(payload: Partial<MarketingCampaign>) {
+    return this.http.post<{ data: MarketingCampaign }>('/api/admin/marketing/campaigns', payload);
+  }
+
+  updateMarketingCampaign(id: number, payload: Partial<MarketingCampaign>) {
+    return this.http.patch<{ data: MarketingCampaign }>(`/api/admin/marketing/campaigns/${id}`, payload);
+  }
+
+  deleteMarketingCampaign(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/marketing/campaigns/${id}`);
+  }
+
+  adminSocialPosts() {
+    return this.http.get<{ data: SocialPost[] }>('/api/admin/marketing/posts');
+  }
+
+  createSocialPost(payload: Partial<SocialPost>) {
+    return this.http.post<{ data: SocialPost }>('/api/admin/marketing/posts', payload);
+  }
+
+  updateSocialPost(id: number, payload: Partial<SocialPost>) {
+    return this.http.patch<{ data: SocialPost }>(`/api/admin/marketing/posts/${id}`, payload);
+  }
+
+  publishSocialPost(id: number) {
+    return this.http.post<{ data: SocialPost }>(`/api/admin/marketing/posts/${id}/publish`, {});
+  }
+
+  deleteSocialPost(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/marketing/posts/${id}`);
   }
   // ---------------------------------------------------------- super admin
 

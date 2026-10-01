@@ -450,7 +450,7 @@ export class AdminShellComponent {
 
   readonly platformItems: NavEntry[] = [
     { key: 'domains', label: 'Domains', icon: 'domains' },
-    { key: 'ads', label: 'Ads', icon: 'ads' },
+    { key: 'ads', label: 'Ads & Marketing', icon: 'ads' },
     { key: 'audit', label: 'Audit log', icon: 'audit' },
     { key: 'settings', label: 'Settings', icon: 'settings' },
   ];
