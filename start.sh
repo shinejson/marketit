@@ -9,6 +9,6 @@ BACKEND_PID=$!
 
 # Start Angular (preview port)
 cd "$ROOT/frontend"
-npm start -- --host 0.0.0.0 --port 4200 --disable-host-check
+npm start -- --host 0.0.0.0 --port 4201 --disable-host-check
 
 trap "kill $BACKEND_PID" EXIT

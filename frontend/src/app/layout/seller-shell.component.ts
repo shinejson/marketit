@@ -318,7 +318,7 @@ const MOBILE_BREAKPOINT = 900;
       font-size: 16px; flex: none;
     }
     .subtitle { margin: 2px 0 4px; font-size: 13px; }
-    nav { display: flex; flex-direction: column; gap: 2px; margin: 10px 0 auto; overflow-y: auto; }
+    nav { display: flex; flex-direction: column; gap: 2px; margin: 10px -16px auto -16px; padding: 0 16px; overflow-y: auto; }
     .section-label { margin: 14px 10px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; white-space: nowrap; }
     nav a {
       display: flex; align-items: center; gap: 11px;
@@ -341,6 +341,7 @@ const MOBILE_BREAKPOINT = 900;
       aside.collapsed .label-text { display: none; }
       aside.collapsed .brand { justify-content: center; }
       aside.collapsed nav a { justify-content: center; padding: 10px; }
+      aside.collapsed nav { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
       aside.collapsed .section-label { text-align: center; }
       aside.collapsed .logout { justify-content: center; }
     }
