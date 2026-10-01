@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
 import { AuthService } from '../core/auth.service';
 
 @Component({
