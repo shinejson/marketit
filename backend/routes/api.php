@@ -221,6 +221,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/backups/{backup}/restore', [AdminBackupController::class, 'restore']);
         Route::delete('/backups/{backup}', [AdminBackupController::class, 'destroy']);
         Route::get('/audit-logs', [AdminController::class, 'auditLogs']);
+        Route::get('/audit-logs/facets', [AdminController::class, 'auditLogFacets']);
         Route::get('/analytics', [AnalyticsController::class, 'platform']);
         Route::get('/insights', [AnalyticsController::class, 'platformInsights']);
         Route::get('/domains', [AdminPhase3Controller::class, 'domains']);

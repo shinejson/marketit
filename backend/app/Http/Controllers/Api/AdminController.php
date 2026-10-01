@@ -188,13 +188,24 @@ class AdminController extends Controller
         }
     }
 
+    /**
+     * Paginated audit trail with full filtering (actor, action, subject, IP,
+     * tenant, free-text search, date range). Always newest first.
+     */
     public function auditLogs(Request $request): JsonResponse
     {
-        $q = AuditLog::query()->with('actor')->orderByDesc('id');
-        if ($request->filled('tenant_id')) {
-            $q->where('tenant_id', $request->integer('tenant_id'));
-        }
-        $page = $q->paginate($request->integer('per_page', 30));
+        $perPage = min(100, max(1, $request->integer('per_page', 30)));
+
+        $page = $this->auditLogQuery($request)
+            ->with([
+                'actor' => fn ($q) => $q->select('id', 'name', 'email'),
+                'tenant' => fn ($q) => $q->select('id', 'name', 'status'),
+            ])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+
+        $filtered = $this->auditLogQuery($request);
 
         return response()->json([
             'data' => $page->items(),
@@ -204,6 +215,111 @@ class AdminController extends Controller
                 'total' => $page->total(),
                 'last_page' => $page->lastPage(),
             ],
+            'stats' => [
+                'total' => (clone $filtered)->count(),
+                'today' => (clone $filtered)->whereDate('created_at', now()->toDateString())->count(),
+                'last_7_days' => (clone $filtered)->where('created_at', '>=', now()->subDays(7))->count(),
+                'unique_actors' => (clone $filtered)->whereNotNull('actor_user_id')->distinct()->count('actor_user_id'),
+                'unique_ips' => (clone $filtered)->whereNotNull('ip')->distinct()->count('ip'),
+            ],
         ]);
+    }
+
+    /**
+     * Filter option lists (actions, subjects, actors, IPs, tenants) used to
+     * populate the audit log filter bar. Always reflects the full table so
+     * dropdowns keep every available option while filters are active.
+     */
+    public function auditLogFacets(): JsonResponse
+    {
+        $actions = AuditLog::query()
+            ->selectRaw('action as value, count(*) as count')
+            ->whereNotNull('action')
+            ->groupBy('action')
+            ->orderByDesc('count')
+            ->get();
+
+        $subjectTypes = AuditLog::query()
+            ->selectRaw('subject_type as value, count(*) as count')
+            ->whereNotNull('subject_type')
+            ->groupBy('subject_type')
+            ->orderByDesc('count')
+            ->get();
+
+        $actors = AuditLog::query()
+            ->join('users', 'users.id', '=', 'audit_logs.actor_user_id')
+            ->selectRaw('users.id as id, users.name as name, users.email as email, count(*) as count')
+            ->groupBy('users.id', 'users.name', 'users.email')
+            ->orderByDesc('count')
+            ->get();
+
+        $ips = AuditLog::query()
+            ->selectRaw('ip as value, count(*) as count')
+            ->whereNotNull('ip')
+            ->groupBy('ip')
+            ->orderByDesc('count')
+            ->limit(100)
+            ->get();
+
+        $tenants = AuditLog::query()
+            ->join('tenants', 'tenants.id', '=', 'audit_logs.tenant_id')
+            ->selectRaw('tenants.id as id, tenants.name as name, count(*) as count')
+            ->groupBy('tenants.id', 'tenants.name')
+            ->orderByDesc('count')
+            ->get();
+
+        return response()->json([
+            'data' => [
+                'actions' => $actions,
+                'subject_types' => $subjectTypes,
+                'actors' => $actors,
+                'ips' => $ips,
+                'tenants' => $tenants,
+            ],
+        ]);
+    }
+
+    /**
+     * Shared filter builder for the audit endpoints so the listing and its
+     * stats always agree on the same filtered set.
+     */
+    protected function auditLogQuery(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
+        $q = AuditLog::query();
+
+        if ($request->filled('tenant_id')) {
+            $q->where('tenant_id', $request->integer('tenant_id'));
+        }
+        if ($request->filled('actor_id')) {
+            $q->where('actor_user_id', $request->integer('actor_id'));
+        }
+        if ($request->filled('action')) {
+            $q->where('action', $request->string('action')->toString());
+        }
+        if ($request->filled('subject_type')) {
+            $q->where('subject_type', $request->string('subject_type')->toString());
+        }
+        if ($request->filled('ip')) {
+            $q->where('ip', $request->string('ip')->toString());
+        }
+        if ($request->filled('from') && strtotime((string) $request->string('from')) !== false) {
+            $q->whereDate('created_at', '>=', $request->string('from')->toString());
+        }
+        if ($request->filled('to') && strtotime((string) $request->string('to')) !== false) {
+            $q->whereDate('created_at', '<=', $request->string('to')->toString());
+        }
+        if ($request->filled('q')) {
+            $term = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $request->string('q')->toString()).'%';
+            $q->where(function ($inner) use ($term) {
+                $inner->where('action', 'like', $term)
+                    ->orWhere('subject_type', 'like', $term)
+                    ->orWhere('ip', 'like', $term)
+                    ->orWhereHas('actor', fn ($user) => $user
+                        ->where('name', 'like', $term)
+                        ->orWhere('email', 'like', $term));
+            });
+        }
+
+        return $q;
     }
 }
