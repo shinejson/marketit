@@ -16,13 +16,17 @@ class AnalyticsController extends Controller
         return response()->json(['data' => $this->analytics->marts($request->user()->tenantId())]);
     }
 
-    public function platform(): JsonResponse
+    public function platform(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->analytics->marts(null)]);
+        $days = max(7, min(365, $request->integer('days', 30)));
+
+        return response()->json(['data' => $this->analytics->marts(null, $days)]);
     }
 
-    public function platformInsights(): JsonResponse
+    public function platformInsights(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->analytics->narrate(null, 'platform')]);
+        $days = max(7, min(365, $request->integer('days', 30)));
+
+        return response()->json(['data' => $this->analytics->narrate(null, 'platform', $days)]);
     }
 }
