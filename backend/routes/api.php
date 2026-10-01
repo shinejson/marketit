@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AdCampaignController;
 use App\Http\Controllers\Api\AdminBackupController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminMarketingController;
 use App\Http\Controllers\Api\AdminOverviewController;
 use App\Http\Controllers\Api\AdminPhase3Controller;
 use App\Http\Controllers\Api\AdminRoleController;
@@ -228,6 +229,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/ads', [AdminPhase3Controller::class, 'ads']);
         Route::get('/ai-costs', [AdminPhase3Controller::class, 'aiCosts']);
         Route::get('/webhooks/health', [AdminPhase3Controller::class, 'webhookHealth']);
+
+        // Marketing hub: social accounts, organic posts, platform campaigns.
+        Route::get('/marketing/overview', [AdminMarketingController::class, 'overview']);
+        Route::get('/marketing/accounts', [AdminMarketingController::class, 'accounts']);
+        Route::post('/marketing/accounts/connect', [AdminMarketingController::class, 'connectAccount']);
+        Route::post('/marketing/accounts/{account}/disconnect', [AdminMarketingController::class, 'disconnectAccount']);
+        Route::get('/marketing/campaigns', [AdminMarketingController::class, 'campaigns']);
+        Route::post('/marketing/campaigns', [AdminMarketingController::class, 'storeCampaign']);
+        Route::patch('/marketing/campaigns/{campaign}', [AdminMarketingController::class, 'updateCampaign']);
+        Route::delete('/marketing/campaigns/{campaign}', [AdminMarketingController::class, 'destroyCampaign']);
+        Route::get('/marketing/posts', [AdminMarketingController::class, 'posts']);
+        Route::post('/marketing/posts', [AdminMarketingController::class, 'storePost']);
+        Route::patch('/marketing/posts/{post}', [AdminMarketingController::class, 'updatePost']);
+        Route::post('/marketing/posts/{post}/publish', [AdminMarketingController::class, 'publishPost']);
+        Route::delete('/marketing/posts/{post}', [AdminMarketingController::class, 'destroyPost']);
     });
 });
 

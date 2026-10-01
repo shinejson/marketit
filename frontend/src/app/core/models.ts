@@ -506,3 +506,57 @@ export interface GatewayTestResult {
   reference?: string | null;
   sent_at?: string | null;
 }
+
+// ---------------------------------------------------------------- marketing
+
+export type SocialPlatform = 'facebook' | 'instagram' | 'x' | 'linkedin' | 'tiktok' | 'youtube';
+
+export interface SocialAccount {
+  id?: number | null;
+  platform: SocialPlatform;
+  handle?: string | null;
+  display_name?: string | null;
+  status: 'connected' | 'disconnected';
+  followers: number;
+  connected_at?: string | null;
+}
+
+export interface MarketingCampaign {
+  id: number;
+  name: string;
+  objective: string;
+  status: 'draft' | 'active' | 'paused' | 'completed';
+  channels: SocialPlatform[];
+  daily_budget?: string | number | null;
+  total_budget?: string | number | null;
+  spend: string | number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  posts_count?: number;
+}
+
+export interface SocialPost {
+  id: number;
+  campaign_id?: number | null;
+  campaign?: { id: number; name: string } | null;
+  body: string;
+  link_url?: string | null;
+  channels: SocialPlatform[];
+  status: 'draft' | 'scheduled' | 'published';
+  scheduled_for?: string | null;
+  published_at?: string | null;
+  impressions: number;
+  clicks: number;
+  engagements: number;
+  created_at?: string;
+}
+
+export interface MarketingOverview {
+  accounts: { connected: number; total_followers: number };
+  campaigns: { active: number; spend: number; impressions: number; clicks: number; conversions: number };
+  posts: { published: number; scheduled: number };
+  sponsored: { campaigns: number; active: number; spend: number };
+}
