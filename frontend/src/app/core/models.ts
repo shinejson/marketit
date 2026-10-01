@@ -264,6 +264,39 @@ export interface AdminOverview {
   recent_activity: { id: number; action: string; entity: string; actor: string; created_at: string }[];
 }
 
+export interface AdminAnalytics {
+  range?: { days: number; start: string; end: string };
+  gmv: string | number;
+  commission: string | number;
+  take_rate: string | number;
+  orders: number;
+  funnel: {
+    views: number;
+    carts: number;
+    checkouts: number;
+    paid: number;
+  };
+  daily: { day: string; gmv: string | number; orders: number }[];
+  ads: {
+    impressions: number;
+    clicks: number;
+    spend: string | number;
+    ctr: number;
+  };
+}
+
+export interface AdminInsight {
+  narrative?: string;
+  summary?: string;
+  payload?: {
+    narrative?: string;
+    metrics?: AdminAnalytics;
+    window?: string;
+    source?: string;
+  };
+  generated_at?: string;
+}
+
 export interface AdminUserRole {
   id: number;
   role: string;
