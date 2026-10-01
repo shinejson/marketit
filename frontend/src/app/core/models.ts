@@ -560,3 +560,70 @@ export interface MarketingOverview {
   posts: { published: number; scheduled: number };
   sponsored: { campaigns: number; active: number; spend: number };
 }
+
+// ---------------------------------------------------------------- audit log
+
+export interface AuditActorRef {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface AuditTenantRef {
+  id: number;
+  name: string;
+  status?: string;
+}
+
+export interface AuditDiff {
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  actor_user_id: number | null;
+  tenant_id: number | null;
+  action: string;
+  subject_type: string | null;
+  subject_id: number | null;
+  diff: AuditDiff | null;
+  ip: string | null;
+  created_at: string;
+  actor: AuditActorRef | null;
+  tenant: AuditTenantRef | null;
+}
+
+export interface AuditLogStats {
+  total: number;
+  today: number;
+  last_7_days: number;
+  unique_actors: number;
+  unique_ips: number;
+}
+
+export interface AuditCountFacet {
+  value: string;
+  count: number;
+}
+
+export interface AuditActorFacet {
+  id: number;
+  name: string;
+  email: string;
+  count: number;
+}
+
+export interface AuditTenantFacet {
+  id: number;
+  name: string;
+  count: number;
+}
+
+export interface AuditLogFacets {
+  actions: AuditCountFacet[];
+  subject_types: AuditCountFacet[];
+  actors: AuditActorFacet[];
+  ips: AuditCountFacet[];
+  tenants: AuditTenantFacet[];
+}

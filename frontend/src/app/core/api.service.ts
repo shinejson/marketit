@@ -8,6 +8,9 @@ import {
   AdminRoleDefinition,
   AdminUser,
   AdminUserSummary,
+  AuditLogEntry,
+  AuditLogFacets,
+  AuditLogStats,
   PermissionGroup,
   CartPayload,
   Category,
@@ -237,8 +240,12 @@ export class ApiService {
     return this.http.get<Paginated<any[]>>('/api/admin/orders');
   }
 
-  adminAuditLogs() {
-    return this.http.get<Paginated<any[]>>('/api/admin/audit-logs');
+  adminAuditLogs(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<AuditLogEntry[]> & { stats: AuditLogStats }>('/api/admin/audit-logs', { params });
+  }
+
+  adminAuditLogFacets() {
+    return this.http.get<{ data: AuditLogFacets }>('/api/admin/audit-logs/facets');
   }
 
   /** Store application: multipart so certificates/permits can be uploaded. */

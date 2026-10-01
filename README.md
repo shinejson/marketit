@@ -67,12 +67,15 @@ Sign in as `admin@markethub.test` at `/admin/login` (or `admin.<your-domain>`) a
 | Tenants | Seller application review, approval, suspension (existing). |
 | Users | Platform-wide user CRUD, role assignment (scoped to a tenant where relevant), suspend/activate, delete. |
 | Subscriptions | Plans CRUD, tenant subscriptions (assign, change plan, change status, renew) and invoices (mark paid / void), with MRR, ARR, ARPA, churn and collected-revenue charts. |
+| Audit log | Full platform activity trail, newest first: who performed each action (with avatar + email), the action and subject (with before/after diff detail), the tenant, the client IP, and the exact date/time. Filter by search, action, subject, user, IP, tenant and date range; KPI cards (total, today, last 7 days, users, unique IPs); a fixed-height timeline that shows ~10 rows and lazily loads older events as you scroll; CSV export. |
 | Settings | Ten-section configuration workspace: general, owner & company, branding (logo / dark logo / favicon / social image uploads, brand colours), commerce, billing, email (SMTP + test send), SMS (gateway, sender ID, encrypted credentials + test send), notifications, security, and backup & recovery (snapshot, download, restore, retention). Secrets are encrypted and write-only; every section resets to schema defaults. |
 
 New API (all under `auth:sanctum` + `role:super_admin`):
 
 ```
 GET    /api/admin/overview?days=30
+GET    /api/admin/audit-logs?search|action|subject_type|actor_id|ip|tenant_id|from|to&page&per_page
+GET    /api/admin/audit-logs/facets
 GET    /api/admin/users            POST /api/admin/users
 GET|PATCH|DELETE /api/admin/users/{user}      PUT /api/admin/users/{user}/roles
 GET|POST /api/admin/plans          PATCH|DELETE /api/admin/plans/{plan}
@@ -92,7 +95,9 @@ never returned by the API — the UI only learns whether a value is set.
 
 Run `php artisan migrate --seed` (or `migrate:fresh --seed`) to pick up the `plans`,
 `subscriptions`, `subscription_invoices`, `platform_settings` and `platform_backups`
-tables plus demo tenants, subscriptions and six months of invoice history.
+tables plus demo tenants, subscriptions and six months of invoice history. Seeding also
+installs a curated 30-day `audit_logs` trail (real demo users as actors, plausible client
+IPs, before/after diffs) so the admin audit console has meaningful data out of the box.
 
 ## Phase 1 coverage
 
