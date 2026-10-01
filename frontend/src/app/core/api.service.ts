@@ -14,9 +14,12 @@ import {
   DeptDashboard,
   Invoice,
   Paginated,
+  BackupMeta,
+  GatewayTestResult,
   Plan,
+  PlatformBackup,
   ProductCard,
-  SettingField,
+  SettingsPayload,
   Storefront,
   Subscription,
   SubscriptionStats,
@@ -445,14 +448,59 @@ export class ApiService {
   }
 
   adminSettings() {
-    return this.http.get<{ data: Record<string, SettingField[]> }>('/api/admin/settings');
+    return this.http.get<SettingsPayload>('/api/admin/settings');
   }
 
   saveSettings(settings: { key: string; value: unknown }[]) {
-    return this.http.put<{ data: Record<string, SettingField[]> }>('/api/admin/settings', { settings });
+    return this.http.put<SettingsPayload>('/api/admin/settings', { settings });
   }
 
   resetSettings(group: string) {
-    return this.http.post<{ data: Record<string, SettingField[]> }>('/api/admin/settings/reset', { group });
+    return this.http.post<SettingsPayload>('/api/admin/settings/reset', { group });
+  }
+
+  /** Branding assets (logo, dark logo, favicon, social image) are uploaded as multipart. */
+  uploadBrandingAsset(asset: string, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<SettingsPayload & { meta: { asset: string; url: string } }>(
+      `/api/admin/settings/assets/${asset}`,
+      form,
+    );
+  }
+
+  removeBrandingAsset(asset: string) {
+    return this.http.delete<SettingsPayload>(`/api/admin/settings/assets/${asset}`);
+  }
+
+  sendTestEmail(to: string) {
+    return this.http.post<{ data: GatewayTestResult }>('/api/admin/settings/email/test', { to });
+  }
+
+  sendTestSms(to: string) {
+    return this.http.post<{ data: GatewayTestResult }>('/api/admin/settings/sms/test', { to });
+  }
+
+  adminBackups() {
+    return this.http.get<{ data: PlatformBackup[]; meta: BackupMeta }>('/api/admin/backups');
+  }
+
+  createAdminBackup(scope: string, note?: string) {
+    return this.http.post<{ data: PlatformBackup }>('/api/admin/backups', { scope, note: note || null });
+  }
+
+  restoreAdminBackup(id: number) {
+    return this.http.post<{ data: { ok: boolean; message: string; settings_restored: number; backup: PlatformBackup } }>(
+      `/api/admin/backups/${id}/restore`,
+      {},
+    );
+  }
+
+  deleteAdminBackup(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/backups/${id}`);
+  }
+
+  adminBackupDownloadUrl(id: number) {
+    return `/api/admin/backups/${id}/download`;
   }
 }

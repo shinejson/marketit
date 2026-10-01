@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 
 class PlatformSetting extends Model
 {
@@ -34,6 +36,7 @@ class PlatformSetting extends Model
             'number' => is_numeric($this->value) ? (float) $this->value : null,
             'bool' => filter_var($this->value, FILTER_VALIDATE_BOOL),
             'json' => json_decode((string) $this->value, true),
+            'secret' => static::decrypt($this->value),
             default => $this->value,
         };
     }
@@ -43,7 +46,22 @@ class PlatformSetting extends Model
         return match ($type) {
             'bool' => $value ? '1' : '0',
             'json' => json_encode($value),
+            'secret' => $value === null || $value === '' ? null : Crypt::encryptString((string) $value),
             default => $value === null ? null : (string) $value,
         };
+    }
+
+    /** Secrets written before encryption existed (or by a seeder) are returned as-is. */
+    protected static function decrypt(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($value);
+        } catch (DecryptException) {
+            return $value;
+        }
     }
 }

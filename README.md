@@ -67,7 +67,7 @@ Sign in as `admin@markethub.test` at `/admin/login` (or `admin.<your-domain>`) a
 | Tenants | Seller application review, approval, suspension (existing). |
 | Users | Platform-wide user CRUD, role assignment (scoped to a tenant where relevant), suspend/activate, delete. |
 | Subscriptions | Plans CRUD, tenant subscriptions (assign, change plan, change status, renew) and invoices (mark paid / void), with MRR, ARR, ARPA, churn and collected-revenue charts. |
-| Settings | Grouped platform configuration: general, commerce, billing, notifications, security — with per-group reset to defaults. |
+| Settings | Ten-section configuration workspace: general, owner & company, branding (logo / dark logo / favicon / social image uploads, brand colours), commerce, billing, email (SMTP + test send), SMS (gateway, sender ID, encrypted credentials + test send), notifications, security, and backup & recovery (snapshot, download, restore, retention). Secrets are encrypted and write-only; every section resets to schema defaults. |
 
 New API (all under `auth:sanctum` + `role:super_admin`):
 
@@ -80,11 +80,19 @@ GET|POST /api/admin/subscriptions  GET /api/admin/subscriptions/stats
 PATCH  /api/admin/subscriptions/{subscription}   POST .../renew
 GET    /api/admin/invoices         PATCH /api/admin/invoices/{invoice}
 GET|PUT /api/admin/settings        POST /api/admin/settings/reset
+POST|DELETE /api/admin/settings/assets/{asset}   (brand_logo, brand_logo_dark, brand_favicon, brand_og_image)
+POST   /api/admin/settings/email/test            POST /api/admin/settings/sms/test
+GET|POST /api/admin/backups        GET /api/admin/backups/{backup}/download
+POST   /api/admin/backups/{backup}/restore       DELETE /api/admin/backups/{backup}
 ```
 
+Branding uploads are written to the `public` disk, so run `php artisan storage:link`
+once. Email and SMS credentials are stored encrypted in `platform_settings` and are
+never returned by the API — the UI only learns whether a value is set.
+
 Run `php artisan migrate --seed` (or `migrate:fresh --seed`) to pick up the `plans`,
-`subscriptions`, `subscription_invoices` and `platform_settings` tables plus demo
-tenants, subscriptions and six months of invoice history.
+`subscriptions`, `subscription_invoices`, `platform_settings` and `platform_backups`
+tables plus demo tenants, subscriptions and six months of invoice history.
 
 ## Phase 1 coverage
 
