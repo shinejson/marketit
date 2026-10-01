@@ -93,3 +93,50 @@ h1, h2, h3, .serif { font-family: Fraunces, Georgia, serif; font-weight: 650; le
 .price { font-family: Fraunces, serif; font-weight: 650; }
 .skeleton { background: linear-gradient(90deg, #ece6d8, #f7f2e8, #ece6d8); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 12px; }
 @keyframes shimmer { to { background-position: -200% 0; } }
+
+/* Route-level frame for the admin analytics workspace. */
+app-admin-analytics {
+  display: block;
+  max-width: 1440px;
+  margin: 0 auto;
+
+  .page-head { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; flex-wrap:wrap; margin-bottom:20px; }
+  .eyebrow { margin:0 0 6px; color:var(--accent); font-size:10px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
+  h1 { margin:0; font-size:clamp(28px,3vw,38px); line-height:1.08; }
+  .intro { margin:7px 0 0; font-size:14px; }
+  .toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .range-picker { display:flex; gap:3px; padding:4px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .range-picker button,
+  .metric-switch button { border:0; border-radius:8px; background:transparent; color:var(--ink-soft); padding:8px 11px; font-size:12px; font-weight:700; cursor:pointer; }
+  .range-picker button.active,
+  .metric-switch button.active { background:var(--ink); color:var(--card); box-shadow:0 4px 12px rgba(28,25,20,.15); }
+  button:disabled { opacity:.55; cursor:not-allowed; }
+  .export-btn,
+  .retry { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink); padding:11px 14px; font-size:12px; font-weight:750; cursor:pointer; }
+  .export-btn:hover,
+  .retry:hover { border-color:var(--accent); }
+  .refresh-line { position:relative; height:2px; overflow:hidden; margin:-8px 0 12px; border-radius:4px; background:var(--paper-2); }
+  .refresh-line span { position:absolute; width:35%; height:100%; background:var(--accent); animation:analytics-refresh 1s ease-in-out infinite; }
+  .warning { display:flex; align-items:center; gap:8px; padding:10px 12px; margin-bottom:12px; border:1px solid color-mix(in srgb,var(--danger) 30%,transparent); border-radius:10px; color:var(--danger); font-size:12px; }
+  .warning > span { display:grid; place-items:center; width:18px; height:18px; border-radius:50%; background:var(--danger); color:#fff; font-weight:800; }
+  .warning button { border:0; background:transparent; color:inherit; font-weight:800; cursor:pointer; text-decoration:underline; }
+  .loading-kpis { grid-template-columns:repeat(4,1fr); margin-top:20px; }
+  .loading-main { grid-template-columns:2fr 1fr; margin-top:18px; }
+  .error-state { text-align:center; padding:64px 24px; }
+  .error-state h2 { margin:14px 0 6px; }
+  .error-state p { max-width:480px; margin:0 auto 20px; }
+  .error-icon { display:grid; place-items:center; width:48px; height:48px; margin:auto; border-radius:50%; background:color-mix(in srgb,var(--danger) 12%,transparent); color:var(--danger); font:800 20px sans-serif; }
+  .insight-card { display:flex; align-items:center; gap:15px; padding:16px 18px; border:1px solid color-mix(in srgb,var(--gold) 40%,var(--line)); border-radius:16px; background:linear-gradient(110deg,color-mix(in srgb,var(--gold) 10%,var(--card)),var(--card) 62%); }
+  .insight-icon { display:grid; place-items:center; flex:none; width:40px; height:40px; border-radius:12px; background:var(--ink); color:var(--gold); font-size:18px; }
+  .insight-copy { flex:1; min-width:0; }
+  .insight-meta { display:flex; align-items:center; gap:8px; margin-bottom:3px; font-size:10px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-soft); }
+  .insight-meta i { width:3px; height:3px; border-radius:50%; background:var(--gold); }
+  .insight-meta small { font:inherit; }
+  .insight-copy p { margin:0; line-height:1.45; font-size:14px; }
+  .signal { display:flex; align-items:center; gap:6px; white-space:nowrap; color:var(--ink-soft); font-size:11px; }
+  .signal span { width:7px; height:7px; border-radius:50%; background:#45a675; box-shadow:0 0 0 4px rgba(69,166,117,.12); }
+  .ad-note { display:flex; gap:7px; margin:14px 0 0; color:var(--ink-soft); font-size:9px; line-height:1.45; }
+  .ad-note span { display:grid; place-items:center; flex:none; width:15px; height:15px; border:1px solid var(--line); border-radius:50%; font-weight:800; }
+}
+
+@keyframes analytics-refresh { from { left:-35%; } to { left:100%; } }

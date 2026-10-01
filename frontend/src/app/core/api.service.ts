@@ -2,6 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import {
   Address,
+  AdminAnalytics,
+  AdminInsight,
   AdminOverview,
   AdminUser,
   AdminUserSummary,
@@ -323,12 +325,12 @@ export class ApiService {
     return this.http.get<{ data: any }>('/api/tenant/analytics');
   }
 
-  adminAnalytics() {
-    return this.http.get<{ data: any }>('/api/admin/analytics');
+  adminAnalytics(days = 30) {
+    return this.http.get<{ data: AdminAnalytics }>('/api/admin/analytics', { params: { days } });
   }
 
-  adminInsights() {
-    return this.http.get<{ data: any }>('/api/admin/insights');
+  adminInsights(days = 30) {
+    return this.http.get<{ data: AdminInsight }>('/api/admin/insights', { params: { days } });
   }
 
   adminAds() {
