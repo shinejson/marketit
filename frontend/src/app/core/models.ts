@@ -418,13 +418,91 @@ export interface Invoice {
   subscription?: { id: number; plan?: { id: number; name: string } };
 }
 
+export type SettingFieldType =
+  | 'string'
+  | 'text'
+  | 'number'
+  | 'bool'
+  | 'json'
+  | 'email'
+  | 'url'
+  | 'color'
+  | 'select'
+  | 'time'
+  | 'secret'
+  | 'image';
+
+export interface SettingOption {
+  value: string;
+  label: string;
+}
+
 export interface SettingField {
   key: string;
   group: string;
-  type: 'string' | 'number' | 'bool' | 'json';
+  type: SettingFieldType;
   label: string;
   help: string;
   value: string | number | boolean | null;
   default: string | number | boolean | null;
   updated_at?: string | null;
+  options?: SettingOption[] | null;
+  placeholder?: string | null;
+  unit?: string | null;
+  columns?: 'full' | null;
+  has_value?: boolean;
+}
+
+export interface SettingGroupMeta {
+  key: string;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+export interface SettingsPayload {
+  data: Record<string, SettingField[]>;
+  meta: { groups: SettingGroupMeta[]; assets: string[] };
+}
+
+export interface PlatformBackup {
+  id: number;
+  filename: string;
+  size_bytes: number;
+  status: 'completed' | 'failed';
+  scope: string;
+  scope_label: string;
+  type: string;
+  tables?: string[] | null;
+  records: number;
+  note?: string | null;
+  error?: string | null;
+  created_at?: string | null;
+  restored_at?: string | null;
+  created_by?: { id: number; name: string; email: string } | null;
+}
+
+export interface BackupScope {
+  value: string;
+  label: string;
+  description: string;
+  tables: number;
+}
+
+export interface BackupMeta {
+  scopes: BackupScope[];
+  retention_days: number;
+  total_size_bytes: number;
+  last_completed_at?: string | null;
+  scheduled: boolean;
+  frequency: string;
+}
+
+export interface GatewayTestResult {
+  ok: boolean;
+  provider?: string;
+  transport?: string;
+  message: string;
+  reference?: string | null;
+  sent_at?: string | null;
 }
