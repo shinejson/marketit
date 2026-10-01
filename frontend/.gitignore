@@ -37,6 +37,9 @@ yarn-error.log
 testem.log
 /typings
 
+# Local dev-server logs (machine noise — kept out of the repo)
+/ng-serve.log
+
 # System files
 .DS_Store
 Thumbs.db
