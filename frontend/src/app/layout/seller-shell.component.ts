@@ -13,6 +13,7 @@ interface NavEntry {
   key: string;
   label: string;
   icon: IconName;
+  faIcon?: string;
 }
 
 interface SearchEntry {
@@ -75,7 +76,7 @@ const MOBILE_BREAKPOINT = 900;
             <div class="subnav" [class.rail]="collapsed()">
               @for (item of accountingItems; track item.key) {
                 <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
-                  <span class="sub-dot"></span><span class="label-text">{{ item.label }}</span>
+                  <i [class]="item.faIcon || ''" aria-hidden="true"></i><span class="label-text">{{ item.label }}</span>
                 </a>
               }
             </div>
@@ -95,7 +96,7 @@ const MOBILE_BREAKPOINT = 900;
             <div class="subnav" [class.rail]="collapsed()">
               @for (item of salesItems; track item.key) {
                 <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
-                  <span class="sub-dot"></span><span class="label-text">{{ item.label }}</span>
+                  <i [class]="item.faIcon || ''" aria-hidden="true"></i><span class="label-text">{{ item.label }}</span>
                 </a>
               }
             </div>
@@ -114,7 +115,7 @@ const MOBILE_BREAKPOINT = 900;
           @if (operationsOpen() || collapsed()) {
             <div class="subnav" [class.rail]="collapsed()">
               @for (item of operationsItems; track item.key) {
-                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''"><span class="sub-dot"></span><span class="label-text">{{ item.label }}</span></a>
+                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''"><i [class]="item.faIcon || ''" aria-hidden="true"></i><span class="label-text">{{ item.label }}</span></a>
               }
             </div>
           }
@@ -132,7 +133,7 @@ const MOBILE_BREAKPOINT = 900;
           @if (marketingOpen() || collapsed()) {
             <div class="subnav" [class.rail]="collapsed()">
               @for (item of marketingItems; track item.key) {
-                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''"><span class="sub-dot"></span><span class="label-text">{{ item.label }}</span></a>
+                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''"><i [class]="item.faIcon || ''" aria-hidden="true"></i><span class="label-text">{{ item.label }}</span></a>
               }
             </div>
           }
@@ -457,8 +458,7 @@ const MOBILE_BREAKPOINT = 900;
     .subnav { display: flex; flex-direction: column; gap: 1px; margin: 1px 0 4px 15px; padding-left: 11px; border-left: 1px solid var(--line); }
     .subnav a { min-height: 30px; padding: 6px 9px; gap: 8px; border-radius: 9px; color: var(--ink-soft); font-size: 12px; }
     .subnav a.on { background: color-mix(in srgb, var(--accent-2) 14%, transparent); color: var(--accent-2); }
-    .sub-dot { width: 5px; height: 5px; border: 1.5px solid currentColor; border-radius: 50%; flex: none; }
-    .subnav a.on .sub-dot { background: currentColor; }
+    .subnav a i { width: 15px; text-align: center; font-size: 11px; flex: none; }
     .logout {
       display: flex; align-items: center; gap: 10px; justify-content: flex-start;
       background: transparent; color: var(--ink); border: 1px solid var(--line);
@@ -476,7 +476,7 @@ const MOBILE_BREAKPOINT = 900;
       aside.collapsed .section-label { text-align: center; }
       aside.collapsed .subnav { margin: 0; padding: 0; border: 0; }
       aside.collapsed .subnav a { min-height: 34px; padding: 8px; }
-      aside.collapsed .sub-dot { width: 7px; height: 7px; }
+      aside.collapsed .subnav a i { font-size: 14px; }
       aside.collapsed .logout { justify-content: center; }
     }
 
@@ -602,37 +602,37 @@ export class SellerShellComponent {
   canViewMarketing = computed(() => this.isOwner() || this.auth.user()?.department === 'marketing');
 
   readonly accountingItems: NavEntry[] = [
-    { key: 'departments/finance', label: 'Overview', icon: 'finance' },
-    { key: 'accounting/invoices', label: 'Invoices', icon: 'finance' },
-    { key: 'accounting/payments', label: 'Payments', icon: 'finance' },
-    { key: 'accounting/expenses', label: 'Expenses', icon: 'finance' },
-    { key: 'accounting/procurement', label: 'Procurement', icon: 'operations' },
-    { key: 'accounting/vendors', label: 'Customers & vendors', icon: 'users' },
-    { key: 'accounting/reconciliation', label: 'Bank reconciliation', icon: 'finance' },
-    { key: 'accounting/chart-of-accounts', label: 'Chart of accounts', icon: 'analytics' },
-    { key: 'accounting/journals', label: 'General journal', icon: 'finance' },
-    { key: 'accounting/reports', label: 'Financial reports', icon: 'analytics' },
+    { key: 'departments/finance', faIcon: 'fa-solid fa-table-columns', label: 'Overview', icon: 'finance' },
+    { key: 'accounting/invoices', faIcon: 'fa-solid fa-file-invoice', label: 'Invoices', icon: 'finance' },
+    { key: 'accounting/payments', faIcon: 'fa-solid fa-credit-card', label: 'Payments', icon: 'finance' },
+    { key: 'accounting/expenses', faIcon: 'fa-solid fa-receipt', label: 'Expenses', icon: 'finance' },
+    { key: 'accounting/procurement', faIcon: 'fa-solid fa-cart-shopping', label: 'Procurement', icon: 'operations' },
+    { key: 'accounting/vendors', faIcon: 'fa-solid fa-handshake', label: 'Customers & vendors', icon: 'users' },
+    { key: 'accounting/reconciliation', faIcon: 'fa-solid fa-building-columns', label: 'Bank reconciliation', icon: 'finance' },
+    { key: 'accounting/chart-of-accounts', faIcon: 'fa-solid fa-book', label: 'Chart of accounts', icon: 'analytics' },
+    { key: 'accounting/journals', faIcon: 'fa-solid fa-book-open', label: 'General journal', icon: 'finance' },
+    { key: 'accounting/reports', faIcon: 'fa-solid fa-chart-column', label: 'Financial reports', icon: 'analytics' },
   ];
 
   readonly salesItems: NavEntry[] = [
-    { key: 'departments/sales', label: 'Overview', icon: 'sales' },
-    { key: 'sales/leads', label: 'Leads', icon: 'users' },
-    { key: 'sales/pipeline', label: 'Pipeline', icon: 'sales' },
-    { key: 'sales/quotes', label: 'Quotes', icon: 'finance' },
-    { key: 'sales/customers', label: 'Customers', icon: 'users' },
+    { key: 'departments/sales', faIcon: 'fa-solid fa-table-columns', label: 'Overview', icon: 'sales' },
+    { key: 'sales/leads', faIcon: 'fa-solid fa-user-plus', label: 'Leads', icon: 'users' },
+    { key: 'sales/pipeline', faIcon: 'fa-solid fa-filter', label: 'Pipeline', icon: 'sales' },
+    { key: 'sales/quotes', faIcon: 'fa-solid fa-file-lines', label: 'Quotes', icon: 'finance' },
+    { key: 'sales/customers', faIcon: 'fa-solid fa-user-group', label: 'Customers', icon: 'users' },
   ];
 
   readonly operationsItems: NavEntry[] = [
-    { key: 'departments/operations', label: 'Overview', icon: 'operations' },
-    { key: 'operations/fulfillment', label: 'Fulfilment', icon: 'orders' },
-    { key: 'operations/inventory', label: 'Inventory', icon: 'inventory' },
-    { key: 'operations/catalog', label: 'Catalogue', icon: 'products' },
+    { key: 'departments/operations', faIcon: 'fa-solid fa-table-columns', label: 'Overview', icon: 'operations' },
+    { key: 'operations/fulfillment', faIcon: 'fa-solid fa-truck-fast', label: 'Fulfilment', icon: 'orders' },
+    { key: 'operations/inventory', faIcon: 'fa-solid fa-boxes-stacked', label: 'Inventory', icon: 'inventory' },
+    { key: 'operations/catalog', faIcon: 'fa-solid fa-folder-open', label: 'Catalogue', icon: 'products' },
   ];
 
   readonly marketingItems: NavEntry[] = [
-    { key: 'departments/marketing', label: 'Overview', icon: 'marketing' },
-    { key: 'marketing/campaigns', label: 'Campaigns', icon: 'ads' },
-    { key: 'marketing/performance', label: 'Performance', icon: 'analytics' },
+    { key: 'departments/marketing', faIcon: 'fa-solid fa-table-columns', label: 'Overview', icon: 'marketing' },
+    { key: 'marketing/campaigns', faIcon: 'fa-solid fa-bullhorn', label: 'Campaigns', icon: 'ads' },
+    { key: 'marketing/performance', faIcon: 'fa-solid fa-chart-line', label: 'Performance', icon: 'analytics' },
   ];
 
   readonly commerceItems: NavEntry[] = [
