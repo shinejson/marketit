@@ -149,6 +149,31 @@ const CLEAR_SECRET = '__clear__';
             </section>
           }
 
+          <!-- ----------------------------------------------- payments -->
+          @if (group() === 'payments') {
+            <section class="card pad payment-health">
+              <div class="block-head">
+                <h3>Checkout health</h3>
+                <p class="muted small">Only the provider status is shown here. Secret keys remain write-only.</p>
+              </div>
+              @if (paymentStatus(); as p) {
+                <div class="payment-health-grid">
+                  <div><span class="muted tiny">Provider</span><strong>{{ titleCase(p.provider) }}</strong></div>
+                  <div><span class="muted tiny">Environment</span><strong>{{ p.mode === 'live' ? 'Live' : 'Test / sandbox' }}</strong></div>
+                  <div><span class="muted tiny">Credentials</span><strong [class.bad-text]="!p.provider_configured">{{ p.provider_configured ? 'Configured' : 'Needs setup' }}</strong></div>
+                  <div><span class="muted tiny">Checkout</span><strong [class.bad-text]="!p.enabled">{{ p.enabled ? 'Enabled' : 'Disabled' }}</strong></div>
+                </div>
+                <div class="method-chips">
+                  @for (method of p.methods; track method.key) {
+                    <span class="method-chip" [class.off]="!method.enabled">{{ method.label }} · {{ method.enabled ? 'On' : 'Off' }}</span>
+                  }
+                </div>
+              } @else {
+                <p class="muted small">Loading provider health…</p>
+              }
+            </section>
+          }
+
           <!-- ------------------------------------------------- fields -->
           @if (formFields().length) {
             <section class="card pad">
@@ -171,6 +196,11 @@ const CLEAR_SECRET = '__clear__';
                 <div class="block-head">
                   <h3>SMS gateway</h3>
                   <p class="muted small">Pick a provider, store its credentials, then send yourself a test message.</p>
+                </div>
+              } @else if (group() === 'payments') {
+                <div class="block-head">
+                  <h3>Online payment methods</h3>
+                  <p class="muted small">Hosted checkout keeps card data outside MarketHub. Provider secrets are encrypted and never returned to the browser.</p>
                 </div>
               } @else if (group() === 'backup') {
                 <div class="block-head">
@@ -409,6 +439,14 @@ const CLEAR_SECRET = '__clear__';
   `,
   styles: [`
     :host { display:block; }
+    .payment-health { margin-bottom:16px; }
+    .payment-health-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-top:14px; }
+    .payment-health-grid div { display:grid; gap:3px; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--paper-2); }
+    .payment-health-grid strong { font-size:14px; }
+    .bad-text { color:var(--danger); }
+    .method-chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+    .method-chip { padding:5px 9px; border-radius:999px; font-size:11px; font-weight:700; background:color-mix(in srgb,var(--ok) 12%,transparent); color:var(--ok); }
+    .method-chip.off { background:var(--paper-2); color:var(--ink-soft); }
   `],
 })
 export class AdminSettingsComponent {
@@ -433,6 +471,9 @@ export class AdminSettingsComponent {
   smsTesting = signal(false);
   emailResult = signal<GatewayTestResult | null>(null);
   smsResult = signal<GatewayTestResult | null>(null);
+
+  // Payment provider health (safe summary; no secrets)
+  paymentStatus = signal<{ enabled: boolean; mode: string; provider: string; provider_configured: boolean; currency: string; methods: { key: string; label: string; enabled: boolean }[] } | null>(null);
 
   // Backups
   backups = signal<PlatformBackup[]>([]);
@@ -483,6 +524,14 @@ export class AdminSettingsComponent {
     this.group.set(key);
     this.error.set('');
     if (key === 'backup' && !this.backupsLoaded) this.loadBackups();
+    if (key === 'payments') this.loadPaymentStatus();
+  }
+
+  loadPaymentStatus() {
+    this.api.adminPaymentStatus().subscribe({
+      next: (res) => this.paymentStatus.set(res.data),
+      error: () => this.paymentStatus.set(null),
+    });
   }
 
   // -------------------------------------------------------------- fields
@@ -551,6 +600,7 @@ export class AdminSettingsComponent {
         this.apply(res);
         this.revealed.set([]);
         this.busy.set(false);
+        if (this.group() === 'payments') this.loadPaymentStatus();
         this.notice.set(`Saved ${payload.length} ${payload.length === 1 ? 'setting' : 'settings'}.`);
       },
       error: (e) => {

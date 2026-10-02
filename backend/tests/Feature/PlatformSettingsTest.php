@@ -31,7 +31,7 @@ class PlatformSettingsTest extends TestCase
             ->getJson('/api/admin/settings')
             ->assertOk();
 
-        foreach (['general', 'owner', 'branding', 'email', 'sms', 'backup'] as $group) {
+        foreach (['general', 'owner', 'branding', 'billing', 'payments', 'email', 'sms', 'security', 'backup'] as $group) {
             $this->assertNotEmpty($response->json("data.$group"), "Group $group should expose fields.");
         }
 
@@ -80,6 +80,31 @@ class PlatformSettingsTest extends TestCase
             ->putJson('/api/admin/settings', ['settings' => [['key' => 'mail_password', 'value' => '__clear__']]])
             ->assertOk();
         $this->assertDatabaseMissing('platform_settings', ['key' => 'mail_password']);
+    }
+
+    public function test_payment_configuration_exposes_safe_methods_without_credentials(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin, 'sanctum')
+            ->putJson('/api/admin/settings', [
+                'settings' => [
+                    ['key' => 'payment_provider', 'value' => 'paystack'],
+                    ['key' => 'payment_methods_card', 'value' => true],
+                    ['key' => 'payment_methods_mobile_money', 'value' => true],
+                ],
+            ])
+            ->assertOk();
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/admin/settings/payment-status')
+            ->assertOk()
+            ->assertJsonPath('data.provider', 'paystack')
+            ->assertJsonPath('data.provider_configured', false);
+
+        $this->getJson('/api/payments/methods')
+            ->assertOk()
+            ->assertJsonPath('data.methods', []);
     }
 
     public function test_invalid_values_are_rejected_per_field_type(): void

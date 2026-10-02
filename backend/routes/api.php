@@ -38,7 +38,7 @@ use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\WebhookController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('throttle:10,1')->group(function () {
+Route::middleware('throttle:login')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
 });
@@ -52,11 +52,15 @@ Route::prefix('market')->middleware('throttle:60,1')->group(function () {
     Route::post('/ads/click/{impression}', [MarketController::class, 'click']);
 });
 
-Route::post('/payments/webhook/{gateway}', [PaymentController::class, 'webhook']);
+Route::post('/payments/webhook/{gateway}', [PaymentController::class, 'webhook'])->middleware('throttle:120,1');
+Route::get('/payments/methods', [PaymentController::class, 'methods'])->middleware('throttle:60,1');
 Route::get('/payments/mock/pay', [PaymentController::class, 'mockPay']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/sessions', [AuthController::class, 'sessions']);
+    Route::delete('/auth/sessions', [AuthController::class, 'revokeOtherSessions']);
+    Route::delete('/auth/sessions/{token}', [AuthController::class, 'revokeSession']);
     Route::get('/auth/me', [AuthController::class, 'me']);
 
     Route::post('/tenants/register', [TenantController::class, 'register']);
@@ -227,6 +231,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/invoices/{invoice}', [AdminSubscriptionController::class, 'updateInvoice']);
 
         Route::get('/settings', [AdminSettingController::class, 'index']);
+        Route::get('/settings/payment-status', [AdminSettingController::class, 'paymentStatus']);
         Route::put('/settings', [AdminSettingController::class, 'update']);
         Route::post('/settings/reset', [AdminSettingController::class, 'reset']);
         Route::post('/settings/assets/{asset}', [AdminSettingController::class, 'uploadAsset']);

@@ -13,7 +13,7 @@ export const apiInterceptor: HttpInterceptorFn = (req, next) => {
   const cloned = req.clone({ setHeaders: headers });
   return next(cloned).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401 && !req.url.includes('/auth/login')) {
+      if (err.status === 401 && !req.url.includes('/auth/login') && !req.url.includes('/auth/logout')) {
         auth.logout();
       }
       return throwError(() => err);

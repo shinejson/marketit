@@ -6,6 +6,7 @@ import {
   AdminInsight,
   AdminOverview,
   AdminRoleDefinition,
+  AuthSession,
   AdminUser,
   AdminUserSummary,
   AuditLogEntry,
@@ -21,6 +22,7 @@ import {
   GatewayTestResult,
   MarketingCampaign,
   MarketingOverview,
+  PaymentMethodsPayload,
   Plan,
   PlatformBackup,
   ProductCard,
@@ -87,6 +89,22 @@ export class ApiService {
     return this.http.delete<{ data: CartPayload }>(`/api/cart/items/${id}`);
   }
 
+  paymentMethods() {
+    return this.http.get<{ data: PaymentMethodsPayload }>('/api/payments/methods');
+  }
+
+  authSessions() {
+    return this.http.get<{ data: AuthSession[] }>('/api/auth/sessions');
+  }
+
+  revokeAuthSession(id: number) {
+    return this.http.delete<{ data: { revoked: boolean } }>(`/api/auth/sessions/${id}`);
+  }
+
+  revokeOtherAuthSessions() {
+    return this.http.delete<{ data: { revoked: number } }>('/api/auth/sessions');
+  }
+
   addresses() {
     return this.http.get<{ data: Address[] }>('/api/addresses');
   }
@@ -99,8 +117,8 @@ export class ApiService {
     return this.http.post<{ data: CartPayload }>('/api/checkout/quote', {});
   }
 
-  checkout(shippingAddressId: number, idempotencyKey: string) {
-    return this.http.post<any>('/api/checkout', { shipping_address_id: shippingAddressId }, {
+  checkout(shippingAddressId: number, idempotencyKey: string, paymentMethod = 'card') {
+    return this.http.post<any>('/api/checkout', { shipping_address_id: shippingAddressId, payment_method: paymentMethod }, {
       headers: { 'Idempotency-Key': idempotencyKey },
     });
   }
@@ -528,6 +546,10 @@ export class ApiService {
 
   adminSettings() {
     return this.http.get<SettingsPayload>('/api/admin/settings');
+  }
+
+  adminPaymentStatus() {
+    return this.http.get<{ data: { enabled: boolean; mode: string; provider: string; provider_configured: boolean; currency: string; webhook_tolerance: number; methods: { key: string; label: string; enabled: boolean }[] } }>('/api/admin/settings/payment-status');
   }
 
   saveSettings(settings: { key: string; value: unknown }[]) {

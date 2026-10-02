@@ -73,6 +73,7 @@ export const routes: Routes = [
       { path: 'users', loadComponent: () => import('./features/admin/users.component').then((m) => m.AdminUsersComponent) },
       { path: 'subscriptions', loadComponent: () => import('./features/admin/subscriptions.component').then((m) => m.AdminSubscriptionsComponent) },
       { path: 'settings', loadComponent: () => import('./features/admin/settings.component').then((m) => m.AdminSettingsComponent) },
+      { path: 'security', loadComponent: () => import('./features/admin/security.component').then((m) => m.AdminSecurityComponent) },
       { path: 'orders', loadComponent: () => import('./features/admin/orders.component').then((m) => m.AdminOrdersComponent) },
       { path: 'audit', loadComponent: () => import('./features/admin/audit.component').then((m) => m.AdminAuditComponent) },
       { path: 'analytics', loadComponent: () => import('./features/admin/analytics.component').then((m) => m.AdminAnalyticsComponent) },

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\PlatformSetting;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserRole;
@@ -38,7 +39,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('web')->plainTextToken;
+        $token = $this->issueToken($user, 'marketplace');
         $user->forceFill(['last_login_at' => now()])->saveQuietly();
         $user->load('roles');
 
@@ -74,7 +75,7 @@ class AuthController extends Controller
         $user->load('roles');
         $this->assertPortalAccess($request, $domains, $user, $data['portal'] ?? 'marketplace');
 
-        $token = $user->createToken('web')->plainTextToken;
+        $token = $this->issueToken($user, $data['portal'] ?? 'marketplace');
         $user->forceFill(['last_login_at' => now()])->saveQuietly();
 
         return response()->json([
@@ -87,9 +88,54 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()?->delete();
+        $request->validate(['all_sessions' => ['sometimes', 'boolean']]);
+        $user = $request->user();
+        if ($request->boolean('all_sessions')) {
+            $user->tokens()->delete();
+        } else {
+            $user->currentAccessToken()?->delete();
+        }
 
         return response()->json(['data' => ['ok' => true]]);
+    }
+
+    /** Active bearer sessions without exposing token hashes or plain tokens. */
+    public function sessions(Request $request): JsonResponse
+    {
+        $current = $request->user()->currentAccessToken()?->id;
+        $sessions = $request->user()->tokens()
+            ->latest('last_used_at')
+            ->latest('created_at')
+            ->get()
+            ->map(fn ($token) => [
+                'id' => $token->id,
+                'name' => str_starts_with((string) $token->name, 'web:') ? str_replace('web:', '', (string) $token->name) : $token->name,
+                'current' => (int) $token->id === (int) $current,
+                'created_at' => $token->created_at,
+                'last_used_at' => $token->last_used_at,
+                'expires_at' => $token->expires_at,
+            ])->values();
+
+        return response()->json(['data' => $sessions]);
+    }
+
+    public function revokeSession(Request $request, int $token): JsonResponse
+    {
+        $deleted = $request->user()->tokens()->whereKey($token)->delete();
+
+        return response()->json(['data' => ['revoked' => $deleted > 0]]);
+    }
+
+    public function revokeOtherSessions(Request $request): JsonResponse
+    {
+        $current = $request->user()->currentAccessToken()?->id;
+        $query = $request->user()->tokens();
+        if ($current) {
+            $query->where($request->user()->tokens()->getModel()->getKeyName(), '!=', $current);
+        }
+        $deleted = $query->delete();
+
+        return response()->json(['data' => ['revoked' => $deleted]]);
     }
 
     public function me(Request $request): JsonResponse
@@ -97,6 +143,14 @@ class AuthController extends Controller
         $user = $request->user()->load('roles');
 
         return response()->json(['data' => $this->userPayload($user)]);
+    }
+
+    protected function issueToken(User $user, string $portal): string
+    {
+        $minutes = (int) PlatformSetting::get('session_timeout_minutes', 120);
+        $minutes = max(15, min(43200, $minutes));
+
+        return $user->createToken('web:'.$portal, ['*'], now()->addMinutes($minutes))->plainTextToken;
     }
 
     protected function assertPortalAccess(Request $request, DomainService $domains, User $user, string $portal): void

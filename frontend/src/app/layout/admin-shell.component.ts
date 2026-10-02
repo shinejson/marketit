@@ -6,7 +6,7 @@ import { ThemeService } from '../core/theme.service';
 
 type IconName =
   | 'dashboard' | 'analytics' | 'tenants' | 'users' | 'subscriptions' | 'orders'
-  | 'domains' | 'ads' | 'audit' | 'settings' | 'logout' | 'search' | 'bell'
+  | 'domains' | 'ads' | 'audit' | 'settings' | 'shield' | 'logout' | 'search' | 'bell'
   | 'sun' | 'moon' | 'chevron' | 'menu'
   | 'lifebuoy' | 'ticket' | 'chat' | 'tasks' | 'guides';
 
@@ -257,6 +257,9 @@ const MOBILE_BREAKPOINT = 900;
           @case ('guides') {
             <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v16H6.5A2.5 2.5 0 0 0 4 20.5z" /><line x1="8" y1="7" x2="16" y2="7" /><line x1="8" y1="11" x2="13.5" y2="11" />
           }
+          @case ('shield') {
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" />
+          }
           @case ('settings') {
             <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .7.4 1.31 1.05 1.6.31.14.65.22 1 .25l.5.01a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           }
@@ -498,7 +501,7 @@ export class AdminShellComponent {
     { key: 'tenants', label: 'Tenants', icon: 'tenants' },
     { key: 'users', label: 'Users', icon: 'users' },
     { key: 'subscriptions', label: 'Subscriptions', icon: 'subscriptions' },
-    { key: 'orders', label: 'Notifications', icon: 'bell' },
+    { key: 'orders', label: 'Orders', icon: 'orders' },
   ];
 
   readonly supportItems: NavEntry[] = [
@@ -513,6 +516,7 @@ export class AdminShellComponent {
     { key: 'domains', label: 'Domains', icon: 'domains' },
     { key: 'ads', label: 'Ads & Marketing', icon: 'ads' },
     { key: 'audit', label: 'Audit log', icon: 'audit' },
+    { key: 'security', label: 'Security', icon: 'shield' },
     { key: 'settings', label: 'Settings', icon: 'settings' },
   ];
 
