@@ -2,6 +2,7 @@
 @use "./app/features/seller/department-workspaces";
 @use "./app/features/seller/sales.workspace";
 @use "./app/features/seller/orders.workspace";
+@use "./app/features/seller/products.workspace";
 
 :root {
   --ink: #1c1914;

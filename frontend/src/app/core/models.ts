@@ -1281,3 +1281,194 @@ export interface DepartmentSummary {
   kpis: DeptKpi[];
   progress: DeptProgress[];
 }
+
+// ---------------------------------------------------------------------------
+// Tenant catalog (/tenant/products)
+//
+// One shape has to describe a dress, a crate of mangoes, a laptop, a download
+// and a service booking. Columns cover what the platform reasons about
+// (stock, shipping, pricing); `specs` + `option_schema` carry whatever the
+// vertical needs, described by the preset metadata below.
+// ---------------------------------------------------------------------------
+
+export type ProductStatus = 'draft' | 'active' | 'archived';
+export type ProductType = 'physical' | 'digital' | 'service';
+export type ProductStockState = 'in_stock' | 'low_stock' | 'out_of_stock' | 'backorder' | 'untracked';
+
+export interface ProductInventory {
+  id: number;
+  variant_id: number;
+  quantity: number;
+  reserved: number;
+  low_stock_threshold: number;
+  batch_reference?: string | null;
+  expires_at?: string | null;
+  location?: string | null;
+}
+
+export interface TenantProductVariant {
+  id: number;
+  product_id: number;
+  sku: string;
+  name?: string | null;
+  options?: Record<string, string> | null;
+  price_override?: string | number | null;
+  cost_price?: string | number | null;
+  weight?: string | number | null;
+  barcode?: string | null;
+  status: 'active' | 'inactive';
+  position?: number;
+  inventory?: ProductInventory | null;
+}
+
+export interface TenantProductImage {
+  id: number;
+  product_id: number;
+  path: string;
+  url: string;
+  position: number;
+  is_primary: boolean;
+}
+
+export interface ProductStoreRef {
+  id: number;
+  name: string;
+  slug?: string;
+  status?: string;
+  currency?: string;
+  products_count?: number;
+}
+
+export interface TenantProduct {
+  id: number;
+  tenant_id: number;
+  store_id: number;
+  category_id?: number | null;
+  name: string;
+  slug: string;
+  description?: string | null;
+  short_description?: string | null;
+  status: ProductStatus;
+  product_type: ProductType;
+  catalog_preset: string;
+
+  price: string | number;
+  compare_at_price?: string | number | null;
+  cost_price?: string | number | null;
+  tax_class?: string | null;
+  brand?: string | null;
+
+  unit: string;
+  unit_amount?: string | number | null;
+  min_order_qty: number;
+  max_order_qty?: number | null;
+
+  track_inventory: boolean;
+  allow_backorder: boolean;
+  low_stock_threshold: number;
+
+  requires_shipping: boolean;
+  weight?: string | number | null;
+  weight_unit?: string | null;
+  length?: string | number | null;
+  width?: string | number | null;
+  height?: string | number | null;
+  dimension_unit?: string | null;
+
+  condition?: string | null;
+  warranty_months?: number | null;
+  is_perishable: boolean;
+  shelf_life_days?: number | null;
+  storage_requirement?: string | null;
+  country_of_origin?: string | null;
+  barcode?: string | null;
+
+  tags?: string[] | null;
+  specs?: Record<string, string | number | boolean | null> | null;
+  option_schema?: ProductOptionDefinition[] | null;
+
+  has_variants: boolean;
+  is_featured: boolean;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  published_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+
+  available_stock: number;
+  stock_state: ProductStockState;
+  primary_image_url?: string | null;
+  margin_percent?: number | null;
+
+  variants: TenantProductVariant[];
+  images: TenantProductImage[];
+  store?: ProductStoreRef | null;
+  category?: Category | null;
+}
+
+export interface ProductOptionDefinition {
+  name: string;
+  values: string[];
+}
+
+export interface ProductSpecField {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'select' | 'date' | 'boolean';
+  options?: string[];
+  placeholder?: string;
+  help?: string;
+}
+
+export interface ProductPreset {
+  key: string;
+  label: string;
+  icon: string;
+  example: string;
+  defaults: Partial<TenantProduct> & Record<string, unknown>;
+  options: ProductOptionDefinition[];
+  specs: ProductSpecField[];
+  tags: string[];
+}
+
+export interface ProductUnitOption {
+  value: string;
+  label: string;
+  group: string;
+}
+
+export interface ProductCatalogMeta {
+  stores: ProductStoreRef[];
+  categories: Category[];
+  presets: ProductPreset[];
+  units: ProductUnitOption[];
+  types: ProductType[];
+  conditions: string[];
+  storage_requirements: string[];
+  statuses: ProductStatus[];
+  tags: string[];
+  brands: string[];
+}
+
+export interface ProductCatalogStats {
+  total_count: number;
+  active_count: number;
+  draft_count: number;
+  archived_count: number;
+  low_stock_count: number;
+  out_of_stock_count: number;
+  total_units: number;
+  retail_value: number;
+  inventory_cost: number;
+  featured_count: number;
+}
+
+export interface TenantProductsResponse {
+  data: TenantProduct[];
+  meta: { page: number; per_page: number; total: number; last_page: number };
+  stats: ProductCatalogStats;
+}
+
+export type ProductBulkAction =
+  | 'activate' | 'draft' | 'archive' | 'delete'
+  | 'feature' | 'unfeature' | 'category' | 'price_adjust' | 'tag';

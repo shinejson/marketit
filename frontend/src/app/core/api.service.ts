@@ -45,7 +45,10 @@ import {
   PaymentMethodsPayload,
   Plan,
   PlatformBackup,
+  ProductBulkAction,
   ProductCard,
+  ProductCatalogMeta,
+  ProductInventory,
   SettingsPayload,
   SocialAccount,
   SocialPost,
@@ -53,6 +56,8 @@ import {
   Subscription,
   SubscriptionStats,
   TenantApplication,
+  TenantProduct,
+  TenantProductsResponse,
   GuideSummary,
   HelpArticle,
   HelpCategory,
@@ -369,16 +374,56 @@ export class ApiService {
     return `/api/tenant/backups/${id}/download`;
   }
 
+  // ---- tenant catalog -----------------------------------------------------
+
   sellerProducts(params: Record<string, string | number> = {}) {
-    return this.http.get<Paginated<any[]>>('/api/tenant/products', { params });
+    return this.http.get<TenantProductsResponse>('/api/tenant/products', { params });
   }
 
-  createProduct(payload: any) {
-    return this.http.post<{ data: any }>('/api/tenant/products', payload);
+  /** Stores, categories, catalog presets, units and enums for the editor. */
+  productCatalogMeta() {
+    return this.http.get<{ data: ProductCatalogMeta }>('/api/tenant/products/meta');
   }
 
-  updateProduct(id: number, payload: any) {
-    return this.http.patch<{ data: any }>(`/api/tenant/products/${id}`, payload);
+  sellerProduct(id: number) {
+    return this.http.get<{ data: TenantProduct }>(`/api/tenant/products/${id}`);
+  }
+
+  createProduct(payload: Record<string, unknown>) {
+    return this.http.post<{ data: TenantProduct }>('/api/tenant/products', payload);
+  }
+
+  updateProduct(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: TenantProduct }>(`/api/tenant/products/${id}`, payload);
+  }
+
+  deleteProduct(id: number) {
+    return this.http.delete<{ data: { ok: boolean; archived: boolean }; message?: string }>(
+      `/api/tenant/products/${id}`,
+    );
+  }
+
+  duplicateProduct(id: number, name?: string) {
+    return this.http.post<{ data: TenantProduct }>(`/api/tenant/products/${id}/duplicate`, name ? { name } : {});
+  }
+
+  bulkProducts(payload: { ids: number[]; action: ProductBulkAction; category_id?: number | null; percent?: number; tag?: string }) {
+    return this.http.post<{ data: { affected: number; archived_instead: number } }>('/api/tenant/products/bulk', payload);
+  }
+
+  uploadProductImage(id: number, file: File, isPrimary = false) {
+    const body = new FormData();
+    body.append('image', file);
+    body.append('is_primary', isPrimary ? '1' : '0');
+    return this.http.post<{ data: { id: number; url: string } }>(`/api/tenant/products/${id}/images`, body);
+  }
+
+  deleteProductImage(productId: number, imageId: number) {
+    return this.http.delete<{ data: { ok: boolean } }>(`/api/tenant/products/${productId}/images/${imageId}`);
+  }
+
+  updateVariantInventory(variantId: number, payload: { quantity?: number; adjustment?: number; low_stock_threshold?: number }) {
+    return this.http.patch<{ data: ProductInventory }>(`/api/tenant/variants/${variantId}/inventory`, payload);
   }
 
   sellerOrders(params: Record<string, string | number> = {}) {

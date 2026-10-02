@@ -11,6 +11,7 @@ import http from 'node:http';
 import { handleSupport } from './support-mock.mjs';
 import { handleTenant } from './tenant-mock.mjs';
 import { handleAccounting } from './accounting-mock.mjs';
+import { handleProducts } from './products-mock.mjs';
 
 const PORT = process.env.PORT || 8001;
 
@@ -331,6 +332,9 @@ const server = http.createServer(async (req, res) => {
 
   // ---- tenant console (dashboard + departments)
   if (handleTenant(req, res, url, method, readBody, json)) return;
+
+  // ---- tenant catalog (/tenant/products)
+  if (await handleProducts(req, res, url, method, readBody, json)) return;
 
   // ---- auth
   if (path === '/api/auth/login' && method === 'POST') {
