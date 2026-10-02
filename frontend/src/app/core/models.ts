@@ -1472,3 +1472,181 @@ export interface TenantProductsResponse {
 export type ProductBulkAction =
   | 'activate' | 'draft' | 'archive' | 'delete'
   | 'feature' | 'unfeature' | 'category' | 'price_adjust' | 'tag';
+
+// ---------------------------------------------------------------------------
+// Inventory workspace (/tenant/inventory)
+// ---------------------------------------------------------------------------
+
+export type StockState = 'in_stock' | 'low_stock' | 'out_of_stock' | 'backorder' | 'untracked';
+
+export type StockMovementType =
+  | 'receipt' | 'adjustment' | 'count' | 'damage' | 'transfer' | 'return' | 'sale';
+
+export interface InventoryRow {
+  id: number;
+  variant_id: number;
+  quantity: number;
+  reserved: number;
+  available: number;
+  low_stock_threshold: number;
+  reorder_suggestion: number;
+  location: string | null;
+  batch_reference: string | null;
+  expires_at: string | null;
+  days_to_expiry: number | null;
+  state: StockState;
+  unit_price: number;
+  unit_cost: number;
+  retail_value: number;
+  cost_value: number;
+  updated_at: string | null;
+  variant: { id: number; sku: string; name: string | null; barcode: string | null; options: Record<string, string> | null } | null;
+  product: {
+    id: number;
+    name: string;
+    status: string;
+    unit: string;
+    product_type: string;
+    track_inventory: boolean;
+    allow_backorder: boolean;
+    is_perishable: boolean;
+    image: string | null;
+  } | null;
+  store: { id: number; name: string } | null;
+}
+
+export interface InventoryStats {
+  sku_count: number;
+  units_on_hand: number;
+  units_reserved: number;
+  units_available: number;
+  retail_value: number;
+  cost_value: number;
+  low_stock_count: number;
+  out_of_stock_count: number;
+  expiring_count: number;
+  healthy_count: number;
+}
+
+export interface InventoryFilterOptions {
+  stores: { id: number; name: string; currency?: string }[];
+  locations: string[];
+}
+
+export interface InventoryResponse {
+  data: InventoryRow[];
+  meta: { page: number; per_page: number; total: number; last_page: number };
+  stats: InventoryStats;
+  filters: InventoryFilterOptions;
+}
+
+export interface StockMovementEntry {
+  id: number;
+  type: StockMovementType;
+  quantity: number;
+  quantity_before: number;
+  quantity_after: number;
+  reference: string | null;
+  location: string | null;
+  note: string | null;
+  created_at: string | null;
+  actor: string | null;
+  variant_id: number;
+  sku: string | null;
+  product_name: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Sponsored ads workspace (/tenant/ads)
+// ---------------------------------------------------------------------------
+
+export type AdCampaignStatus = 'draft' | 'active' | 'paused' | 'exhausted';
+
+export interface AdCampaignMetrics {
+  impressions: number;
+  clicks: number;
+  spend: number;
+  ctr: number;
+  avg_cpc: number;
+  cpm: number;
+}
+
+export interface AdCampaignRow {
+  id: number;
+  name: string;
+  status: AdCampaignStatus;
+  objective: string;
+  store: { id: number; name: string } | null;
+  daily_budget: number;
+  total_budget: number;
+  bid_cpc: number;
+  spent_today: number;
+  spent_total: number;
+  remaining_budget: number;
+  budget_used_percent: number;
+  daily_pacing_percent: number;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string | null;
+  metrics: AdCampaignMetrics;
+  products: { id: number; name: string | null; price: number | null; match_type: string }[];
+}
+
+export interface AdWorkspaceSummary {
+  window_days: number;
+  campaign_count: number;
+  active_count: number;
+  paused_count: number;
+  draft_count: number;
+  impressions: number;
+  clicks: number;
+  spend: number;
+  ctr: number;
+  avg_cpc: number;
+  daily_committed: number;
+  wallet_balance: number;
+  runway_days: number | null;
+}
+
+export interface AdWorkspace {
+  balance: string;
+  campaigns: AdCampaignRow[];
+  summary: AdWorkspaceSummary;
+  series: { day: string; impressions: number; clicks: number; spend: number }[];
+  top_products: { product_id: number; name: string; clicks: number; spend: number; impressions: number }[];
+  ledger: { id: number; campaign_id: number; kind: string; amount: number; created_at: string | null }[];
+}
+
+export interface AdWorkspaceMeta {
+  stores: { id: number; name: string; currency?: string }[];
+  products: { id: number; name: string; store_id: number; price: number }[];
+  objectives: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Analytics workspace (/tenant/analytics)
+// ---------------------------------------------------------------------------
+
+export interface AnalyticsKpi {
+  value: number;
+  previous: number;
+  delta_percent: number;
+  direction: 'up' | 'down' | 'flat';
+}
+
+export interface TenantAnalyticsReport {
+  range: { days: number; start: string; end: string; previous_start: string; previous_end: string };
+  kpis: Record<'gmv' | 'orders' | 'aov' | 'net' | 'units' | 'customers' | 'views' | 'conversion' | 'commission', AnalyticsKpi>;
+  series: { day: string; gmv: number; orders: number; views: number }[];
+  funnel: {
+    steps: { key: string; label: string; value: number; rate: number }[];
+    cart_abandonment: number;
+  };
+  status_mix: { status: string; count: number; gmv: number }[];
+  top_products: { name: string; sku: string | null; units: number; revenue: number; orders: number }[];
+  stores: { id: number; name: string; currency: string; orders: number; gmv: number; net: number }[];
+  customers: { buyers: number; repeat_buyers: number; repeat_rate: number; revenue_per_buyer: number };
+  ads: { impressions: number; clicks: number; spend: number; ctr: number; avg_cpc: number; roas: number | null };
+  highlights: { tone: 'positive' | 'negative' | 'neutral'; title: string; detail: string }[];
+  lifetime?: { gmv: string; commission: string; orders: number; take_rate: string };
+}

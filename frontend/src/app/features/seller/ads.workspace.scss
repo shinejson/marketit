@@ -1,0 +1,63 @@
+@use 'workspace-kit' as kit;
+
+// Sponsored ads workspace (/tenant/ads).
+app-seller-ads {
+  @include kit.base;
+
+  .notice { display: flex; align-items: center; gap: 13px; margin-bottom: 16px; padding: 13px 16px; border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line)); border-radius: 14px; background: color-mix(in srgb, var(--gold) 10%, var(--card)); }
+  .notice > span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: color-mix(in srgb, var(--gold) 30%, transparent); color: #8a6c17; }
+  .notice strong { display: block; font-size: 13px; }
+  .notice p { margin: 3px 0 0; color: var(--muted); font-size: 11.5px; }
+  .notice .btn { margin-left: auto; }
+
+  .split { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+  .split .panel + .panel { margin-top: 0; }
+
+  .chart { padding: 16px 17px 12px; }
+  .chart svg { width: 100%; height: 150px; border-radius: 12px; background: linear-gradient(var(--canvas), color-mix(in srgb, var(--tint-subtle) 55%, var(--card))); }
+  .chart .axis { display: flex; justify-content: space-between; margin-top: 7px; color: var(--muted); font-size: 10px; }
+  .legend { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10.5px; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; }
+  .legend i.imp { background: #9aa7bd; }
+  .legend i.clk { background: #2f6b4f; margin-left: 7px; }
+
+  .wallet-body { padding: 16px 17px 18px; }
+  .balance { margin: 0; font: 700 30px/1 Fraunces, serif; }
+  .wallet-body .muted { margin: 7px 0 14px; font-size: 11.5px; }
+  .presets { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  .presets button { border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); padding: 6px 12px; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+  .presets button.on { background: var(--ink); color: var(--card); border-color: var(--ink); }
+  .fund-row { display: flex; gap: 8px; }
+  .fund-row input { flex: 1; height: 38px; border: 1px solid var(--line); border-radius: 10px; background: var(--canvas); color: var(--ink); padding: 0 11px; font-size: 13px; }
+  .wallet-body h4 { margin: 18px 0 7px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+  .ledger { margin: 0; padding: 0; list-style: none; }
+  .ledger li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); font-size: 11.5px; }
+  .ledger time { color: var(--muted); font-size: 10.5px; }
+
+  .status-tabs .search-box.inline { flex: 0 0 240px; max-width: 240px; margin-right: 4px; }
+  .status-tabs .search-box.inline input { height: 34px; }
+
+  .status-pill { display: inline-flex; padding: 3px 9px; border-radius: 999px; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; background: var(--tint-subtle); color: var(--muted); }
+  .status-pill.active { background: color-mix(in srgb, var(--accent-2) 15%, transparent); color: var(--accent-2); }
+  .status-pill.paused { background: #f7eddc; color: #9a641d; }
+  .status-pill.exhausted { background: color-mix(in srgb, var(--danger) 13%, transparent); color: var(--danger); }
+
+  .pace-cell { display: grid; gap: 5px; min-width: 210px; }
+  .level-bar { height: 6px; border-radius: 999px; background: var(--tint-subtle); overflow: hidden; }
+  .level-bar i { display: block; height: 100%; border-radius: 999px; background: var(--accent-2); }
+  .level-bar i.hot { background: #c98a2e; }
+
+  .actions-cell { white-space: nowrap; }
+
+  .empty-state.small { padding: 34px 20px; }
+
+  .product-picker { display: grid; gap: 2px; max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 6px; }
+  .pick-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 8px 9px; border-radius: 9px; font-size: 12.5px; cursor: pointer; }
+  .pick-row:hover { background: var(--tint-subtle); }
+  .pick-row input { width: 15px; height: 15px; accent-color: var(--accent); }
+  .pick-row b { color: var(--muted); font-size: 11.5px; font-weight: 700; }
+
+  @media (max-width: 1040px) {
+    .split { grid-template-columns: 1fr; }
+  }
+}

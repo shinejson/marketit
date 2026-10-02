@@ -1,0 +1,61 @@
+@use 'workspace-kit' as kit;
+
+// Reporting workspace (/tenant/analytics).
+app-seller-analytics {
+  @include kit.base;
+
+  .range-note { margin: 0 0 16px; color: var(--ink); font-size: 12px; font-weight: 700; }
+  .range-note .muted { font-weight: 500; }
+
+  .highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .highlight { padding: 13px 15px; border: 1px solid var(--line); border-left-width: 3px; border-radius: 13px; background: var(--card); }
+  .highlight strong { display: block; font-size: 13px; }
+  .highlight p { margin: 4px 0 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+  .highlight.positive { border-left-color: var(--accent-2); }
+  .highlight.negative { border-left-color: var(--danger); }
+  .highlight.neutral { border-left-color: var(--line); }
+
+  .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+  .split .panel + .panel { margin-top: 0; }
+  .panel-head a { color: var(--accent); font-size: 11.5px; font-weight: 700; text-decoration: none; }
+
+  .metric-switch { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--canvas); }
+  .metric-switch button { border: 0; border-radius: 8px; background: transparent; color: var(--muted); padding: 6px 11px; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .metric-switch button.on { background: var(--ink); color: var(--card); }
+
+  .chart { padding: 16px 17px 12px; }
+  .chart svg { width: 100%; height: 190px; border-radius: 12px; background: linear-gradient(var(--canvas), color-mix(in srgb, var(--tint-subtle) 50%, var(--card))); }
+  .chart .axis { display: flex; justify-content: space-between; margin-top: 7px; color: var(--muted); font-size: 10px; }
+  .empty-state.small { padding: 40px 20px; }
+
+  .funnel { display: grid; gap: 14px; padding: 16px 17px 18px; }
+  .funnel-step small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+  .funnel-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+  .funnel-label b { font-size: 13px; }
+  .funnel-bar { height: 10px; border-radius: 999px; background: var(--tint-subtle); overflow: hidden; }
+  .funnel-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 55%, var(--gold))); }
+  .funnel-note { margin: 2px 0 0; color: var(--muted); font-size: 11.5px; }
+
+  .mix { display: grid; gap: 11px; padding: 16px 17px 18px; }
+  .mix-row { display: grid; grid-template-columns: 10px 128px minmax(0, 1fr) 34px 70px; gap: 9px; align-items: center; font-size: 11.5px; }
+  .mix-row .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .mix-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mix-bar { height: 7px; border-radius: 999px; background: var(--tint-subtle); overflow: hidden; }
+  .mix-bar i { display: block; height: 100%; border-radius: 999px; }
+  .mix-row b { text-align: right; }
+  .mix-row .muted { text-align: right; font-size: 10.5px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+  .stat-grid > div { padding: 14px 15px; background: var(--card); }
+  .stat-grid p { margin: 0 0 4px; color: var(--muted); font-size: 9.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+  .stat-grid strong { font-size: 17px; }
+
+  .lifetime-note { margin: 18px 2px 0; color: var(--muted); font-size: 11.5px; }
+
+  table { min-width: 440px; }
+
+  @media (max-width: 1040px) {
+    .split { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+}

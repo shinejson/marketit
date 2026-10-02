@@ -49,6 +49,14 @@ import {
   ProductCard,
   ProductCatalogMeta,
   ProductInventory,
+  AdWorkspace,
+  AdWorkspaceMeta,
+  InventoryFilterOptions,
+  InventoryResponse,
+  InventoryRow,
+  StockMovementEntry,
+  StockMovementType,
+  TenantAnalyticsReport,
   SettingsPayload,
   SocialAccount,
   SocialPost,
@@ -466,8 +474,35 @@ export class ApiService {
     return this.http.post<{ data: Category }>('/api/tenant/categories', payload);
   }
 
+  // ---- tenant stock control ----------------------------------------------
+
+  tenantInventory(params: Record<string, string | number> = {}) {
+    return this.http.get<InventoryResponse>('/api/tenant/inventory', { params });
+  }
+
+  inventoryMeta() {
+    return this.http.get<{ data: InventoryFilterOptions & { movement_types: StockMovementType[] } }>(
+      '/api/tenant/inventory/meta',
+    );
+  }
+
+  inventoryMovements(params: Record<string, string | number> = {}) {
+    return this.http.get<{ data: StockMovementEntry[] }>('/api/tenant/inventory/movements', { params });
+  }
+
+  adjustInventory(id: number, payload: Record<string, unknown>) {
+    return this.http.post<{ data: InventoryRow; movement_id: number | null }>(
+      `/api/tenant/inventory/${id}/adjust`,
+      payload,
+    );
+  }
+
+  bulkInventory(payload: { ids: number[]; action: string; quantity?: number; location?: string; note?: string; reference?: string }) {
+    return this.http.post<{ data: { affected: number } }>('/api/tenant/inventory/bulk', payload);
+  }
+
   lowStock() {
-    return this.http.get<{ data: any[] }>('/api/tenant/inventory/low-stock');
+    return this.http.get<{ data: InventoryRow[] }>('/api/tenant/inventory/low-stock');
   }
 
   adminMetrics() {
@@ -536,8 +571,16 @@ export class ApiService {
     return this.http.post<{ data: any }>(`/api/tenant/domains/${id}/verify`, { force });
   }
 
-  sellerAds() {
-    return this.http.get<{ data: { balance: string; campaigns: any[] } }>('/api/tenant/ads');
+  sellerAds(params: Record<string, string | number> = {}) {
+    return this.http.get<{ data: AdWorkspace }>('/api/tenant/ads', { params });
+  }
+
+  adsMeta() {
+    return this.http.get<{ data: AdWorkspaceMeta }>('/api/tenant/ads/meta');
+  }
+
+  deleteAd(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/ads/${id}`);
   }
 
   createAd(payload: any) {
@@ -596,8 +639,8 @@ export class ApiService {
     return this.http.get<{ data: any }>('/api/tenant/ai/insights');
   }
 
-  sellerAnalytics() {
-    return this.http.get<{ data: any }>('/api/tenant/analytics');
+  sellerAnalytics(params: Record<string, string | number> = {}) {
+    return this.http.get<{ data: TenantAnalyticsReport }>('/api/tenant/analytics', { params });
   }
 
   adminAnalytics(days = 30) {

@@ -6,6 +6,7 @@ use App\Concerns\Auditable;
 use App\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Inventory extends Model
 {
@@ -33,6 +34,11 @@ class Inventory extends Model
     public function variant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class, 'variant_id');
+    }
+
+    public function movements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class)->latest('id');
     }
 
     public function available(): int
