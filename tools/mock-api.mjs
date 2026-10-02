@@ -8,6 +8,7 @@
  * posts, campaigns). Data is kept in memory and resets on restart.
  */
 import http from 'node:http';
+import { handleSupport } from './support-mock.mjs';
 
 const PORT = process.env.PORT || 8001;
 
@@ -318,6 +319,9 @@ const server = http.createServer(async (req, res) => {
 
   if (method === 'OPTIONS') return json(res, 204, {});
 
+  // ---- service desk (tickets, live chat, tasks, help centre)
+  if (await handleSupport(req, res, url, method, readBody, json)) return;
+
   // ---- auth
   if (path === '/api/auth/login' && method === 'POST') {
     return json(res, 200, { data: { token: 'mock-token', user: adminUser } });
@@ -467,4 +471,5 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`Mock MarketHub API listening on http://127.0.0.1:${PORT}`);
   console.log('Log in with any credentials at /admin/login (returns a super_admin session).');
+  console.log('Service desk endpoints are served from tools/support-mock.mjs.');
 });

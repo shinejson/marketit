@@ -17,6 +17,7 @@ const tenantConsoleChildren: Routes = [
   { path: 'users', loadComponent: () => import('./features/seller/users.component').then((m) => m.SellerUsersComponent) },
   { path: 'settings', loadComponent: () => import('./features/seller/settings.component').then((m) => m.SellerSettingsComponent) },
   { path: 'backups', loadComponent: () => import('./features/seller/backups.component').then((m) => m.SellerBackupsComponent) },
+  { path: 'support', loadComponent: () => import('./features/seller/support.component').then((m) => m.TenantSupportComponent) },
 ];
 
 export const routes: Routes = [
@@ -77,6 +78,26 @@ export const routes: Routes = [
       { path: 'analytics', loadComponent: () => import('./features/admin/analytics.component').then((m) => m.AdminAnalyticsComponent) },
       { path: 'domains', loadComponent: () => import('./features/admin/domains.component').then((m) => m.AdminDomainsComponent) },
       { path: 'ads', loadComponent: () => import('./features/admin/ads.component').then((m) => m.AdminAdsComponent) },
+      {
+        path: 'support',
+        loadComponent: () => import('./features/admin/support-overview.component').then((m) => m.AdminSupportOverviewComponent),
+      },
+      {
+        path: 'support/tickets',
+        loadComponent: () => import('./features/admin/support-tickets.component').then((m) => m.AdminSupportTicketsComponent),
+      },
+      {
+        path: 'support/chats',
+        loadComponent: () => import('./features/admin/support-chats.component').then((m) => m.AdminSupportChatsComponent),
+      },
+      {
+        path: 'support/tasks',
+        loadComponent: () => import('./features/admin/support-tasks.component').then((m) => m.AdminSupportTasksComponent),
+      },
+      {
+        path: 'support/guides',
+        loadComponent: () => import('./features/admin/support-guides.component').then((m) => m.AdminSupportGuidesComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\AdminPhase3Controller;
 use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AdminSubscriptionController;
+use App\Http\Controllers\Api\AdminSupportController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\AnalyticsController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Api\DepartmentDashboardController;
 use App\Http\Controllers\Api\StaffController;
 use App\Http\Controllers\Api\TenantBackupController;
 use App\Http\Controllers\Api\TenantSettingsController;
+use App\Http\Controllers\Api\TenantSupportController;
 use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\DomainController;
 use App\Http\Controllers\Api\InventoryController;
@@ -167,6 +169,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/ai/usage', [AiController::class, 'usage']);
 
         Route::get('/analytics', [AnalyticsController::class, 'tenant']);
+
+        // Tenant help centre: tickets, live chat, assigned tasks and guides.
+        Route::prefix('support')->group(function () {
+            Route::get('/overview', [TenantSupportController::class, 'overview']);
+            Route::get('/tickets', [TenantSupportController::class, 'tickets']);
+            Route::post('/tickets', [TenantSupportController::class, 'storeTicket']);
+            Route::get('/tickets/{ticket}', [TenantSupportController::class, 'showTicket']);
+            Route::post('/tickets/{ticket}/messages', [TenantSupportController::class, 'replyTicket']);
+            Route::post('/tickets/{ticket}/rate', [TenantSupportController::class, 'rateTicket']);
+            Route::get('/chat', [TenantSupportController::class, 'chat']);
+            Route::post('/chat/messages', [TenantSupportController::class, 'sendChatMessage']);
+            Route::get('/tasks', [TenantSupportController::class, 'tasks']);
+            Route::patch('/tasks/{task}', [TenantSupportController::class, 'updateTask']);
+            Route::get('/guides', [TenantSupportController::class, 'guides']);
+            Route::get('/guides/{guide}', [TenantSupportController::class, 'readGuide']);
+            Route::post('/guides/{guide}/feedback', [TenantSupportController::class, 'rateGuide']);
+        });
     });
 
     Route::post('/devices', [DeviceTokenController::class, 'store']);
@@ -230,6 +249,37 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/ads', [AdminPhase3Controller::class, 'ads']);
         Route::get('/ai-costs', [AdminPhase3Controller::class, 'aiCosts']);
         Route::get('/webhooks/health', [AdminPhase3Controller::class, 'webhookHealth']);
+
+        // Service desk: tickets, live chat, service tasks and tenant guides.
+        Route::prefix('support')->group(function () {
+            Route::get('/overview', [AdminSupportController::class, 'overview']);
+            Route::get('/agents', [AdminSupportController::class, 'agents']);
+
+            Route::get('/tickets', [AdminSupportController::class, 'tickets']);
+            Route::post('/tickets', [AdminSupportController::class, 'storeTicket']);
+            Route::get('/tickets/{ticket}', [AdminSupportController::class, 'showTicket']);
+            Route::patch('/tickets/{ticket}', [AdminSupportController::class, 'updateTicket']);
+            Route::post('/tickets/{ticket}/messages', [AdminSupportController::class, 'replyTicket']);
+
+            Route::get('/chats', [AdminSupportController::class, 'chats']);
+            Route::get('/chats/{chat}', [AdminSupportController::class, 'showChat']);
+            Route::patch('/chats/{chat}', [AdminSupportController::class, 'updateChat']);
+            Route::post('/chats/{chat}/messages', [AdminSupportController::class, 'replyChat']);
+
+            Route::get('/tasks', [AdminSupportController::class, 'tasks']);
+            Route::post('/tasks', [AdminSupportController::class, 'storeTask']);
+            Route::patch('/tasks/{task}', [AdminSupportController::class, 'updateTask']);
+            Route::delete('/tasks/{task}', [AdminSupportController::class, 'destroyTask']);
+
+            Route::get('/guides', [AdminSupportController::class, 'guides']);
+            Route::post('/guides', [AdminSupportController::class, 'storeGuide']);
+            Route::patch('/guides/{guide}', [AdminSupportController::class, 'updateGuide']);
+            Route::delete('/guides/{guide}', [AdminSupportController::class, 'destroyGuide']);
+            Route::post('/guide-categories', [AdminSupportController::class, 'storeGuideCategory']);
+
+            Route::get('/canned-replies', [AdminSupportController::class, 'cannedReplies']);
+            Route::post('/canned-replies', [AdminSupportController::class, 'storeCannedReply']);
+        });
 
         // Marketing hub: social accounts, organic posts, platform campaigns.
         Route::get('/marketing/overview', [AdminMarketingController::class, 'overview']);
