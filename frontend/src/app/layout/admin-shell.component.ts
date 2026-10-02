@@ -396,7 +396,7 @@ const MOBILE_BREAKPOINT = 900;
       padding: 12px 24px; border-bottom: 1px solid var(--line);
       background: rgba(244,239,230,.92); backdrop-filter: blur(10px);
     }
-    :root[data-theme="dark"] .topnav { background: rgba(21,19,15,.92); }
+    :host-context([data-theme="dark"]) .topnav { background: rgba(21,19,15,.92); }
 
     .icon-btn {
       position: relative; display: inline-flex; align-items: center; justify-content: center;
