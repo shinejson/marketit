@@ -898,3 +898,118 @@ export interface TenantSupportOverview {
   chat: { status: ChatStatus | 'none'; unread: number };
   guides: { published: number };
 }
+
+// ------------------------------------------------- tenant console dashboard
+
+export interface DashboardMetric {
+  value: number;
+  previous: number;
+  delta: number;
+  direction: 'up' | 'down' | 'flat';
+  format: 'currency' | 'number' | 'percent';
+  caption: string;
+}
+
+export interface DashboardTrendPoint {
+  day: string;
+  label: string;
+  total: number;
+  orders: number;
+}
+
+export interface DashboardStatusSlice {
+  status: string;
+  label: string;
+  count: number;
+  value: number;
+}
+
+export interface DashboardTopProduct {
+  name: string;
+  sku: string | null;
+  units: number;
+  orders: number;
+  revenue: number;
+  share: number;
+  delta: number;
+  stock: number | null;
+}
+
+export interface DashboardStoreRow {
+  id: number;
+  name: string;
+  status: string;
+  orders: number;
+  revenue: number;
+  share: number;
+}
+
+export interface DashboardInventoryAlert {
+  variant_id: number;
+  name: string;
+  sku: string | null;
+  available: number;
+  threshold: number;
+  severity: 'low' | 'out';
+}
+
+export interface DashboardRecentOrder {
+  id: number;
+  reference: string;
+  status: string;
+  subtotal: string;
+  store: string | null;
+  customer: string;
+  created_at: string | null;
+}
+
+export interface DashboardChatMessage {
+  id: number;
+  author: string;
+  role: string;
+  body: string;
+  read: boolean;
+  at: string | null;
+}
+
+export interface DashboardChatThread {
+  id: number;
+  topic: string;
+  status: string;
+  priority: string;
+  agent: string | null;
+  unread: number;
+  last_message_at: string | null;
+  messages: DashboardChatMessage[];
+}
+
+export interface DashboardSupport {
+  tickets?: { open: number; awaiting_you: number; resolved: number; total: number };
+  tasks?: { open: number; overdue: number; done: number; total: number };
+  guides?: { published: number };
+  chat?: { unread: number; active: number };
+  threads: DashboardChatThread[];
+}
+
+export interface TenantDashboard {
+  generated_at: string;
+  range: { days: number; from: string; to: string };
+  sales_today: string;
+  open_orders: number;
+  low_stock: number;
+  kpis: Record<string, DashboardMetric>;
+  sales_chart: DashboardTrendPoint[];
+  status_breakdown: DashboardStatusSlice[];
+  top_products: DashboardTopProduct[];
+  stores: DashboardStoreRow[];
+  inventory_alerts: DashboardInventoryAlert[];
+  recent_orders: DashboardRecentOrder[];
+  support: DashboardSupport;
+}
+
+export interface DepartmentSummary {
+  key: string;
+  title: string;
+  kpis: DeptKpi[];
+  progress: DeptProgress[];
+}
