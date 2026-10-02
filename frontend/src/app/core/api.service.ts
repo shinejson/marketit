@@ -23,6 +23,8 @@ import {
   SalesLead,
   SalesOpportunity,
   SalesQuote,
+  SellerOrder,
+  SellerOrdersResponse,
   AdminUser,
   AdminUserSummary,
   AuditLogEntry,
@@ -380,11 +382,15 @@ export class ApiService {
   }
 
   sellerOrders(params: Record<string, string | number> = {}) {
-    return this.http.get<Paginated<any[]>>('/api/tenant/orders', { params });
+    return this.http.get<SellerOrdersResponse>('/api/tenant/orders', { params });
+  }
+
+  sellerOrder(id: number) {
+    return this.http.get<{ data: SellerOrder }>(`/api/tenant/orders/${id}`);
   }
 
   updateSellerOrderStatus(id: number, status: string) {
-    return this.http.patch<{ data: any }>(`/api/tenant/orders/${id}/status`, { status });
+    return this.http.patch<{ data: SellerOrder }>(`/api/tenant/orders/${id}/status`, { status });
   }
 
   sellerStores() {
