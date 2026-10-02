@@ -62,6 +62,26 @@ const MOBILE_BREAKPOINT = 900;
             <span class="label-text">Dashboard</span>
           </a>
 
+          @if (canViewAccounting()) {
+          <p class="section-label label-text">Accounting</p>
+          <button type="button" class="nav-group label-text" [class.open]="accountingOpen()" (click)="toggleAccounting()" aria-label="Toggle accounting menu" [attr.aria-expanded]="accountingOpen()">
+            <span class="nav-group-copy">
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'finance' }" />
+              <span>Finance & accounts</span>
+            </span>
+            <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+          </button>
+          @if (accountingOpen() || collapsed()) {
+            <div class="subnav" [class.rail]="collapsed()">
+              @for (item of accountingItems; track item.key) {
+                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
+                  <span class="sub-dot"></span><span class="label-text">{{ item.label }}</span>
+                </a>
+              }
+            </div>
+          }
+          }
+
           <p class="section-label label-text">Departments</p>
           @for (d of departments; track d.key) {
             <a [routerLink]="tenantLink('departments/' + d.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? d.label : ''">
@@ -375,6 +395,22 @@ const MOBILE_BREAKPOINT = 900;
     nav a:hover { background: rgba(0,0,0,.06); }
     :host-context([data-theme="dark"]) nav a:hover { background: rgba(255,255,255,.07); }
     nav a.on { background: var(--ink); color: var(--paper); }
+    .nav-group {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 9px 10px; border: 0; border-radius: 12px; background: transparent; color: var(--ink);
+      font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+    }
+    .nav-group:hover { background: rgba(0,0,0,.06); }
+    :host-context([data-theme="dark"]) .nav-group:hover { background: rgba(255,255,255,.07); }
+    .nav-group-copy { display: flex; align-items: center; gap: 11px; }
+    .nav-group svg { width: 18px; height: 18px; flex: none; }
+    .nav-group > svg { width: 13px; height: 13px; transition: transform .18s ease; }
+    .nav-group.open > svg { transform: rotate(180deg); }
+    .subnav { display: flex; flex-direction: column; gap: 1px; margin: 1px 0 4px 15px; padding-left: 11px; border-left: 1px solid var(--line); }
+    .subnav a { min-height: 30px; padding: 6px 9px; gap: 8px; border-radius: 9px; color: var(--ink-soft); font-size: 12px; }
+    .subnav a.on { background: color-mix(in srgb, var(--accent-2) 14%, transparent); color: var(--accent-2); }
+    .sub-dot { width: 5px; height: 5px; border: 1.5px solid currentColor; border-radius: 50%; flex: none; }
+    .subnav a.on .sub-dot { background: currentColor; }
     .logout {
       display: flex; align-items: center; gap: 10px; justify-content: flex-start;
       background: transparent; color: var(--ink); border: 1px solid var(--line);
@@ -390,6 +426,9 @@ const MOBILE_BREAKPOINT = 900;
       aside.collapsed nav a { justify-content: center; padding: 10px; }
       aside.collapsed nav { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
       aside.collapsed .section-label { text-align: center; }
+      aside.collapsed .subnav { margin: 0; padding: 0; border: 0; }
+      aside.collapsed .subnav a { min-height: 34px; padding: 8px; }
+      aside.collapsed .sub-dot { width: 7px; height: 7px; }
       aside.collapsed .logout { justify-content: center; }
     }
 
@@ -509,9 +548,22 @@ export class SellerShellComponent {
   private router = inject(Router);
 
   isOwner = computed(() => this.auth.hasRole('tenant_owner'));
+  canViewAccounting = computed(() => this.isOwner() || this.auth.user()?.department === 'finance');
+
+  readonly accountingItems: NavEntry[] = [
+    { key: 'departments/finance', label: 'Overview', icon: 'finance' },
+    { key: 'accounting/invoices', label: 'Invoices', icon: 'finance' },
+    { key: 'accounting/payments', label: 'Payments', icon: 'finance' },
+    { key: 'accounting/expenses', label: 'Expenses', icon: 'finance' },
+    { key: 'accounting/procurement', label: 'Procurement', icon: 'operations' },
+    { key: 'accounting/vendors', label: 'Customers & vendors', icon: 'users' },
+    { key: 'accounting/reconciliation', label: 'Bank reconciliation', icon: 'finance' },
+    { key: 'accounting/chart-of-accounts', label: 'Chart of accounts', icon: 'analytics' },
+    { key: 'accounting/journals', label: 'General journal', icon: 'finance' },
+    { key: 'accounting/reports', label: 'Financial reports', icon: 'analytics' },
+  ];
 
   readonly departments: NavEntry[] = [
-    { key: 'finance', label: 'Finance', icon: 'finance' },
     { key: 'sales', label: 'Sales', icon: 'sales' },
     { key: 'operations', label: 'Operations', icon: 'operations' },
     { key: 'marketing', label: 'Marketing', icon: 'marketing' },
@@ -536,6 +588,9 @@ export class SellerShellComponent {
     { key: 'ai', label: 'AI', icon: 'ai' },
   ];
 
+  /** The accounting suite stays discoverable as a nested sidebar workspace. */
+  accountingOpen = signal(true);
+
   /** Sidebar collapse (icon rail on desktop, off-canvas drawer on mobile). */
   collapsed = signal(this.initialCollapsed());
   /** Backdrop only ever paints on small screens (hidden via CSS at desktop widths). */
@@ -548,6 +603,11 @@ export class SellerShellComponent {
 
   searchIndex = computed<SearchEntry[]>(() => {
     const items: SearchEntry[] = [{ label: 'Dashboard', path: this.tenantLink(), icon: 'home', section: 'Overview' }];
+    if (this.canViewAccounting()) {
+      for (const a of this.accountingItems) {
+        items.push({ label: a.label, path: this.tenantLink(a.key), icon: a.icon, section: 'Accounting' });
+      }
+    }
     for (const d of this.departments) {
       items.push({ label: d.label, path: this.tenantLink('departments/' + d.key), icon: d.icon, section: 'Departments' });
     }
@@ -612,6 +672,10 @@ export class SellerShellComponent {
 
   toggleSidebar() {
     this.collapsed.update((v) => !v);
+  }
+
+  toggleAccounting() {
+    this.accountingOpen.update((value) => !value);
   }
 
   onNavigate() {

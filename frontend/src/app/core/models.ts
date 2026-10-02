@@ -63,6 +63,114 @@ export interface DeptDashboard {
   table?: { title: string; columns: string[]; rows: string[][] };
 }
 
+export interface AccountingDashboard {
+  currency: string;
+  kpis: {
+    cash_balance: number; receivables: number; payables: number; net_cash_flow: number;
+    cash_in: number; cash_out: number; overdue_invoices: number; open_bills: number;
+    pending_settlements: number; committed_spend: number;
+  };
+  cash_flow: { label: string; month: string; incoming: number; outgoing: number }[];
+  aging: Record<'current' | '1_30' | '31_60' | '61_90' | 'over_90', number>;
+  invoice_statuses: Record<string, number>;
+  purchase_statuses: Record<string, number>;
+  recent_activity: { type: string; title: string; amount: number; status: string; at: string }[];
+}
+
+export interface AccountingContact {
+  id: number; type: 'customer' | 'vendor' | 'both'; name: string; email?: string | null;
+  phone?: string | null; tax_id?: string | null; address?: string | null; currency: string;
+  payment_terms: number; opening_balance: string | number; is_active: boolean;
+  invoices_count?: number; purchase_orders_count?: number;
+}
+
+export interface AccountingLineItem {
+  id?: number; description: string; sku?: string | null; quantity: string | number;
+  unit_price?: string | number; unit_cost?: string | number; tax_rate: string | number;
+  line_subtotal?: string | number; line_tax?: string | number; line_total?: string | number;
+}
+
+export interface AccountingInvoice {
+  id: number; number: string; contact_id?: number | null; customer_name: string;
+  customer_email?: string | null; issue_date: string; due_date: string;
+  status: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'void';
+  subtotal: string | number; tax_total: string | number; discount_total: string | number;
+  total: string | number; amount_paid: string | number; balance_due: string | number;
+  currency: string; notes?: string | null; items: AccountingLineItem[];
+  payments?: AccountingPayment[];
+}
+
+export interface AccountingPayment {
+  id: number; reference: string; direction: 'incoming' | 'outgoing'; method: string;
+  amount: string | number; currency: string; paid_on: string; notes?: string | null;
+  invoice?: { id: number; number: string; customer_name: string } | null;
+  expense?: { id: number; number: string; vendor_name?: string; description: string } | null;
+}
+
+export interface AccountingExpense {
+  id: number; number: string; vendor_id?: number | null; vendor_name?: string | null;
+  category: string; description: string; expense_date: string; due_date?: string | null;
+  amount: string | number; tax_amount: string | number; total: string | number;
+  currency: string; status: 'draft' | 'pending' | 'paid' | 'overdue' | 'void';
+  receipt_reference?: string | null; vendor?: Pick<AccountingContact, 'id' | 'name'> | null;
+}
+
+export interface PurchaseOrder {
+  id: number; number: string; vendor_id?: number | null; vendor_name: string;
+  order_date: string; expected_date?: string | null;
+  status: 'draft' | 'pending_approval' | 'approved' | 'ordered' | 'partially_received' | 'received' | 'cancelled';
+  subtotal: string | number; tax_total: string | number; total: string | number;
+  currency: string; notes?: string | null; items: AccountingLineItem[];
+  vendor?: Pick<AccountingContact, 'id' | 'name' | 'email'> | null;
+}
+
+export interface AccountingAccount {
+  id: number; code: string; name: string; type: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+  subtype?: string | null; system_key?: string | null; description?: string | null;
+  is_system: boolean; is_active: boolean; debit_total?: number; credit_total?: number; balance?: number;
+}
+
+export interface AccountingJournalLine {
+  id?: number; account_id: number; description?: string | null;
+  debit: string | number; credit: string | number; account?: Pick<AccountingAccount, 'id' | 'code' | 'name' | 'type'>;
+}
+
+export interface AccountingJournalEntry {
+  id: number; number: string; entry_date: string; reference?: string | null; memo: string;
+  status: 'draft' | 'posted'; source_type?: string | null; source_id?: number | null;
+  total_debit: string | number; total_credit: string | number; posted_at?: string | null;
+  lines: AccountingJournalLine[]; creator?: { id: number; name: string } | null;
+  poster?: { id: number; name: string } | null;
+}
+
+export interface AccountingReportRow {
+  id: number; code: string; name: string; type: string; debit: number; credit: number; balance: number;
+}
+
+export interface AccountingReport {
+  report: 'profit_loss' | 'balance_sheet' | 'trial_balance'; from: string; to: string; currency: string;
+  income?: AccountingReportRow[]; expenses?: AccountingReportRow[]; total_income?: number; total_expenses?: number; net_income?: number;
+  assets?: AccountingReportRow[]; liabilities?: AccountingReportRow[]; equity?: AccountingReportRow[];
+  total_assets?: number; total_liabilities?: number; total_equity?: number; difference?: number;
+  accounts?: AccountingReportRow[]; total_debit?: number; total_credit?: number;
+}
+
+export interface AccountingBankAccount {
+  id: number; name: string; bank_name?: string | null; account_number_last4?: string | null;
+  currency: string; opening_balance: string | number; is_active: boolean;
+  statement_balance?: number; ledger_balance?: number; difference?: number;
+  transactions_count?: number; unmatched_count?: number;
+  ledger_account?: { id: number; code: string; name: string };
+}
+
+export interface AccountingBankTransaction {
+  id: number; bank_account_id: number; payment_id?: number | null; transaction_date: string;
+  description: string; reference?: string | null; amount: string | number;
+  status: 'unmatched' | 'matched' | 'excluded'; reconciled_at?: string | null;
+  bank_account?: Pick<AccountingBankAccount, 'id' | 'name' | 'currency'>;
+  payment?: Pick<AccountingPayment, 'id' | 'reference' | 'direction' | 'amount' | 'currency' | 'paid_on'> | null;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

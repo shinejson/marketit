@@ -25,6 +25,18 @@ class TenantBackupController extends Controller
         'seller_orders',
         'seller_settlements',
         'ad_campaigns',
+        'accounting_contacts',
+        'accounting_invoices',
+        'accounting_invoice_items',
+        'accounting_payments',
+        'accounting_expenses',
+        'purchase_orders',
+        'purchase_order_items',
+        'accounting_accounts',
+        'accounting_journal_entries',
+        'accounting_journal_lines',
+        'accounting_bank_accounts',
+        'accounting_bank_transactions',
         'tenant_settings',
     ];
 
@@ -107,6 +119,15 @@ class TenantBackupController extends Controller
         try {
             $tables = [];
             $orderIds = DB::table('seller_orders')->where('tenant_id', $tenant->id)->pluck('id');
+            $invoiceIds = $this->hasTable('accounting_invoices')
+                ? DB::table('accounting_invoices')->where('tenant_id', $tenant->id)->pluck('id')
+                : collect();
+            $purchaseOrderIds = $this->hasTable('purchase_orders')
+                ? DB::table('purchase_orders')->where('tenant_id', $tenant->id)->pluck('id')
+                : collect();
+            $journalIds = $this->hasTable('accounting_journal_entries')
+                ? DB::table('accounting_journal_entries')->where('tenant_id', $tenant->id)->pluck('id')
+                : collect();
             foreach (self::TABLES as $table) {
                 if (! $this->hasTable($table)) {
                     continue;
@@ -116,6 +137,12 @@ class TenantBackupController extends Controller
                     $q->where('tenant_id', $tenant->id);
                 } elseif ($table === 'seller_settlements') {
                     $q->whereIn('seller_order_id', $orderIds);
+                } elseif ($table === 'accounting_invoice_items') {
+                    $q->whereIn('invoice_id', $invoiceIds);
+                } elseif ($table === 'purchase_order_items') {
+                    $q->whereIn('purchase_order_id', $purchaseOrderIds);
+                } elseif ($table === 'accounting_journal_lines') {
+                    $q->whereIn('journal_entry_id', $journalIds);
                 } else {
                     continue;
                 }

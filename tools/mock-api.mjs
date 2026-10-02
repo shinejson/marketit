@@ -10,6 +10,7 @@
 import http from 'node:http';
 import { handleSupport } from './support-mock.mjs';
 import { handleTenant } from './tenant-mock.mjs';
+import { handleAccounting } from './accounting-mock.mjs';
 
 const PORT = process.env.PORT || 8001;
 
@@ -324,6 +325,9 @@ const server = http.createServer(async (req, res) => {
 
   // ---- service desk (tickets, live chat, tasks, help centre)
   if (await handleSupport(req, res, url, method, readBody, json)) return;
+
+  // ---- tenant accounting and procurement
+  if (await handleAccounting(req, res, url, method, readBody, json)) return;
 
   // ---- tenant console (dashboard + departments)
   if (handleTenant(req, res, url, method, readBody, json)) return;

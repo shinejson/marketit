@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AddressController;
+use App\Http\Controllers\Api\AccountingController;
+use App\Http\Controllers\Api\AccountingLedgerController;
 use App\Http\Controllers\Api\AdCampaignController;
 use App\Http\Controllers\Api\AdminBackupController;
 use App\Http\Controllers\Api\AdminController;
@@ -127,6 +129,36 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
         Route::get('/dashboard/departments', [DepartmentDashboardController::class, 'overview']);
         Route::get('/dashboard/departments/{department}', [DepartmentDashboardController::class, 'show']);
+
+        // Accounting: receivables, payments, bills, contacts and procurement.
+        Route::prefix('accounting')->middleware('accounting')->group(function () {
+            Route::get('/dashboard', [AccountingController::class, 'dashboard']);
+            Route::get('/invoices', [AccountingController::class, 'invoices']);
+            Route::post('/invoices', [AccountingController::class, 'storeInvoice']);
+            Route::patch('/invoices/{invoice}', [AccountingController::class, 'updateInvoice']);
+            Route::post('/invoices/{invoice}/payments', [AccountingController::class, 'recordInvoicePayment']);
+            Route::get('/payments', [AccountingController::class, 'payments']);
+            Route::get('/expenses', [AccountingController::class, 'expenses']);
+            Route::post('/expenses', [AccountingController::class, 'storeExpense']);
+            Route::post('/expenses/{expense}/pay', [AccountingController::class, 'payExpense']);
+            Route::get('/contacts', [AccountingController::class, 'contacts']);
+            Route::post('/contacts', [AccountingController::class, 'storeContact']);
+            Route::get('/purchase-orders', [AccountingController::class, 'purchaseOrders']);
+            Route::post('/purchase-orders', [AccountingController::class, 'storePurchaseOrder']);
+            Route::patch('/purchase-orders/{purchaseOrder}', [AccountingController::class, 'updatePurchaseOrder']);
+
+            Route::get('/accounts', [AccountingLedgerController::class, 'accounts']);
+            Route::post('/accounts', [AccountingLedgerController::class, 'storeAccount']);
+            Route::get('/journals', [AccountingLedgerController::class, 'journals']);
+            Route::post('/journals', [AccountingLedgerController::class, 'storeJournal']);
+            Route::post('/journals/{journal}/post', [AccountingLedgerController::class, 'postJournal']);
+            Route::get('/reports', [AccountingLedgerController::class, 'reports']);
+            Route::get('/bank-accounts', [AccountingLedgerController::class, 'bankAccounts']);
+            Route::post('/bank-accounts', [AccountingLedgerController::class, 'storeBankAccount']);
+            Route::get('/bank-transactions', [AccountingLedgerController::class, 'bankTransactions']);
+            Route::post('/bank-transactions', [AccountingLedgerController::class, 'storeBankTransaction']);
+            Route::patch('/bank-transactions/{bankTransaction}', [AccountingLedgerController::class, 'reconcileBankTransaction']);
+        });
 
         Route::get('/staff', [StaffController::class, 'index']);
         Route::post('/staff', [StaffController::class, 'store']);

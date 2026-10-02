@@ -2,6 +2,17 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import {
   Address,
+  AccountingAccount,
+  AccountingBankAccount,
+  AccountingBankTransaction,
+  AccountingContact,
+  AccountingDashboard,
+  AccountingExpense,
+  AccountingInvoice,
+  AccountingJournalEntry,
+  AccountingPayment,
+  AccountingReport,
+  PurchaseOrder,
   AdminAnalytics,
   AdminInsight,
   AdminOverview,
@@ -157,6 +168,106 @@ export class ApiService {
 
   departmentDashboard(department: string) {
     return this.http.get<{ data: DeptDashboard }>(`/api/tenant/dashboard/departments/${department}`);
+  }
+
+  accountingDashboard() {
+    return this.http.get<{ data: AccountingDashboard }>('/api/tenant/accounting/dashboard');
+  }
+
+  accountingInvoices(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<AccountingInvoice[]>>('/api/tenant/accounting/invoices', { params });
+  }
+
+  createAccountingInvoice(payload: Record<string, unknown>) {
+    return this.http.post<{ data: AccountingInvoice }>('/api/tenant/accounting/invoices', payload);
+  }
+
+  updateAccountingInvoice(id: number, status: string) {
+    return this.http.patch<{ data: AccountingInvoice }>(`/api/tenant/accounting/invoices/${id}`, { status });
+  }
+
+  recordAccountingPayment(id: number, payload: Record<string, unknown>) {
+    return this.http.post<{ data: { invoice: AccountingInvoice; payment: AccountingPayment } }>(`/api/tenant/accounting/invoices/${id}/payments`, payload);
+  }
+
+  accountingPayments(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<AccountingPayment[]>>('/api/tenant/accounting/payments', { params });
+  }
+
+  accountingExpenses(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<AccountingExpense[]>>('/api/tenant/accounting/expenses', { params });
+  }
+
+  createAccountingExpense(payload: Record<string, unknown>) {
+    return this.http.post<{ data: AccountingExpense }>('/api/tenant/accounting/expenses', payload);
+  }
+
+  payAccountingExpense(id: number, payload: Record<string, unknown>) {
+    return this.http.post<{ data: { expense: AccountingExpense; payment: AccountingPayment } }>(`/api/tenant/accounting/expenses/${id}/pay`, payload);
+  }
+
+  accountingContacts(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<AccountingContact[]>>('/api/tenant/accounting/contacts', { params });
+  }
+
+  createAccountingContact(payload: Record<string, unknown>) {
+    return this.http.post<{ data: AccountingContact }>('/api/tenant/accounting/contacts', payload);
+  }
+
+  purchaseOrders(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<PurchaseOrder[]>>('/api/tenant/accounting/purchase-orders', { params });
+  }
+
+  createPurchaseOrder(payload: Record<string, unknown>) {
+    return this.http.post<{ data: PurchaseOrder }>('/api/tenant/accounting/purchase-orders', payload);
+  }
+
+  updatePurchaseOrder(id: number, status: string) {
+    return this.http.patch<{ data: PurchaseOrder }>(`/api/tenant/accounting/purchase-orders/${id}`, { status });
+  }
+
+  accountingAccounts(params: Record<string, string | number> = {}) {
+    return this.http.get<{ data: AccountingAccount[] }>('/api/tenant/accounting/accounts', { params });
+  }
+
+  createAccountingAccount(payload: Record<string, unknown>) {
+    return this.http.post<{ data: AccountingAccount }>('/api/tenant/accounting/accounts', payload);
+  }
+
+  accountingJournals(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<AccountingJournalEntry[]>>('/api/tenant/accounting/journals', { params });
+  }
+
+  createAccountingJournal(payload: Record<string, unknown>) {
+    return this.http.post<{ data: AccountingJournalEntry }>('/api/tenant/accounting/journals', payload);
+  }
+
+  postAccountingJournal(id: number) {
+    return this.http.post<{ data: AccountingJournalEntry }>(`/api/tenant/accounting/journals/${id}/post`, {});
+  }
+
+  accountingReport(params: { report: string; from: string; to: string }) {
+    return this.http.get<{ data: AccountingReport }>('/api/tenant/accounting/reports', { params });
+  }
+
+  accountingBankAccounts() {
+    return this.http.get<{ data: AccountingBankAccount[] }>('/api/tenant/accounting/bank-accounts');
+  }
+
+  createAccountingBankAccount(payload: Record<string, unknown>) {
+    return this.http.post<{ data: AccountingBankAccount }>('/api/tenant/accounting/bank-accounts', payload);
+  }
+
+  accountingBankTransactions(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<AccountingBankTransaction[]>>('/api/tenant/accounting/bank-transactions', { params });
+  }
+
+  createAccountingBankTransaction(payload: Record<string, unknown>) {
+    return this.http.post<{ data: AccountingBankTransaction }>('/api/tenant/accounting/bank-transactions', payload);
+  }
+
+  reconcileAccountingBankTransaction(id: number, payload: { status: string; payment_id?: number | null }) {
+    return this.http.patch<{ data: AccountingBankTransaction }>(`/api/tenant/accounting/bank-transactions/${id}`, payload);
   }
 
   tenantStaff() {

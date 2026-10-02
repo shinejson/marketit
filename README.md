@@ -167,5 +167,6 @@ help centre.
 - Super admin tenant approval, metrics, audit log
 - Row-level `tenant_id` isolation (Eloquent global scope + policies)
 - Tenant department dashboards (finance, sales, operations, marketing) with charts and goal progress
+- Full tenant accounting workspace: receivables, invoices, partial payments, payables, expenses, procurement, double-entry general ledger, chart of accounts, bank reconciliation, profit & loss, balance sheet, trial balance, cash flow and aging
 - Staff users, tenant settings, and JSON backups
 - Service desk: support tickets with SLAs, live chat, service tasks and a tenant-facing help centre
