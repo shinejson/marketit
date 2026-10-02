@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\EnsureRole::class,
             'tenant' => \App\Http\Middleware\SetTenantContext::class,
             'accounting' => \App\Http\Middleware\EnsureAccountingAccess::class,
+            'sales' => \App\Http\Middleware\EnsureSalesAccess::class,
             'seller.api' => \App\Http\Middleware\AuthenticateSellerApiKey::class,
         ]);
         $middleware->throttleApi();

@@ -171,6 +171,64 @@ export interface AccountingBankTransaction {
   payment?: Pick<AccountingPayment, 'id' | 'reference' | 'direction' | 'amount' | 'currency' | 'paid_on'> | null;
 }
 
+export interface SalesDashboard {
+  currency: string;
+  kpis: {
+    pipeline_value: number; weighted_forecast: number; open_opportunities: number;
+    active_leads: number; new_leads_30d: number; open_quotes: number; open_quotes_value: number;
+    win_rate: number; won_revenue_30d: number; active_customers: number;
+  };
+  stages: { stage: string; label: string; count: number; value: number; probability: number }[];
+  trend: { label: string; month: string; opened: number; won: number }[];
+  lead_sources: { source: string; count: number }[];
+  recent_activity: { type: string; title: string; amount: number; status: string; at: string }[];
+  top_customers: { id: number; name: string; company?: string | null; won_total: string | number; open_deals_count: number }[];
+}
+
+export interface SalesLead {
+  id: number; name: string; company?: string | null; email?: string | null; phone?: string | null;
+  source: 'web' | 'referral' | 'campaign' | 'walk_in' | 'partner' | 'other';
+  status: 'new' | 'contacted' | 'qualified' | 'disqualified' | 'converted';
+  estimated_value: string | number; currency: string; notes?: string | null;
+  last_contacted_at?: string | null; converted_at?: string | null;
+  converted_customer_id?: number | null; created_at?: string;
+  owner?: { id: number; name: string } | null;
+}
+
+export interface SalesOpportunity {
+  id: number; number: string; title: string;
+  stage: 'prospecting' | 'qualified' | 'proposal' | 'negotiation' | 'won' | 'lost';
+  expected_value: string | number; probability: number; currency: string;
+  expected_close_date?: string | null; lost_reason?: string | null; notes?: string | null;
+  closed_at?: string | null; customer_id?: number | null; lead_id?: number | null;
+  customer?: { id: number; name: string; company?: string | null } | null;
+  owner?: { id: number; name: string } | null;
+  lead?: { id: number; name: string } | null;
+}
+
+export interface SalesQuoteLineItem {
+  id?: number; description: string; quantity: string | number; unit_price: string | number;
+  tax_rate: string | number; line_subtotal?: string | number; line_tax?: string | number; line_total?: string | number;
+}
+
+export interface SalesQuote {
+  id: number; number: string; customer_id?: number | null; opportunity_id?: number | null;
+  customer_name: string; customer_email?: string | null; issue_date: string; expiry_date: string;
+  status: 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'void';
+  subtotal: string | number; tax_total: string | number; discount_total: string | number;
+  total: string | number; currency: string; notes?: string | null;
+  customer?: { id: number; name: string; company?: string | null } | null;
+  opportunity?: { id: number; number: string; title: string } | null;
+  items: SalesQuoteLineItem[];
+}
+
+export interface SalesCustomer {
+  id: number; name: string; company?: string | null; email?: string | null; phone?: string | null;
+  segment: string; status: 'active' | 'inactive'; currency: string; notes?: string | null;
+  opportunities_count?: number; quotes_count?: number; open_deals_count?: number;
+  won_total?: string | number;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

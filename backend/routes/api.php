@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\MarketController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\SalesController;
 use App\Http\Controllers\Api\SellerOrderController;
 use App\Http\Controllers\Api\SellerPublicApiController;
 use App\Http\Controllers\Api\TenantController;
@@ -158,6 +159,23 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/bank-transactions', [AccountingLedgerController::class, 'bankTransactions']);
             Route::post('/bank-transactions', [AccountingLedgerController::class, 'storeBankTransaction']);
             Route::patch('/bank-transactions/{bankTransaction}', [AccountingLedgerController::class, 'reconcileBankTransaction']);
+        });
+
+        // Sales workspace: leads, pipeline, quotes and customer accounts.
+        Route::prefix('sales')->middleware('sales')->group(function () {
+            Route::get('/dashboard', [SalesController::class, 'dashboard']);
+            Route::get('/leads', [SalesController::class, 'leads']);
+            Route::post('/leads', [SalesController::class, 'storeLead']);
+            Route::patch('/leads/{lead}', [SalesController::class, 'updateLead']);
+            Route::post('/leads/{lead}/convert', [SalesController::class, 'convertLead']);
+            Route::get('/opportunities', [SalesController::class, 'opportunities']);
+            Route::post('/opportunities', [SalesController::class, 'storeOpportunity']);
+            Route::patch('/opportunities/{opportunity}', [SalesController::class, 'updateOpportunity']);
+            Route::get('/quotes', [SalesController::class, 'quotes']);
+            Route::post('/quotes', [SalesController::class, 'storeQuote']);
+            Route::patch('/quotes/{quote}', [SalesController::class, 'updateQuote']);
+            Route::get('/customers', [SalesController::class, 'customers']);
+            Route::post('/customers', [SalesController::class, 'storeCustomer']);
         });
 
         Route::get('/staff', [StaffController::class, 'index']);

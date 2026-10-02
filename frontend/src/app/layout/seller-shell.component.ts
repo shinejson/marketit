@@ -82,6 +82,26 @@ const MOBILE_BREAKPOINT = 900;
           }
           }
 
+          @if (canViewSales()) {
+          <p class="section-label label-text">Sales</p>
+          <button type="button" class="nav-group label-text" [class.open]="salesOpen()" (click)="toggleSales()" aria-label="Toggle sales menu" [attr.aria-expanded]="salesOpen()">
+            <span class="nav-group-copy">
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'sales' }" />
+              <span>Sales workspace</span>
+            </span>
+            <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+          </button>
+          @if (salesOpen() || collapsed()) {
+            <div class="subnav" [class.rail]="collapsed()">
+              @for (item of salesItems; track item.key) {
+                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
+                  <span class="sub-dot"></span><span class="label-text">{{ item.label }}</span>
+                </a>
+              }
+            </div>
+          }
+          }
+
           <p class="section-label label-text">Departments</p>
           @for (d of departments; track d.key) {
             <a [routerLink]="tenantLink('departments/' + d.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? d.label : ''">
@@ -549,6 +569,7 @@ export class SellerShellComponent {
 
   isOwner = computed(() => this.auth.hasRole('tenant_owner'));
   canViewAccounting = computed(() => this.isOwner() || this.auth.user()?.department === 'finance');
+  canViewSales = computed(() => this.isOwner() || this.auth.user()?.department === 'sales');
 
   readonly accountingItems: NavEntry[] = [
     { key: 'departments/finance', label: 'Overview', icon: 'finance' },
@@ -563,8 +584,15 @@ export class SellerShellComponent {
     { key: 'accounting/reports', label: 'Financial reports', icon: 'analytics' },
   ];
 
+  readonly salesItems: NavEntry[] = [
+    { key: 'departments/sales', label: 'Overview', icon: 'sales' },
+    { key: 'sales/leads', label: 'Leads', icon: 'users' },
+    { key: 'sales/pipeline', label: 'Pipeline', icon: 'sales' },
+    { key: 'sales/quotes', label: 'Quotes', icon: 'finance' },
+    { key: 'sales/customers', label: 'Customers', icon: 'users' },
+  ];
+
   readonly departments: NavEntry[] = [
-    { key: 'sales', label: 'Sales', icon: 'sales' },
     { key: 'operations', label: 'Operations', icon: 'operations' },
     { key: 'marketing', label: 'Marketing', icon: 'marketing' },
   ];
@@ -591,6 +619,9 @@ export class SellerShellComponent {
   /** The accounting suite stays discoverable as a nested sidebar workspace. */
   accountingOpen = signal(true);
 
+  /** The sales workspace mirrors accounting as a nested sidebar suite. */
+  salesOpen = signal(true);
+
   /** Sidebar collapse (icon rail on desktop, off-canvas drawer on mobile). */
   collapsed = signal(this.initialCollapsed());
   /** Backdrop only ever paints on small screens (hidden via CSS at desktop widths). */
@@ -606,6 +637,11 @@ export class SellerShellComponent {
     if (this.canViewAccounting()) {
       for (const a of this.accountingItems) {
         items.push({ label: a.label, path: this.tenantLink(a.key), icon: a.icon, section: 'Accounting' });
+      }
+    }
+    if (this.canViewSales()) {
+      for (const s of this.salesItems) {
+        items.push({ label: s.label, path: this.tenantLink(s.key), icon: s.icon, section: 'Sales' });
       }
     }
     for (const d of this.departments) {
@@ -676,6 +712,10 @@ export class SellerShellComponent {
 
   toggleAccounting() {
     this.accountingOpen.update((value) => !value);
+  }
+
+  toggleSales() {
+    this.salesOpen.update((value) => !value);
   }
 
   onNavigate() {

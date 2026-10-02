@@ -18,6 +18,11 @@ import {
   AdminOverview,
   AdminRoleDefinition,
   AuthSession,
+  SalesCustomer,
+  SalesDashboard,
+  SalesLead,
+  SalesOpportunity,
+  SalesQuote,
   AdminUser,
   AdminUserSummary,
   AuditLogEntry,
@@ -268,6 +273,58 @@ export class ApiService {
 
   reconcileAccountingBankTransaction(id: number, payload: { status: string; payment_id?: number | null }) {
     return this.http.patch<{ data: AccountingBankTransaction }>(`/api/tenant/accounting/bank-transactions/${id}`, payload);
+  }
+
+  salesDashboard() {
+    return this.http.get<{ data: SalesDashboard }>('/api/tenant/sales/dashboard');
+  }
+
+  salesLeads(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<SalesLead[]>>('/api/tenant/sales/leads', { params });
+  }
+
+  createSalesLead(payload: any) {
+    return this.http.post<{ data: SalesLead }>('/api/tenant/sales/leads', payload);
+  }
+
+  updateSalesLead(id: number, status: string) {
+    return this.http.patch<{ data: SalesLead }>(`/api/tenant/sales/leads/${id}`, { status });
+  }
+
+  convertSalesLead(id: number, payload: any) {
+    return this.http.post<{ data: { customer: SalesCustomer; opportunity: SalesOpportunity; lead: SalesLead } }>(`/api/tenant/sales/leads/${id}/convert`, payload);
+  }
+
+  salesOpportunities(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<SalesOpportunity[]>>('/api/tenant/sales/opportunities', { params });
+  }
+
+  createSalesOpportunity(payload: any) {
+    return this.http.post<{ data: SalesOpportunity }>('/api/tenant/sales/opportunities', payload);
+  }
+
+  updateSalesOpportunity(id: number, payload: { stage: string; lost_reason?: string | null; probability?: number }) {
+    return this.http.patch<{ data: SalesOpportunity }>(`/api/tenant/sales/opportunities/${id}`, payload);
+  }
+
+  salesQuotes(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<SalesQuote[]>>('/api/tenant/sales/quotes', { params });
+  }
+
+  createSalesQuote(payload: any) {
+    return this.http.post<{ data: SalesQuote }>('/api/tenant/sales/quotes', payload);
+  }
+
+  updateSalesQuote(id: number, status: string) {
+    return this.http.patch<{ data: SalesQuote }>(`/api/tenant/sales/quotes/${id}`, { status });
+  }
+
+  salesCustomers(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<SalesCustomer[]>>('/api/tenant/sales/customers', { params });
+  }
+
+  createSalesCustomer(payload: any) {
+    return this.http.post<{ data: SalesCustomer }>('/api/tenant/sales/customers', payload);
   }
 
   tenantStaff() {

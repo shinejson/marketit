@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class SalesQuoteItem extends Model
+{
+    protected $fillable = [
+        'quote_id', 'description', 'quantity', 'unit_price', 'tax_rate',
+        'line_subtotal', 'line_tax', 'line_total',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'quantity' => 'decimal:2',
+            'unit_price' => 'decimal:2',
+            'tax_rate' => 'decimal:2',
+            'line_subtotal' => 'decimal:2',
+            'line_tax' => 'decimal:2',
+            'line_total' => 'decimal:2',
+        ];
+    }
+
+    public function quote(): BelongsTo
+    {
+        return $this->belongsTo(SalesQuote::class, 'quote_id');
+    }
+}
