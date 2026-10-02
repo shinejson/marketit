@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\TenantAccess;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -21,6 +22,7 @@ class User extends Authenticatable
         'phone',
         'password',
         'status',
+        'avatar_url',
         'last_login_at',
     ];
 
@@ -41,6 +43,11 @@ class User extends Authenticatable
     public function roles(): HasMany
     {
         return $this->hasMany(UserRole::class);
+    }
+
+    public function socialIdentities(): HasMany
+    {
+        return $this->hasMany(SocialIdentity::class);
     }
 
     public function addresses(): HasMany
@@ -107,6 +114,29 @@ class User extends Authenticatable
         $role = $this->roles->first(fn (UserRole $r) => in_array($r->role, ['tenant_owner', 'store_staff'], true));
 
         return $role?->tenant_id;
+    }
+
+    /**
+     * Permissions this user holds inside a tenant. Tenant owners resolve to the
+     * full catalog; staff resolve to their assigned tenant role plus any
+     * per-user overrides.
+     *
+     * @return string[]
+     */
+    public function tenantPermissions(?int $tenantId = null): array
+    {
+        return TenantAccess::permissionsFor($this, $tenantId);
+    }
+
+    public function hasTenantPermission(string $permission, ?int $tenantId = null): bool
+    {
+        return TenantAccess::allows($this, $permission, $tenantId);
+    }
+
+    /** A tenant can lock a staff member out without deleting the account. */
+    public function tenantAccessSuspended(?int $tenantId = null): bool
+    {
+        return TenantAccess::isSuspended($this, $tenantId);
     }
 
     public function primaryRole(): string

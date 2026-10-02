@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Store;
 use App\Models\Tenant;
+use App\Models\TenantRole;
 use App\Models\UserRole;
+use App\Support\TenantAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -56,11 +58,24 @@ class TenantController extends Controller
             'submitted_at' => now(),
         ]);
 
-        UserRole::query()->firstOrCreate([
-            'user_id' => $user->id,
-            'role' => 'tenant_owner',
-            'tenant_id' => $tenant->id,
-        ]);
+        // Give the new tenant its built-in role set so the access-control
+        // workspace is usable the moment the console opens.
+        TenantRole::seedDefaultsFor($tenant->id);
+
+        UserRole::query()->firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'role' => 'tenant_owner',
+                'tenant_id' => $tenant->id,
+            ],
+            [
+                'tenant_role_id' => TenantRole::query()->withoutGlobalScopes()
+                    ->where('tenant_id', $tenant->id)
+                    ->where('key', TenantRole::KEY_OWNER)
+                    ->value('id'),
+                'status' => TenantAccess::STATUS_ACTIVE,
+            ]
+        );
 
         if (! empty($data['preferred_store_name'])) {
             Store::withoutGlobalScopes()->create([

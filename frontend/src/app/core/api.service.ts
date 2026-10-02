@@ -31,6 +31,11 @@ import {
   AuditLogFacets,
   AuditLogStats,
   PermissionGroup,
+  TenantCustomer,
+  TenantCustomersResponse,
+  TenantRoleSummary,
+  TenantSystemUser,
+  TenantSystemUsersResponse,
   CartPayload,
   Category,
   DeptDashboard,
@@ -342,16 +347,77 @@ export class ApiService {
     return this.http.post<{ data: SalesCustomer }>('/api/tenant/sales/customers', payload);
   }
 
+  // ------------------------------------------------------------- tenant access
+  // System users (console staff), the roles that carry their permissions, and
+  // the tenant's customer accounts. See /tenant/users.
+
+  tenantSystemUsers(params: Record<string, string | number> = {}) {
+    return this.http.get<TenantSystemUsersResponse>('/api/tenant/users', { params });
+  }
+
+  createTenantSystemUser(payload: Record<string, unknown>) {
+    return this.http.post<{ data: TenantSystemUser; meta: { temporary_password?: string | null } }>(
+      '/api/tenant/users',
+      payload,
+    );
+  }
+
+  updateTenantSystemUser(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: TenantSystemUser }>(`/api/tenant/users/${id}`, payload);
+  }
+
+  removeTenantSystemUser(id: number) {
+    return this.http.delete<{ data: { ok: boolean } }>(`/api/tenant/users/${id}`);
+  }
+
+  resetTenantSystemUserPassword(id: number) {
+    return this.http.post<{ data: { ok: boolean }; meta: { temporary_password: string } }>(
+      `/api/tenant/users/${id}/password`,
+      {},
+    );
+  }
+
+  tenantRoles() {
+    return this.http.get<{ data: TenantRoleSummary[]; meta: { permission_groups: PermissionGroup[]; departments: string[]; can_manage: boolean } }>(
+      '/api/tenant/roles',
+    );
+  }
+
+  createTenantRole(payload: Record<string, unknown>) {
+    return this.http.post<{ data: TenantRoleSummary }>('/api/tenant/roles', payload);
+  }
+
+  updateTenantRole(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: TenantRoleSummary }>(`/api/tenant/roles/${id}`, payload);
+  }
+
+  deleteTenantRole(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/roles/${id}`);
+  }
+
+  tenantCustomers(params: Record<string, string | number> = {}) {
+    return this.http.get<TenantCustomersResponse>('/api/tenant/customers', { params });
+  }
+
+  tenantCustomer(id: number) {
+    return this.http.get<{ data: TenantCustomer }>(`/api/tenant/customers/${id}`);
+  }
+
+  updateTenantCustomer(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: TenantCustomer }>(`/api/tenant/customers/${id}`, payload);
+  }
+
+  // Legacy aliases (the API keeps /api/tenant/staff working).
   tenantStaff() {
-    return this.http.get<{ data: any[]; meta: { departments: string[]; roles: string[] } }>('/api/tenant/staff');
+    return this.http.get<TenantSystemUsersResponse>('/api/tenant/staff');
   }
 
   createStaff(payload: any) {
-    return this.http.post<{ data: any; meta: { temporary_password?: string | null } }>('/api/tenant/staff', payload);
+    return this.http.post<{ data: TenantSystemUser; meta: { temporary_password?: string | null } }>('/api/tenant/staff', payload);
   }
 
   updateStaff(id: number, payload: any) {
-    return this.http.patch<{ data: any }>(`/api/tenant/staff/${id}`, payload);
+    return this.http.patch<{ data: TenantSystemUser }>(`/api/tenant/staff/${id}`, payload);
   }
 
   removeStaff(id: number) {

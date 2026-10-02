@@ -158,6 +158,27 @@ queue: tickets across every status, priority and channel with threaded replies a
 internal notes, live and queued chats, a task board, canned replies and a published
 help centre.
 
+## Users, roles & social login
+
+`/tenant/users` is the tenant access-control workspace: **system users**
+(who can sign into the console), **customers** (who buy from the stores) and
+**roles & permissions** (reusable checkbox sets assigned by the admin).
+
+Access is two layers: `user_roles.role` stays the portal access level
+(`tenant_owner` / `store_staff`), while `user_roles.tenant_role_id` points at a
+`tenant_roles` permission profile and `user_roles.permissions` holds optional
+per-user overrides. Owners always resolve to every permission; suspended
+accounts resolve to none. Nine built-in roles are seeded per tenant and custom
+roles can be created or duplicated.
+
+Customers can sign in with Google, Facebook, Apple or GitHub. The OAuth
+exchange happens server-side (no Socialite) with a single-use cached `state`;
+the SPA only handles `/auth/callback/:provider`. Providers without credentials
+are hidden in production and run in demo mode locally.
+
+See [docs/tenant-users-and-access.md](docs/tenant-users-and-access.md) for the
+permission catalog, API surface, safety rails and provider configuration.
+
 ## Phase 1 coverage
 
 - Tenant registration, stores, categories, products, variants, images, inventory
@@ -169,4 +190,5 @@ help centre.
 - Tenant department dashboards (finance, sales, operations, marketing) with charts and goal progress
 - Full tenant accounting workspace: receivables, invoices, partial payments, payables, expenses, procurement, double-entry general ledger, chart of accounts, bank reconciliation, profit & loss, balance sheet, trial balance, cash flow and aging
 - Staff users, tenant settings, and JSON backups
+- Tenant access control: roles with checkbox permissions, per-user overrides, customer directory and customer social login (Google, Facebook, Apple, GitHub)
 - Service desk: support tickets with SLAs, live chat, service tasks and a tenant-facing help centre

@@ -195,6 +195,7 @@ class DatabaseSeeder extends Seeder
         $this->call(SalesSeeder::class);
         $this->call(MarketingSeeder::class);
         $this->call(SupportSeeder::class);
+        $this->call(AccessControlSeeder::class);
         $this->call(AuditLogSeeder::class);
     }
 

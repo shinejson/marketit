@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\PlatformSetting;
+use App\Models\SocialIdentity;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserRole;
@@ -41,7 +42,7 @@ class AuthController extends Controller
 
         $token = $this->issueToken($user, 'marketplace');
         $user->forceFill(['last_login_at' => now()])->saveQuietly();
-        $user->load('roles');
+        $user->load('roles', 'socialIdentities');
 
         return response()->json([
             'data' => [
@@ -72,7 +73,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $user->load('roles');
+        $user->load('roles', 'socialIdentities');
         $this->assertPortalAccess($request, $domains, $user, $data['portal'] ?? 'marketplace');
 
         $token = $this->issueToken($user, $data['portal'] ?? 'marketplace');
@@ -140,7 +141,7 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load('roles');
+        $user = $request->user()->load('roles', 'socialIdentities');
 
         return response()->json(['data' => $this->userPayload($user)]);
     }
@@ -175,6 +176,12 @@ class AuthController extends Controller
             ]);
         }
 
+        if ($user->tenantAccessSuspended()) {
+            throw ValidationException::withMessages([
+                'email' => 'Your access to this workspace has been suspended by an administrator.',
+            ]);
+        }
+
         $tenant = $this->tenantForUser($user);
         if (! $tenant) {
             throw ValidationException::withMessages([
@@ -205,6 +212,7 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
+            'avatar_url' => $user->avatar_url,
             'role' => $user->primaryRole(),
             'tenant_id' => $tenant?->id,
             'tenant_slug' => $tenant?->slug,
@@ -217,6 +225,15 @@ class AuthController extends Controller
                 'store_id' => $r->store_id,
                 'department' => $r->department,
             ])->all(),
+            // What this person may do inside the tenant console. Empty for
+            // customers and platform admins.
+            'permissions' => $tenant ? $user->tenantPermissions($tenant->id) : [],
+            'social_accounts' => $user->relationLoaded('socialIdentities')
+                ? $user->socialIdentities->map(fn (SocialIdentity $identity) => [
+                    'provider' => $identity->provider,
+                    'label' => SocialIdentity::label($identity->provider),
+                ])->all()
+                : [],
         ];
     }
 
