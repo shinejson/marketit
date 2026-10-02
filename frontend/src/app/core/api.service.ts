@@ -16,6 +16,8 @@ import {
   CartPayload,
   Category,
   DeptDashboard,
+  DepartmentSummary,
+  TenantDashboard,
   Invoice,
   Paginated,
   BackupMeta,
@@ -143,12 +145,14 @@ export class ApiService {
     return this.http.get<{ data: TenantApplication }>('/api/tenant');
   }
 
-  sellerDashboard() {
-    return this.http.get<{ data: any }>('/api/tenant/dashboard/summary');
+  sellerDashboard(days = 30) {
+    return this.http.get<{ data: TenantDashboard }>('/api/tenant/dashboard/summary', {
+      params: { days },
+    });
   }
 
   departmentOverview() {
-    return this.http.get<{ data: { departments: any[] } }>('/api/tenant/dashboard/departments');
+    return this.http.get<{ data: { departments: DepartmentSummary[] } }>('/api/tenant/dashboard/departments');
   }
 
   departmentDashboard(department: string) {

@@ -9,6 +9,7 @@
  */
 import http from 'node:http';
 import { handleSupport } from './support-mock.mjs';
+import { handleTenant } from './tenant-mock.mjs';
 
 const PORT = process.env.PORT || 8001;
 
@@ -53,6 +54,8 @@ const adminDomains = [
   { id: 10, tenant_id: 3, tenant: { id: 3, name: 'Accra Food Hub', business_name: 'Accra Food Hub' }, domain: 'store.accrafoodhub.com', status: 'active', cert_status: 'issued', dns_verified_at: '2026-09-28T11:10:00Z', last_check_at: '2026-10-01T20:08:00Z', check_attempts: 1, updated_at: '2026-09-28T11:10:00Z' },
   { id: 9, tenant_id: 4, tenant: { id: 4, name: 'SheaGold', business_name: 'SheaGold' }, domain: 'sheagold.co', status: 'failed', cert_status: 'failed', dns_verified_at: '2026-09-27T09:22:00Z', last_check_at: '2026-10-01T15:38:00Z', check_attempts: 5, updated_at: '2026-10-01T15:38:00Z' },
 ];
+
+const tenantUser = { id: 7, name: 'Nana Owusu', email: 'owner@northstar.test', role: 'tenant_owner', tenant_id: 1 };
 
 const adminUser = { id: 1, name: 'Super Admin', email: 'admin@markethub.test', role: 'super_admin' };
 
@@ -322,9 +325,14 @@ const server = http.createServer(async (req, res) => {
   // ---- service desk (tickets, live chat, tasks, help centre)
   if (await handleSupport(req, res, url, method, readBody, json)) return;
 
+  // ---- tenant console (dashboard + departments)
+  if (handleTenant(req, res, url, method, readBody, json)) return;
+
   // ---- auth
   if (path === '/api/auth/login' && method === 'POST') {
-    return json(res, 200, { data: { token: 'mock-token', user: adminUser } });
+    const body = await readBody(req);
+    const user = body.portal === 'tenant' ? tenantUser : adminUser;
+    return json(res, 200, { data: { token: 'mock-token', user } });
   }
   if (path === '/api/auth/logout' && method === 'POST') return json(res, 200, { data: { ok: true } });
   if (path === '/api/auth/me') return json(res, 200, { data: adminUser });
