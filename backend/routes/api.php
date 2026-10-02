@@ -125,7 +125,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/variants/{variant}/inventory', [InventoryController::class, 'show']);
         Route::patch('/variants/{variant}/inventory', [InventoryController::class, 'update']);
+        Route::get('/inventory', [InventoryController::class, 'index']);
+        Route::get('/inventory/meta', [InventoryController::class, 'meta']);
+        Route::get('/inventory/movements', [InventoryController::class, 'movements']);
         Route::get('/inventory/low-stock', [InventoryController::class, 'lowStock']);
+        Route::post('/inventory/bulk', [InventoryController::class, 'bulk']);
+        Route::post('/inventory/{inventory}/adjust', [InventoryController::class, 'adjust']);
 
         Route::get('/orders', [SellerOrderController::class, 'index']);
         Route::get('/orders/{order}', [SellerOrderController::class, 'show']);
@@ -201,9 +206,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/domains/{domain}', [DomainController::class, 'destroy']);
 
         Route::get('/ads', [AdCampaignController::class, 'index']);
+        Route::get('/ads/meta', [AdCampaignController::class, 'meta']);
         Route::post('/ads', [AdCampaignController::class, 'store']);
         Route::patch('/ads/{campaign}', [AdCampaignController::class, 'update']);
         Route::post('/ads/fund', [AdCampaignController::class, 'fund']);
+        Route::delete('/ads/{campaign}', [AdCampaignController::class, 'destroy']);
 
         Route::get('/api-keys', [ApiKeyController::class, 'index']);
         Route::post('/api-keys', [ApiKeyController::class, 'store']);
