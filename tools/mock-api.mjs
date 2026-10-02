@@ -46,6 +46,13 @@ const sponsoredAds = [
   { id: 103, name: 'SheaGold glow-up', tenant_id: 2, status: 'paused', spent_total: '44.75' },
 ];
 
+const adminDomains = [
+  { id: 12, tenant_id: 1, tenant: { id: 1, name: 'Northstar Gadgets', business_name: 'Northstar Gadgets' }, domain: 'shop.northstargadgets.com', status: 'active', cert_status: 'active', dns_verified_at: '2026-09-30T08:30:00Z', last_check_at: '2026-10-01T21:42:00Z', check_attempts: 1, updated_at: '2026-09-30T08:30:00Z' },
+  { id: 11, tenant_id: 2, tenant: { id: 2, name: 'Kente & Co', business_name: 'Kente & Co' }, domain: 'kenteandco.market', status: 'dns_pending', cert_status: 'none', dns_verified_at: null, last_check_at: '2026-10-01T17:14:00Z', check_attempts: 3, updated_at: '2026-10-01T17:14:00Z' },
+  { id: 10, tenant_id: 3, tenant: { id: 3, name: 'Accra Food Hub', business_name: 'Accra Food Hub' }, domain: 'store.accrafoodhub.com', status: 'active', cert_status: 'issued', dns_verified_at: '2026-09-28T11:10:00Z', last_check_at: '2026-10-01T20:08:00Z', check_attempts: 1, updated_at: '2026-09-28T11:10:00Z' },
+  { id: 9, tenant_id: 4, tenant: { id: 4, name: 'SheaGold', business_name: 'SheaGold' }, domain: 'sheagold.co', status: 'failed', cert_status: 'failed', dns_verified_at: '2026-09-27T09:22:00Z', last_check_at: '2026-10-01T15:38:00Z', check_attempts: 5, updated_at: '2026-10-01T15:38:00Z' },
+];
+
 const adminUser = { id: 1, name: 'Super Admin', email: 'admin@markethub.test', role: 'super_admin' };
 
 // ----------------------------------------------------------------- audit log
@@ -393,6 +400,16 @@ const server = http.createServer(async (req, res) => {
 
   // ---- misc admin endpoints used around the console
   if (path === '/api/admin/ads') return json(res, 200, { data: sponsoredAds });
+  if (path === '/api/admin/domains' && method === 'GET') return json(res, 200, { data: adminDomains });
+  m = path.match(/^\/api\/admin\/domains\/(\d+)\/verify$/);
+  if (m && method === 'POST') {
+    const domain = adminDomains.find((item) => item.id === +m[1]);
+    if (domain) Object.assign(domain, {
+      status: 'active', cert_status: 'active', dns_verified_at: new Date().toISOString(),
+      last_check_at: new Date().toISOString(), check_attempts: (domain.check_attempts || 0) + 1,
+    });
+    return json(res, 200, { data: domain ?? null });
+  }
   if (path === '/api/admin/ai-costs') return json(res, 200, { data: [] });
   if (path === '/api/admin/webhooks/health') return json(res, 200, { data: { endpoints: 0, active: 0, failed_24h: 0 } });
 
