@@ -102,12 +102,40 @@ const MOBILE_BREAKPOINT = 900;
           }
           }
 
-          <p class="section-label label-text">Departments</p>
-          @for (d of departments; track d.key) {
-            <a [routerLink]="tenantLink('departments/' + d.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? d.label : ''">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: d.icon }" />
-              <span class="label-text">{{ d.label }}</span>
-            </a>
+          @if (canViewOperations()) {
+          <p class="section-label label-text">Operations</p>
+          <button type="button" class="nav-group label-text" [class.open]="operationsOpen()" (click)="toggleOperations()" aria-label="Toggle operations menu" [attr.aria-expanded]="operationsOpen()">
+            <span class="nav-group-copy">
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'operations' }" />
+              <span>Operations</span>
+            </span>
+            <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+          </button>
+          @if (operationsOpen() || collapsed()) {
+            <div class="subnav" [class.rail]="collapsed()">
+              @for (item of operationsItems; track item.key) {
+                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''"><span class="sub-dot"></span><span class="label-text">{{ item.label }}</span></a>
+              }
+            </div>
+          }
+          }
+
+          @if (canViewMarketing()) {
+          <p class="section-label label-text">Marketing</p>
+          <button type="button" class="nav-group label-text" [class.open]="marketingOpen()" (click)="toggleMarketing()" aria-label="Toggle marketing menu" [attr.aria-expanded]="marketingOpen()">
+            <span class="nav-group-copy">
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'marketing' }" />
+              <span>Marketing</span>
+            </span>
+            <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+          </button>
+          @if (marketingOpen() || collapsed()) {
+            <div class="subnav" [class.rail]="collapsed()">
+              @for (item of marketingItems; track item.key) {
+                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''"><span class="sub-dot"></span><span class="label-text">{{ item.label }}</span></a>
+              }
+            </div>
+          }
           }
 
           <p class="section-label label-text">Commerce</p>
@@ -570,6 +598,8 @@ export class SellerShellComponent {
   isOwner = computed(() => this.auth.hasRole('tenant_owner'));
   canViewAccounting = computed(() => this.isOwner() || this.auth.user()?.department === 'finance');
   canViewSales = computed(() => this.isOwner() || this.auth.user()?.department === 'sales');
+  canViewOperations = computed(() => this.isOwner() || this.auth.user()?.department === 'operations');
+  canViewMarketing = computed(() => this.isOwner() || this.auth.user()?.department === 'marketing');
 
   readonly accountingItems: NavEntry[] = [
     { key: 'departments/finance', label: 'Overview', icon: 'finance' },
@@ -592,9 +622,17 @@ export class SellerShellComponent {
     { key: 'sales/customers', label: 'Customers', icon: 'users' },
   ];
 
-  readonly departments: NavEntry[] = [
-    { key: 'operations', label: 'Operations', icon: 'operations' },
-    { key: 'marketing', label: 'Marketing', icon: 'marketing' },
+  readonly operationsItems: NavEntry[] = [
+    { key: 'departments/operations', label: 'Overview', icon: 'operations' },
+    { key: 'operations/fulfillment', label: 'Fulfilment', icon: 'orders' },
+    { key: 'operations/inventory', label: 'Inventory', icon: 'inventory' },
+    { key: 'operations/catalog', label: 'Catalogue', icon: 'products' },
+  ];
+
+  readonly marketingItems: NavEntry[] = [
+    { key: 'departments/marketing', label: 'Overview', icon: 'marketing' },
+    { key: 'marketing/campaigns', label: 'Campaigns', icon: 'ads' },
+    { key: 'marketing/performance', label: 'Performance', icon: 'analytics' },
   ];
 
   readonly commerceItems: NavEntry[] = [
@@ -616,11 +654,11 @@ export class SellerShellComponent {
     { key: 'ai', label: 'AI', icon: 'ai' },
   ];
 
-  /** The accounting suite stays discoverable as a nested sidebar workspace. */
-  accountingOpen = signal(true);
-
-  /** The sales workspace mirrors accounting as a nested sidebar suite. */
-  salesOpen = signal(true);
+  /** Workspace menus start closed to keep the sidebar compact. */
+  accountingOpen = signal(false);
+  salesOpen = signal(false);
+  operationsOpen = signal(false);
+  marketingOpen = signal(false);
 
   /** Sidebar collapse (icon rail on desktop, off-canvas drawer on mobile). */
   collapsed = signal(this.initialCollapsed());
@@ -644,8 +682,11 @@ export class SellerShellComponent {
         items.push({ label: s.label, path: this.tenantLink(s.key), icon: s.icon, section: 'Sales' });
       }
     }
-    for (const d of this.departments) {
-      items.push({ label: d.label, path: this.tenantLink('departments/' + d.key), icon: d.icon, section: 'Departments' });
+    if (this.canViewOperations()) {
+      for (const item of this.operationsItems) items.push({ label: item.label, path: this.tenantLink(item.key), icon: item.icon, section: 'Operations' });
+    }
+    if (this.canViewMarketing()) {
+      for (const item of this.marketingItems) items.push({ label: item.label, path: this.tenantLink(item.key), icon: item.icon, section: 'Marketing' });
     }
     items.push({ label: 'Help centre', path: this.tenantLink('support'), icon: 'lifebuoy', section: 'Support' });
     for (const c of this.commerceItems) {
@@ -716,6 +757,14 @@ export class SellerShellComponent {
 
   toggleSales() {
     this.salesOpen.update((value) => !value);
+  }
+
+  toggleOperations() {
+    this.operationsOpen.update((value) => !value);
+  }
+
+  toggleMarketing() {
+    this.marketingOpen.update((value) => !value);
   }
 
   onNavigate() {
