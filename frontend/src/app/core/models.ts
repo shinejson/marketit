@@ -229,6 +229,108 @@ export interface SalesCustomer {
   won_total?: string | number;
 }
 
+export type SellerOrderStatus =
+  | 'awaiting_fulfillment'
+  | 'processing'
+  | 'shipped'
+  | 'delivered'
+  | 'completed'
+  | 'cancelled'
+  | 'refunded';
+
+export interface SellerOrderItem {
+  id: number;
+  seller_order_id: number;
+  variant_id?: number | null;
+  product_name: string;
+  sku?: string | null;
+  unit_price: string | number;
+  qty: number;
+  line_tax: string | number;
+  options?: Record<string, unknown> | null;
+}
+
+export interface SellerOrderAddress {
+  id: number;
+  full_name: string;
+  phone?: string | null;
+  line1: string;
+  line2?: string | null;
+  city: string;
+  state?: string | null;
+  postal_code?: string | null;
+  country: string;
+}
+
+export interface SellerOrderSettlement {
+  id: number;
+  seller_order_id: number;
+  gross: string | number;
+  commission: string | number;
+  delivery_fee: string | number;
+  refund_amount: string | number;
+  net: string | number;
+  status: 'pending' | 'released';
+}
+
+export interface SellerOrderStoreRef {
+  id: number;
+  name: string;
+  slug?: string;
+}
+
+export interface SellerOrderCustomer {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface SellerOrderMaster {
+  id: number;
+  status: string;
+  currency?: string;
+  grand_total?: string | number;
+  placed_at?: string | null;
+  created_at?: string;
+  user?: SellerOrderCustomer | null;
+  shipping_address?: SellerOrderAddress | null;
+}
+
+export interface SellerOrder {
+  id: number;
+  order_id: number;
+  tenant_id: number;
+  store_id: number;
+  subtotal: string | number;
+  delivery_fee: string | number;
+  commission: string | number;
+  net_settlement: string | number;
+  status: SellerOrderStatus;
+  created_at: string;
+  updated_at?: string;
+  items: SellerOrderItem[];
+  store?: SellerOrderStoreRef | null;
+  order?: SellerOrderMaster | null;
+  settlement?: SellerOrderSettlement | null;
+}
+
+export interface SellerOrderStats {
+  total_count: number;
+  awaiting_fulfillment_count: number;
+  processing_count: number;
+  shipped_count: number;
+  delivered_count: number;
+  completed_count: number;
+  cancelled_count: number;
+  total_net_payout: number;
+}
+
+export interface SellerOrdersResponse {
+  data: SellerOrder[];
+  meta: { page: number; per_page: number; total: number; last_page: number };
+  stats: SellerOrderStats;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;
