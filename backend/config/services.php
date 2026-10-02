@@ -35,4 +35,45 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Customer social login
+    |--------------------------------------------------------------------------
+    |
+    | Marketplace customers can sign in with an OAuth provider. A provider is
+    | offered on the login page as soon as it has a client id and secret (and
+    | is not explicitly disabled). `social.demo` lets non-production
+    | environments exercise the whole flow without real OAuth apps — it is
+    | ignored when credentials exist and refused in production.
+    |
+    */
+
+    'social' => [
+        'demo' => env('SOCIAL_LOGIN_DEMO', true),
+    ],
+
+    'google' => [
+        'enabled' => env('GOOGLE_LOGIN_ENABLED', true),
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+    ],
+
+    'facebook' => [
+        'enabled' => env('FACEBOOK_LOGIN_ENABLED', true),
+        'client_id' => env('FACEBOOK_CLIENT_ID'),
+        'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+    ],
+
+    'apple' => [
+        'enabled' => env('APPLE_LOGIN_ENABLED', true),
+        'client_id' => env('APPLE_CLIENT_ID'),
+        'client_secret' => env('APPLE_CLIENT_SECRET'),
+    ],
+
+    'github' => [
+        'enabled' => env('GITHUB_LOGIN_ENABLED', false),
+        'client_id' => env('GITHUB_CLIENT_ID'),
+        'client_secret' => env('GITHUB_CLIENT_SECRET'),
+    ],
+
 ];

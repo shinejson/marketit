@@ -588,6 +588,155 @@ export interface PermissionGroup {
   permissions: PermissionDefinition[];
 }
 
+/* ------------------------------------------------------------------------ */
+/* Tenant access control (/tenant/users)                                      */
+/* ------------------------------------------------------------------------ */
+
+export type TenantAccessLevel = 'tenant_owner' | 'store_staff';
+export type TenantUserStatus = 'active' | 'invited' | 'suspended';
+export type TenantCustomerStatus = 'active' | 'blocked';
+export type SocialProviderKey = 'google' | 'facebook' | 'apple' | 'github';
+
+export interface TenantRoleSummary {
+  id: number;
+  key: string;
+  name: string;
+  description?: string | null;
+  department?: string | null;
+  permissions: string[];
+  is_system: boolean;
+  is_owner_role?: boolean;
+  users_count: number;
+  updated_at?: string | null;
+}
+
+export interface TenantAccessLevelOption {
+  key: TenantAccessLevel;
+  label: string;
+  description: string;
+}
+
+export interface TenantSystemUser {
+  id: number;
+  user_id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  avatar_url?: string | null;
+  title?: string | null;
+  role: TenantAccessLevel;
+  access_level: TenantAccessLevel;
+  status: TenantUserStatus;
+  department?: string | null;
+  store_id?: number | null;
+  store?: { id: number; name: string } | null;
+  tenant_role_id?: number | null;
+  tenant_role?: Pick<TenantRoleSummary, 'id' | 'key' | 'name' | 'department' | 'permissions'> | null;
+  permissions: string[];
+  custom_permissions: boolean;
+  is_owner: boolean;
+  last_login_at?: string | null;
+  invited_at?: string | null;
+  created_at?: string | null;
+}
+
+export interface TenantSystemUserStats {
+  total: number;
+  active: number;
+  invited: number;
+  suspended: number;
+  owners: number;
+  customised: number;
+}
+
+export interface TenantSystemUsersResponse {
+  data: TenantSystemUser[];
+  stats: TenantSystemUserStats;
+  meta: {
+    departments: string[];
+    roles: string[];
+    access_levels: TenantAccessLevelOption[];
+    statuses: TenantUserStatus[];
+    tenant_roles: TenantRoleSummary[];
+    permission_groups: PermissionGroup[];
+    stores: { id: number; name: string }[];
+    can_manage: boolean;
+  };
+}
+
+export interface SocialAccountRef {
+  provider: SocialProviderKey | string;
+  label: string;
+  email?: string | null;
+  nickname?: string | null;
+  avatar_url?: string | null;
+  last_login_at?: string | null;
+}
+
+export interface TenantCustomer {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  avatar_url?: string | null;
+  account_status: 'active' | 'suspended';
+  status: TenantCustomerStatus;
+  segment?: string | null;
+  tags: string[];
+  notes?: string | null;
+  marketing_opt_in: boolean;
+  orders_count: number;
+  total_spent: number;
+  average_order_value: number;
+  first_order_at?: string | null;
+  last_order_at?: string | null;
+  joined_at?: string | null;
+  last_login_at?: string | null;
+  login_methods: string[];
+  social_accounts: SocialAccountRef[];
+  orders?: TenantCustomerOrder[];
+}
+
+export interface TenantCustomerOrder {
+  id: number;
+  order_id: number;
+  status: string;
+  total: number;
+  currency: string;
+  placed_at?: string | null;
+}
+
+export interface TenantCustomerStats {
+  total: number;
+  blocked: number;
+  repeat: number;
+  new_this_month: number;
+  social_logins: number;
+  revenue: number;
+  average_spend: number;
+}
+
+export interface TenantCustomersResponse {
+  data: TenantCustomer[];
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+    providers: { key: string; label: string; count: number }[];
+    segments: string[];
+    can_manage: boolean;
+  };
+  stats: TenantCustomerStats;
+}
+
+export interface SocialProviderOption {
+  key: SocialProviderKey | string;
+  label: string;
+  color: string;
+  mode: 'oauth' | 'demo';
+}
+
 export interface AdminRoleDefinition {
   id: number;
   key: string;

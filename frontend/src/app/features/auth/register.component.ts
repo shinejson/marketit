@@ -2,10 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { SocialLoginComponent } from '../../shared/social-login.component';
 
 @Component({
   selector: 'app-register',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, SocialLoginComponent],
   template: `
     <div class="wrap page">
       <form class="card form" (ngSubmit)="submit()">
@@ -16,6 +17,7 @@ import { AuthService } from '../../core/auth.service';
         <div class="field"><label>Password</label><input [(ngModel)]="password" name="password" type="password" required minlength="8" /></div>
         @if (error()) { <p class="err">{{ error() }}</p> }
         <button class="btn" [disabled]="busy()">Register</button>
+        <app-social-login label="or sign up with" returnTo="/" intent="register" (failed)="error.set($event)" />
         <p class="muted">Already here? <a routerLink="/login">Log in</a></p>
         <p class="muted sell">Selling on MarketHub? <a routerLink="/sell">Apply to open a store →</a></p>
       </form>

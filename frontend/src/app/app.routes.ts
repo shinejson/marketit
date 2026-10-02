@@ -71,6 +71,11 @@ export const routes: Routes = [
       { path: 'stores/:slug', loadComponent: () => import('./features/marketplace/store.component').then((m) => m.StoreComponent) },
       { path: 'login', loadComponent: () => import('./features/auth/login.component').then((m) => m.LoginComponent) },
       { path: 'register', loadComponent: () => import('./features/auth/register.component').then((m) => m.RegisterComponent) },
+      {
+        // OAuth redirect target for customer social login.
+        path: 'auth/callback/:provider',
+        loadComponent: () => import('./features/auth/social-callback.component').then((m) => m.SocialCallbackComponent),
+      },
       { path: 'cart', canActivate: [authGuard], loadComponent: () => import('./features/customer/cart.component').then((m) => m.CartComponent) },
       { path: 'checkout', canActivate: [authGuard], loadComponent: () => import('./features/customer/checkout.component').then((m) => m.CheckoutComponent) },
       { path: 'orders', canActivate: [authGuard], loadComponent: () => import('./features/customer/orders.component').then((m) => m.OrdersComponent) },

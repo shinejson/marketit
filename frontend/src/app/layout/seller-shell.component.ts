@@ -645,7 +645,7 @@ export class SellerShellComponent {
   ];
 
   readonly adminItems: NavEntry[] = [
-    { key: 'users', label: 'Users', icon: 'users' },
+    { key: 'users', label: 'Users & permissions', icon: 'users' },
     { key: 'settings', label: 'Settings', icon: 'settings' },
     { key: 'backups', label: 'Backups', icon: 'backups' },
     { key: 'domains', label: 'Domains', icon: 'domains' },

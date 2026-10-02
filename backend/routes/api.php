@@ -23,8 +23,11 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DepartmentDashboardController;
-use App\Http\Controllers\Api\StaffController;
+use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\Api\TenantBackupController;
+use App\Http\Controllers\Api\TenantCustomerController;
+use App\Http\Controllers\Api\TenantRoleController;
+use App\Http\Controllers\Api\TenantUserController;
 use App\Http\Controllers\Api\TenantSettingsController;
 use App\Http\Controllers\Api\TenantSupportController;
 use App\Http\Controllers\Api\DeviceTokenController;
@@ -44,7 +47,13 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('throttle:login')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
+
+    // Customer social login (Google, Facebook, Apple, GitHub).
+    Route::post('/auth/social/{provider}/redirect', [SocialAuthController::class, 'redirect']);
+    Route::post('/auth/social/{provider}/callback', [SocialAuthController::class, 'callback']);
 });
+
+Route::get('/auth/social/providers', [SocialAuthController::class, 'index'])->middleware('throttle:60,1');
 
 Route::prefix('market')->middleware('throttle:60,1')->group(function () {
     Route::get('/products', [MarketController::class, 'products']);
@@ -65,6 +74,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/auth/sessions', [AuthController::class, 'revokeOtherSessions']);
     Route::delete('/auth/sessions/{token}', [AuthController::class, 'revokeSession']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::get('/auth/social/identities', [SocialAuthController::class, 'identities']);
+    Route::delete('/auth/social/identities/{identity}', [SocialAuthController::class, 'unlink']);
 
     Route::post('/tenants/register', [TenantController::class, 'register']);
     Route::get('/tenants/mine', [TenantController::class, 'mine']);
@@ -187,10 +198,28 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/customers', [SalesController::class, 'storeCustomer']);
         });
 
-        Route::get('/staff', [StaffController::class, 'index']);
-        Route::post('/staff', [StaffController::class, 'store']);
-        Route::patch('/staff/{staff}', [StaffController::class, 'update']);
-        Route::delete('/staff/{staff}', [StaffController::class, 'destroy']);
+        // Access control: system users (console staff), the roles that carry
+        // their permission checkboxes, and the tenant's customer accounts.
+        Route::get('/users', [TenantUserController::class, 'index']);
+        Route::post('/users', [TenantUserController::class, 'store']);
+        Route::patch('/users/{staff}', [TenantUserController::class, 'update']);
+        Route::delete('/users/{staff}', [TenantUserController::class, 'destroy']);
+        Route::post('/users/{staff}/password', [TenantUserController::class, 'resetPassword']);
+
+        // Legacy aliases kept so older clients keep working.
+        Route::get('/staff', [TenantUserController::class, 'index']);
+        Route::post('/staff', [TenantUserController::class, 'store']);
+        Route::patch('/staff/{staff}', [TenantUserController::class, 'update']);
+        Route::delete('/staff/{staff}', [TenantUserController::class, 'destroy']);
+
+        Route::get('/roles', [TenantRoleController::class, 'index']);
+        Route::post('/roles', [TenantRoleController::class, 'store']);
+        Route::patch('/roles/{role}', [TenantRoleController::class, 'update']);
+        Route::delete('/roles/{role}', [TenantRoleController::class, 'destroy']);
+
+        Route::get('/customers', [TenantCustomerController::class, 'index']);
+        Route::get('/customers/{customer}', [TenantCustomerController::class, 'show']);
+        Route::patch('/customers/{customer}', [TenantCustomerController::class, 'update']);
 
         Route::get('/settings', [TenantSettingsController::class, 'show']);
         Route::patch('/settings', [TenantSettingsController::class, 'update']);

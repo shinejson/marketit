@@ -12,6 +12,7 @@ import { handleSupport } from './support-mock.mjs';
 import { handleTenant } from './tenant-mock.mjs';
 import { handleAccounting } from './accounting-mock.mjs';
 import { handleProducts } from './products-mock.mjs';
+import { handleAccess } from './access-mock.mjs';
 
 const PORT = process.env.PORT || 8001;
 
@@ -335,6 +336,9 @@ const server = http.createServer(async (req, res) => {
 
   // ---- tenant catalog (/tenant/products)
   if (await handleProducts(req, res, url, method, readBody, json)) return;
+
+  // ---- access control (/tenant/users) and customer social login
+  if (await handleAccess(req, res, url, method, readBody, json)) return;
 
   // ---- auth
   if (path === '/api/auth/login' && method === 'POST') {

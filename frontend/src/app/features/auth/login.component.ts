@@ -3,10 +3,11 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { PortalService } from '../../core/portal.service';
+import { SocialLoginComponent } from '../../shared/social-login.component';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, SocialLoginComponent],
   template: `
     <div class="wrap page">
       <form class="card form" (ngSubmit)="submit()">
@@ -15,6 +16,7 @@ import { PortalService } from '../../core/portal.service';
         <div class="field"><label>Password</label><input [(ngModel)]="password" name="password" type="password" required /></div>
         @if (error()) { <p class="err">{{ error() }}</p> }
         <button class="btn" [disabled]="busy()">Log in</button>
+        <app-social-login label="or sign in with" returnTo="/" intent="login" (failed)="error.set($event)" />
         <p class="muted">No account? <a routerLink="/register">Register</a></p>
         <p class="muted split">
           Console logins:

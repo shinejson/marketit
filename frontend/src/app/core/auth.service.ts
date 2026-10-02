@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { EMPTY } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { AuthResponse, User } from './models';
+import { AuthResponse, SocialProviderOption, User } from './models';
 
 // sessionStorage keeps bearer tokens scoped to the browser tab instead of
 // leaving a reusable platform credential in persistent localStorage.
@@ -52,6 +52,31 @@ export class AuthService {
     return this.http.post<{ data: AuthResponse }>('/api/auth/login', { email, password, portal }).pipe(
       tap((res) => this.persist(res.data)),
     );
+  }
+
+  /* ----------------------------------------------------------- social login */
+
+  /** Providers the API has credentials for (or demo mode outside production). */
+  socialProviders() {
+    return this.http.get<{ data: SocialProviderOption[] }>('/api/auth/social/providers');
+  }
+
+  /**
+   * Ask the API for a provider authorize URL. The client secret stays on the
+   * server; we only ever hold the opaque state value.
+   */
+  startSocialLogin(provider: string, redirectUri: string, intent: 'login' | 'register' = 'login') {
+    return this.http.post<{ data: { provider: string; state: string; mode: 'oauth' | 'demo'; url: string } }>(
+      `/api/auth/social/${provider}/redirect`,
+      { redirect_uri: redirectUri, intent },
+    );
+  }
+
+  /** Exchange the authorization code for a session. */
+  completeSocialLogin(provider: string, code: string, state: string) {
+    return this.http
+      .post<{ data: AuthResponse }>(`/api/auth/social/${provider}/callback`, { code, state })
+      .pipe(tap((res) => this.persist(res.data)));
   }
 
   register(payload: { name: string; email: string; password: string; phone?: string }) {
