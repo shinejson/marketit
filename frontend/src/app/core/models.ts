@@ -498,6 +498,29 @@ export interface BackupMeta {
   frequency: string;
 }
 
+export interface PaymentMethod {
+  key: 'card' | 'mobile_money' | 'bank_transfer' | 'cash_on_delivery' | string;
+  label: string;
+  description: string;
+  online: boolean;
+}
+
+export interface PaymentMethodsPayload {
+  provider: string;
+  mode: 'test' | 'live' | string;
+  currency: string;
+  methods: PaymentMethod[];
+}
+
+export interface AuthSession {
+  id: number;
+  name: string;
+  current: boolean;
+  created_at?: string | null;
+  last_used_at?: string | null;
+  expires_at?: string | null;
+}
+
 export interface GatewayTestResult {
   ok: boolean;
   provider?: string;

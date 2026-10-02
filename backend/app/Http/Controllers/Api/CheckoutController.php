@@ -4,13 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\CheckoutService;
+use App\Services\Payment\PaymentConfiguration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
-    public function __construct(protected CheckoutService $checkout) {}
+    public function __construct(
+        protected CheckoutService $checkout,
+        protected PaymentConfiguration $payments,
+    ) {}
 
     public function quote(Request $request): JsonResponse
     {
@@ -27,12 +31,20 @@ class CheckoutController extends Controller
         }
         $data = $request->validate([
             'shipping_address_id' => ['required', 'integer', 'exists:addresses,id'],
+            'payment_method' => ['nullable', 'string', 'max:32'],
         ]);
+        $paymentMethod = (string) ($data['payment_method'] ?? 'card');
+        if (! $this->payments->supports($paymentMethod)) {
+            throw ValidationException::withMessages([
+                'payment_method' => 'That payment method is not available right now.',
+            ]);
+        }
 
         $payload = $this->checkout->checkout(
             $request->user(),
             (int) $data['shipping_address_id'],
             $key,
+            $paymentMethod,
         );
 
         return response()->json($payload, 201);

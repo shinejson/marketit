@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class MockPaymentGateway implements PaymentGateway
 {
-    public function createIntent(Order $order, string $amount): PaymentIntentResult
+    public function createIntent(Order $order, string $amount, ?string $paymentMethod = null): PaymentIntentResult
     {
         $ref = 'mock_'.Str::uuid()->toString();
 
@@ -16,7 +16,7 @@ class MockPaymentGateway implements PaymentGateway
             gatewayRef: $ref,
             type: 'redirect',
             url: '/api/payments/mock/pay?ref='.$ref.'&order='.$order->id,
-            meta: ['amount' => $amount],
+            meta: ['amount' => $amount, 'payment_method' => $paymentMethod ?: 'card'],
         );
     }
 

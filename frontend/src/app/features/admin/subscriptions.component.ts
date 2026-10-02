@@ -122,8 +122,19 @@ type Tab = 'subscriptions' | 'plans' | 'invoices';
     }
 
     @if (tab() === 'plans') {
-      <div class="toolbar">
-        <button class="btn accent" type="button" (click)="startPlan()">New plan</button>
+      <div class="pricing-toolbar">
+        <div>
+          <p class="eyebrow">Pricing architecture</p>
+          <h2>Plans that make the next step obvious</h2>
+          <p class="muted small">Use annual billing to create a clear value anchor while keeping plan limits and commission visible.</p>
+        </div>
+        <div class="pricing-actions">
+          <div class="cycle-toggle" role="group" aria-label="Pricing display cycle">
+            <button type="button" [class.on]="pricingCycle() === 'monthly'" (click)="pricingCycle.set('monthly')">Monthly</button>
+            <button type="button" [class.on]="pricingCycle() === 'annual'" (click)="pricingCycle.set('annual')">Annual <span>save 2 months</span></button>
+          </div>
+          <button class="btn accent" type="button" (click)="startPlan()">New plan</button>
+        </div>
       </div>
 
       @if (planForm(); as f) {
@@ -154,22 +165,24 @@ type Tab = 'subscriptions' | 'plans' | 'invoices';
 
       <div class="grid plans">
         @for (p of plans(); track p.id) {
-          <article class="card pad plan" [class.off]="!p.is_active">
-            <div class="row">
-              <h3>{{ p.name }}</h3>
+          <article class="card pad plan" [class.off]="!p.is_active" [class.featured]="isFeatured(p)">
+            @if (isFeatured(p)) { <div class="popular">Most popular</div> }
+            <div class="row plan-top">
+              <div><h3>{{ p.name }}</h3><span class="muted small">{{ p.description || 'A focused toolkit for growing stores.' }}</span></div>
               <span class="pill">{{ p.is_active ? 'active' : 'archived' }}</span>
             </div>
-            <p class="price">{{ +p.price | currency: 'USD' }}<span class="muted small"> / {{ p.interval }}</span></p>
-            <p class="muted small">{{ p.description }}</p>
-            <ul>
-              <li>{{ p.commission_rate }}% commission</li>
-              <li>{{ p.trial_days }} day trial</li>
-              <li>{{ p.max_products ?? 'Unlimited' }} products · {{ p.max_stores ?? 'Unlimited' }} stores</li>
-              @for (feature of p.features || []; track feature) { <li>{{ feature }}</li> }
+            <p class="price">{{ displayPrice(p) | currency: p.currency }}<span class="muted small"> / {{ pricingCycle() === 'annual' ? 'year' : 'month' }}</span></p>
+            @if (pricingCycle() === 'annual') { <p class="saving">Annual view · {{ monthlyEquivalent(p) | currency: p.currency }}/mo equivalent</p> }
+            <div class="plan-rule"></div>
+            <ul class="feature-list">
+              <li><b>✓</b>{{ p.commission_rate }}% commission</li>
+              <li><b>✓</b>{{ p.trial_days }} day trial</li>
+              <li><b>✓</b>{{ p.max_products ?? 'Unlimited' }} products · {{ p.max_stores ?? 'Unlimited' }} stores · {{ p.max_staff ?? 'Unlimited' }} staff</li>
+              @for (feature of p.features || []; track feature) { <li><b>✓</b>{{ feature }}</li> }
             </ul>
-            <p class="muted small">{{ p.subscribers_count || 0 }} paying subscribers</p>
+            <div class="plan-footer"><span class="muted small">{{ p.subscribers_count || 0 }} paying subscribers</span><span class="muted small">{{ p.interval | titlecase }} billing</span></div>
             <div class="row gap">
-              <button class="btn ghost sm" type="button" (click)="startPlan(p)">Edit</button>
+              <button class="btn ghost sm" type="button" (click)="startPlan(p)">Edit plan</button>
               <button class="btn ghost sm danger" type="button" (click)="removePlan(p)">Delete</button>
             </div>
           </article>
@@ -251,11 +264,34 @@ type Tab = 'subscriptions' | 'plans' | 'invoices';
     .actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
     .btn.sm { padding: 6px 10px; font-size: 12px; }
     .btn.danger { color: var(--danger); }
-    .plans { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 18px; }
-    .plan ul { list-style: none; margin: 10px 0; padding: 0; font-size: 13px; display: flex; flex-direction: column; gap: 4px; color: var(--ink-soft); }
+    .pricing-toolbar { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; flex-wrap:wrap; margin:26px 0 16px; padding:20px; border:1px solid var(--line); border-radius:20px; background:linear-gradient(120deg,color-mix(in srgb,var(--accent-2) 12%,var(--card)),var(--card)); }
+    .pricing-toolbar h2 { margin:0 0 4px; font-family:Fraunces, Georgia, serif; font-size:26px; }
+    .pricing-toolbar p { margin:0; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.12em; font-size:10px; font-weight:800; margin-bottom:4px !important; }
+    .pricing-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .cycle-toggle { display:flex; gap:3px; padding:4px; border-radius:999px; background:var(--paper-2); border:1px solid var(--line); }
+    .cycle-toggle button { border:0; border-radius:999px; padding:8px 12px; color:var(--ink-soft); background:transparent; font-weight:700; cursor:pointer; }
+    .cycle-toggle button.on { color:#fff; background:var(--ink); }
+    .cycle-toggle span { color:var(--accent); font-size:10px; margin-left:3px; }
+    .plans { grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); margin-bottom: 18px; align-items:stretch; }
+    .plan { position:relative; display:flex; flex-direction:column; min-height:390px; overflow:hidden; }
+    .plan.featured { border:1px solid var(--accent); box-shadow:0 12px 28px color-mix(in srgb,var(--accent) 16%,transparent); transform:translateY(-4px); }
+    .popular { position:absolute; top:0; left:0; right:0; padding:6px; text-align:center; color:#fff; background:var(--accent); text-transform:uppercase; letter-spacing:.12em; font-size:10px; font-weight:800; }
+    .plan.featured .plan-top { padding-top:18px; }
+    .plan-top { align-items:flex-start; }
+    .plan-top h3 { margin:0 0 3px; }
+    .plan-top .small { display:block; max-width:210px; line-height:1.4; }
     .plan.off { opacity: .6; }
     .plan h3 { margin: 0; }
-    .price { font-family: Fraunces, Georgia, serif; font-size: 24px; margin: 8px 0 4px; }
+    .price { font-family: Fraunces, Georgia, serif; font-size: 32px; margin: 18px 0 3px; }
+    .saving { color:var(--ok); font-size:11px; font-weight:700; }
+    .plan-rule { border-top:1px solid var(--line); margin:15px 0 8px; }
+    .feature-list { list-style:none; margin:0; padding:0; font-size:13px; display:flex; flex-direction:column; gap:8px; color:var(--ink-soft); flex:1; }
+    .feature-list li { display:flex; gap:8px; }
+    .feature-list b { color:var(--ok); }
+    .plan-footer { display:flex; justify-content:space-between; gap:8px; border-top:1px solid var(--line); margin-top:16px; padding-top:12px; }
+    .plan .row.gap { margin-top:14px; }
+
     .pill.paid { background: rgba(31,75,58,.14); color: var(--ok); }
     .pill.open { background: rgba(201,162,39,.18); color: #7a6410; }
     .pill.failed { background: rgba(155,44,44,.14); color: var(--danger); }
@@ -268,6 +304,7 @@ export class AdminSubscriptionsComponent {
   readonly statuses = ['trialing', 'active', 'past_due', 'canceled', 'expired'];
 
   tab = signal<Tab>('subscriptions');
+  pricingCycle = signal<'monthly' | 'annual'>('monthly');
   subscriptions = signal<Subscription[]>([]);
   plans = signal<Plan[]>([]);
   invoices = signal<Invoice[]>([]);
@@ -304,6 +341,20 @@ export class AdminSubscriptionsComponent {
 
   planSubscribers() {
     return this.plans().map((p) => ({ label: p.name, value: p.subscribers_count || 0 }));
+  }
+
+  isFeatured(plan: Plan): boolean {
+    return plan.slug === 'growth' || (plan.slug === 'pro' && !this.plans().some((item) => item.slug === 'growth'));
+  }
+
+  displayPrice(plan: Plan): number {
+    const price = Number(plan.price) || 0;
+    if (this.pricingCycle() === 'annual') return plan.interval === 'yearly' ? price : price * 10;
+    return plan.interval === 'yearly' ? price / 12 : price;
+  }
+
+  monthlyEquivalent(plan: Plan): number {
+    return this.displayPrice(plan) / 12;
   }
 
   loadSubscriptions() {

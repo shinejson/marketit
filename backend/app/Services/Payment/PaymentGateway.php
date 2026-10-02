@@ -7,7 +7,7 @@ use App\Models\PaymentTransaction;
 
 interface PaymentGateway
 {
-    public function createIntent(Order $order, string $amount): PaymentIntentResult;
+    public function createIntent(Order $order, string $amount, ?string $paymentMethod = null): PaymentIntentResult;
 
     public function verifyAndParse(WebhookRequest $req): ?WebhookResult;
 

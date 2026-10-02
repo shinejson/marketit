@@ -44,6 +44,7 @@ class AdminSettingController extends Controller
         'branding' => ['label' => 'Branding & assets', 'icon' => 'palette', 'description' => 'Logo, favicon, colours and social preview artwork.'],
         'commerce' => ['label' => 'Commerce', 'icon' => 'cart', 'description' => 'Commission, payouts and tax defaults applied to sellers.'],
         'billing' => ['label' => 'Billing', 'icon' => 'card', 'description' => 'Trials, dunning and invoice numbering.'],
+        'payments' => ['label' => 'Payments', 'icon' => 'card', 'description' => 'Online providers, payment methods and webhook safety.'],
         'email' => ['label' => 'Email', 'icon' => 'mail', 'description' => 'Outgoing mail transport and sender identity.'],
         'sms' => ['label' => 'SMS', 'icon' => 'chat', 'description' => 'Text message gateway, sender ID and delivery rules.'],
         'notifications' => ['label' => 'Notifications', 'icon' => 'bell', 'description' => 'What the platform tells admins, sellers and buyers.'],
@@ -111,6 +112,49 @@ class AdminSettingController extends Controller
         'invoice_prefix' => ['billing', 'string', 'Invoice prefix', 'Prefix for generated invoice numbers.', 'INV'],
         'dunning_enabled' => ['billing', 'bool', 'Dunning emails', 'Retry reminders for unpaid invoices.', true],
 
+        // ----------------------------------------------------------- payments
+        'payments_enabled' => ['payments', 'bool', 'Accept online payments', 'Master switch for checkout payment collection.', true],
+        'payment_mode' => ['payments', 'select', 'Environment', 'Use test mode while validating provider credentials. Never use test credentials in live mode.', 'test', [
+            'options' => [
+                ['value' => 'test', 'label' => 'Test / sandbox'],
+                ['value' => 'live', 'label' => 'Live'],
+            ],
+        ]],
+        'payment_provider' => ['payments', 'select', 'Primary provider', 'Hosted checkout provider used for online card and mobile-money payments.', 'mock', [
+            'options' => [
+                ['value' => 'mock', 'label' => 'Mock (local development)'],
+                ['value' => 'stripe', 'label' => 'Stripe Checkout'],
+                ['value' => 'paystack', 'label' => 'Paystack'],
+                ['value' => 'flutterwave', 'label' => 'Flutterwave'],
+            ],
+        ]],
+        'payment_currency' => ['payments', 'select', 'Payment currency', 'Currency sent to the provider. It must match the currency configured in your provider account.', 'USD', [
+            'options' => [
+                ['value' => 'USD', 'label' => 'USD — US dollar'],
+                ['value' => 'GHS', 'label' => 'GHS — Ghana cedi'],
+                ['value' => 'NGN', 'label' => 'NGN — Nigerian naira'],
+                ['value' => 'KES', 'label' => 'KES — Kenyan shilling'],
+                ['value' => 'ZAR', 'label' => 'ZAR — South African rand'],
+            ],
+        ]],
+        'payment_methods_card' => ['payments', 'bool', 'Cards', 'Show card checkout when the selected provider supports it.', true],
+        'payment_methods_mobile_money' => ['payments', 'bool', 'Mobile money', 'Show mobile-money checkout for supported regional providers.', true],
+        'payment_methods_bank_transfer' => ['payments', 'bool', 'Bank transfer', 'Show bank-transfer instructions for manually reconciled orders.', false],
+        'payment_methods_cash_on_delivery' => ['payments', 'bool', 'Cash on delivery', 'Allow buyers to place an order without an online charge.', false],
+        'payment_auto_capture' => ['payments', 'bool', 'Auto-capture payments', 'Capture successful provider authorizations automatically.', true],
+        'payment_webhook_tolerance' => ['payments', 'number', 'Webhook tolerance (seconds)', 'Reject signed webhook requests older than this window.', 300, ['unit' => 'sec']],
+        'stripe_publishable_key' => ['payments', 'string', 'Stripe publishable key', 'Public key used by Stripe.js when you add an embedded card form.', '', ['placeholder' => 'pk_live_… or pk_test_…']],
+        'stripe_secret_key' => ['payments', 'secret', 'Stripe secret key', 'Encrypted at rest and never returned to the browser.', ''],
+        'stripe_webhook_secret' => ['payments', 'secret', 'Stripe webhook signing secret', 'Encrypted webhook secret used to verify checkout events.', ''],
+        'paystack_public_key' => ['payments', 'string', 'Paystack public key', 'Public key for Paystack inline checkout.', '', ['placeholder' => 'pk_live_… or pk_test_…']],
+        'paystack_secret_key' => ['payments', 'secret', 'Paystack secret key', 'Encrypted at rest and never returned to the browser.', ''],
+        'paystack_webhook_secret' => ['payments', 'secret', 'Paystack webhook secret', 'Optional separate secret; defaults to the Paystack secret key.', ''],
+        'flutterwave_public_key' => ['payments', 'string', 'Flutterwave public key', 'Public key for Flutterwave checkout.', '', ['placeholder' => 'FLWPUBK_…']],
+        'flutterwave_secret_key' => ['payments', 'secret', 'Flutterwave secret key', 'Encrypted at rest and never returned to the browser.', ''],
+        'flutterwave_encryption_key' => ['payments', 'secret', 'Flutterwave encryption key', 'Required for some Flutterwave payment flows; encrypted at rest.', ''],
+        'flutterwave_webhook_hash' => ['payments', 'secret', 'Flutterwave webhook hash', 'Secret hash sent by Flutterwave in webhook headers.', ''],
+        'bank_transfer_instructions' => ['payments', 'text', 'Bank transfer instructions', 'Shown to buyers when bank transfer is enabled. Never put card or secret credentials here.', '', ['columns' => 'full']],
+
         // -------------------------------------------------------------- email
         'mail_driver' => ['email', 'select', 'Transport', 'How outgoing mail leaves the platform.', 'smtp', [
             'options' => [
@@ -168,7 +212,7 @@ class AdminSettingController extends Controller
 
         // ----------------------------------------------------------- security
         'require_2fa_admins' => ['security', 'bool', 'Require 2FA for admins', 'Enforce two-factor for super admins.', false],
-        'session_timeout_minutes' => ['security', 'number', 'Session timeout (minutes)', 'Idle time before re-authentication.', 120, ['unit' => 'min']],
+        'session_timeout_minutes' => ['security', 'number', 'Session lifetime (minutes)', 'Maximum lifetime of a bearer session before the user must sign in again.', 120, ['unit' => 'min']],
         'max_login_attempts' => ['security', 'number', 'Max login attempts', 'Before an account is throttled.', 5],
         'allowed_upload_mb' => ['security', 'number', 'Max upload size (MB)', 'Applies to product and document uploads.', 10, ['unit' => 'MB']],
 
@@ -207,6 +251,36 @@ class AdminSettingController extends Controller
                 'assets' => array_keys(self::ASSETS),
             ],
         ]);
+    }
+
+    /** Safe, non-secret payment health summary for the checkout and settings UI. */
+    public function paymentStatus(): JsonResponse
+    {
+        $values = $this->values();
+        $provider = (string) ($values['payment_provider'] ?: 'mock');
+        $credentials = match ($provider) {
+            'stripe' => filled($values['stripe_secret_key']),
+            'paystack' => filled($values['paystack_secret_key']),
+            'flutterwave' => filled($values['flutterwave_secret_key']),
+            default => true,
+        };
+
+        $methods = collect([
+            ['key' => 'card', 'label' => 'Cards', 'enabled' => (bool) $values['payment_methods_card']],
+            ['key' => 'mobile_money', 'label' => 'Mobile money', 'enabled' => (bool) $values['payment_methods_mobile_money']],
+            ['key' => 'bank_transfer', 'label' => 'Bank transfer', 'enabled' => (bool) $values['payment_methods_bank_transfer']],
+            ['key' => 'cash_on_delivery', 'label' => 'Cash on delivery', 'enabled' => (bool) $values['payment_methods_cash_on_delivery']],
+        ])->values();
+
+        return response()->json(['data' => [
+            'enabled' => (bool) $values['payments_enabled'],
+            'mode' => $values['payment_mode'],
+            'provider' => $provider,
+            'provider_configured' => $credentials,
+            'currency' => $values['payment_currency'] ?: $values['default_currency'],
+            'methods' => $methods,
+            'webhook_tolerance' => (int) $values['payment_webhook_tolerance'],
+        ]]);
     }
 
     public function update(Request $request): JsonResponse
@@ -512,8 +586,20 @@ class AdminSettingController extends Controller
                 if (! is_numeric($value)) {
                     $fail("$label must be a number.");
                 }
+                $number = 0 + $value;
+                $limits = [
+                    'commission_rate' => [0, 100],
+                    'tax_rate' => [0, 100],
+                    'payment_webhook_tolerance' => [30, 3600],
+                    'session_timeout_minutes' => [15, 43200],
+                    'max_login_attempts' => [3, 20],
+                    'allowed_upload_mb' => [1, 100],
+                ];
+                if (isset($limits[$key]) && ($number < $limits[$key][0] || $number > $limits[$key][1])) {
+                    $fail("$label must be between {$limits[$key][0]} and {$limits[$key][1]}.");
+                }
 
-                return 0 + $value;
+                return $number;
 
             case 'email':
                 if ($value !== '' && ! filter_var($value, FILTER_VALIDATE_EMAIL)) {
