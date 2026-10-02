@@ -6,6 +6,24 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script>
+    // Suppress unhandled errors injected by third-party browser extensions (e.g. Urban VPN 200.js)
+    window.addEventListener('unhandledrejection', function(e) {
+      var r = e && e.reason;
+      var msg = (r && (r.message || String(r))) || '';
+      var stack = (r && r.stack) || '';
+      if (msg.includes('M_ID') || stack.includes('200.js') || stack.includes('chrome-extension:')) {
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('error', function(e) {
+      var msg = (e && e.message) || '';
+      var fn = (e && e.filename) || '';
+      if (msg.includes('M_ID') || fn.includes('200.js') || fn.includes('chrome-extension:')) {
+        e.preventDefault();
+      }
+    });
+  </script>
 </head>
 <body>
   <app-root></app-root>
