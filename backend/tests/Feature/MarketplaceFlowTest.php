@@ -38,9 +38,13 @@ class MarketplaceFlowTest extends TestCase
 
     public function test_marketplace_lists_active_products_publicly(): void
     {
+        $expected = \App\Models\Product::withoutGlobalScopes()
+            ->where('status', \App\Models\Product::STATUS_ACTIVE)
+            ->count();
+
         $this->getJson('/api/market/products')
             ->assertOk()
-            ->assertJsonPath('meta.total', 8);
+            ->assertJsonPath('meta.total', $expected);
     }
 
     public function test_seller_cannot_see_other_tenant_products(): void

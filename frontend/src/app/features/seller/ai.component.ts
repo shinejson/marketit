@@ -50,7 +50,7 @@ export class SellerAiComponent {
   constructor() {
     this.api.sellerProducts().subscribe((res) => {
       this.products.set(res.data);
-      if (res.data[0]) this.productId = res.data[0].id;
+      if (res.data[0]) this.productId = String(res.data[0].id);
     });
     this.reload();
     this.api.aiInsights().subscribe((res) => this.insight.set(res.data));

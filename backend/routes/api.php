@@ -107,8 +107,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
         Route::get('/products', [ProductController::class, 'index']);
+        Route::get('/products/meta', [ProductController::class, 'meta']);
         Route::post('/products', [ProductController::class, 'store']);
+        Route::post('/products/bulk', [ProductController::class, 'bulk']);
         Route::get('/products/{product}', [ProductController::class, 'show']);
+        Route::post('/products/{product}/duplicate', [ProductController::class, 'duplicate']);
         Route::patch('/products/{product}', [ProductController::class, 'update']);
         Route::delete('/products/{product}', [ProductController::class, 'destroy']);
 

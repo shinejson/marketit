@@ -17,8 +17,18 @@ class Inventory extends Model
         'quantity',
         'reserved',
         'low_stock_threshold',
+        'batch_reference',
+        'expires_at',
+        'location',
         'version',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'expires_at' => 'date',
+        ];
+    }
 
     public function variant(): BelongsTo
     {
