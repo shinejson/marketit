@@ -7,7 +7,8 @@ import { ThemeService } from '../core/theme.service';
 type IconName =
   | 'dashboard' | 'analytics' | 'tenants' | 'users' | 'subscriptions' | 'orders'
   | 'domains' | 'ads' | 'audit' | 'settings' | 'logout' | 'search' | 'bell'
-  | 'sun' | 'moon' | 'chevron' | 'menu';
+  | 'sun' | 'moon' | 'chevron' | 'menu'
+  | 'lifebuoy' | 'ticket' | 'chat' | 'tasks' | 'guides';
 
 interface NavEntry {
   key: string;
@@ -71,6 +72,14 @@ const MOBILE_BREAKPOINT = 900;
             <a [routerLink]="adminLink(m.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? m.label : ''">
               <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: m.icon }" />
               <span class="label-text">{{ m.label }}</span>
+            </a>
+          }
+
+          <p class="section-label label-text">Service desk</p>
+          @for (s of supportItems; track s.key) {
+            <a [routerLink]="adminLink(s.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: !!s.exact }" (click)="onNavigate()" [title]="collapsed() ? s.label : ''">
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: s.icon }" />
+              <span class="label-text">{{ s.label }}</span>
             </a>
           }
 
@@ -232,6 +241,21 @@ const MOBILE_BREAKPOINT = 900;
           }
           @case ('audit') {
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><polyline points="9 12 11 14 15 10" />
+          }
+          @case ('lifebuoy') {
+            <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><line x1="4.9" y1="4.9" x2="9.2" y2="9.2" /><line x1="14.8" y1="14.8" x2="19.1" y2="19.1" /><line x1="14.8" y1="9.2" x2="19.1" y2="4.9" /><line x1="4.9" y1="19.1" x2="9.2" y2="14.8" />
+          }
+          @case ('ticket') {
+            <path d="M3 9.5V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2.5a2.5 2.5 0 0 0 0 5V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2.5a2.5 2.5 0 0 0 0-5z" /><line x1="14" y1="5" x2="14" y2="19" stroke-dasharray="2.5 2.5" />
+          }
+          @case ('chat') {
+            <path d="M21 14a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /><line x1="8" y1="8.5" x2="16" y2="8.5" /><line x1="8" y1="12" x2="13" y2="12" />
+          }
+          @case ('tasks') {
+            <polyline points="3 7 5 9 9 5" /><polyline points="3 17 5 19 9 15" /><line x1="12" y1="7" x2="21" y2="7" /><line x1="12" y1="17" x2="21" y2="17" />
+          }
+          @case ('guides') {
+            <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v16H6.5A2.5 2.5 0 0 0 4 20.5z" /><line x1="8" y1="7" x2="16" y2="7" /><line x1="8" y1="11" x2="13.5" y2="11" />
           }
           @case ('settings') {
             <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .7.4 1.31 1.05 1.6.31.14.65.22 1 .25l.5.01a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -451,6 +475,14 @@ export class AdminShellComponent {
     { key: 'orders', label: 'Notifications', icon: 'bell' },
   ];
 
+  readonly supportItems: NavEntry[] = [
+    { key: 'support', label: 'Support overview', icon: 'lifebuoy', exact: true },
+    { key: 'support/tickets', label: 'Tickets', icon: 'ticket' },
+    { key: 'support/chats', label: 'Live chat', icon: 'chat' },
+    { key: 'support/tasks', label: 'Service tasks', icon: 'tasks' },
+    { key: 'support/guides', label: 'Help & guides', icon: 'guides' },
+  ];
+
   readonly platformItems: NavEntry[] = [
     { key: 'domains', label: 'Domains', icon: 'domains' },
     { key: 'ads', label: 'Ads & Marketing', icon: 'ads' },
@@ -474,6 +506,9 @@ export class AdminShellComponent {
     }
     for (const m of this.manageItems) {
       items.push({ label: m.label, path: this.adminLink(m.key), icon: m.icon, section: 'Manage' });
+    }
+    for (const s of this.supportItems) {
+      items.push({ label: s.label, path: this.adminLink(s.key), icon: s.icon, section: 'Service desk' });
     }
     for (const p of this.platformItems) {
       items.push({ label: p.label, path: this.adminLink(p.key), icon: p.icon, section: 'Platform' });

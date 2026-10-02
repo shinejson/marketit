@@ -7,7 +7,7 @@ import { ThemeService } from '../core/theme.service';
 type IconName =
   | 'home' | 'finance' | 'sales' | 'operations' | 'marketing' | 'store' | 'orders' | 'products'
   | 'inventory' | 'ads' | 'analytics' | 'users' | 'settings' | 'backups' | 'domains' | 'apikeys'
-  | 'webhooks' | 'ai' | 'search' | 'bell' | 'sun' | 'moon' | 'chevron' | 'menu';
+  | 'webhooks' | 'ai' | 'search' | 'bell' | 'sun' | 'moon' | 'chevron' | 'menu' | 'lifebuoy';
 
 interface NavEntry {
   key: string;
@@ -77,6 +77,12 @@ const MOBILE_BREAKPOINT = 900;
               <span class="label-text">{{ c.label }}</span>
             </a>
           }
+
+          <p class="section-label label-text">Support</p>
+          <a [routerLink]="tenantLink('support')" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? 'Help centre' : ''">
+            <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'lifebuoy' }" />
+            <span class="label-text">Help centre</span>
+          </a>
 
           @if (isOwner()) {
             <p class="section-label label-text">Admin</p>
@@ -213,6 +219,9 @@ const MOBILE_BREAKPOINT = 900;
         @switch (name) {
           @case ('home') {
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+          }
+          @case ('lifebuoy') {
+            <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><line x1="4.9" y1="4.9" x2="9.2" y2="9.2" /><line x1="14.8" y1="14.8" x2="19.1" y2="19.1" /><line x1="14.8" y1="9.2" x2="19.1" y2="4.9" /><line x1="4.9" y1="19.1" x2="9.2" y2="14.8" />
           }
           @case ('finance') {
             <circle cx="12" cy="12" r="9" /><path d="M12 7v10M9.5 9.5c0-1.1 1.1-2 2.5-2s2.5.9 2.5 2c0 2.5-5 1.5-5 4 0 1.1 1.1 2 2.5 2s2.5-.9 2.5-2" />
@@ -505,6 +514,7 @@ export class SellerShellComponent {
     for (const d of this.departments) {
       items.push({ label: d.label, path: this.tenantLink('departments/' + d.key), icon: d.icon, section: 'Departments' });
     }
+    items.push({ label: 'Help centre', path: this.tenantLink('support'), icon: 'lifebuoy', section: 'Support' });
     for (const c of this.commerceItems) {
       items.push({ label: c.label, path: this.tenantLink(c.key), icon: c.icon, section: 'Commerce' });
     }

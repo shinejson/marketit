@@ -31,6 +31,20 @@ import {
   Subscription,
   SubscriptionStats,
   TenantApplication,
+  GuideSummary,
+  HelpArticle,
+  HelpCategory,
+  SupportAgent,
+  SupportCannedReply,
+  SupportChat,
+  SupportChatMessage,
+  SupportChatSummary,
+  SupportOverview,
+  SupportTask,
+  SupportTaskSummary,
+  SupportTicket,
+  SupportTicketSummary,
+  TenantSupportOverview,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -563,6 +577,158 @@ export class ApiService {
 
   deleteAdminBackup(id: number) {
     return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/backups/${id}`);
+  }
+
+  // ---------------------------------------------------------- service desk
+
+  supportOverview(days = 30) {
+    return this.http.get<{ data: SupportOverview }>('/api/admin/support/overview', { params: { days } });
+  }
+
+  supportAgents() {
+    return this.http.get<{ data: SupportAgent[] }>('/api/admin/support/agents');
+  }
+
+  supportTickets(params: Record<string, string | number | boolean> = {}) {
+    return this.http.get<{ data: SupportTicket[]; meta: Paginated<unknown>['meta']; summary: SupportTicketSummary }>(
+      '/api/admin/support/tickets',
+      { params: params as Record<string, string> },
+    );
+  }
+
+  supportTicket(id: number) {
+    return this.http.get<{ data: SupportTicket }>(`/api/admin/support/tickets/${id}`);
+  }
+
+  createSupportTicket(payload: Record<string, unknown>) {
+    return this.http.post<{ data: SupportTicket }>('/api/admin/support/tickets', payload);
+  }
+
+  updateSupportTicket(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: SupportTicket }>(`/api/admin/support/tickets/${id}`, payload);
+  }
+
+  replySupportTicket(id: number, payload: Record<string, unknown>) {
+    return this.http.post<{ data: SupportTicket }>(`/api/admin/support/tickets/${id}/messages`, payload);
+  }
+
+  supportChats(params: Record<string, string> = {}) {
+    return this.http.get<{ data: SupportChat[]; summary: SupportChatSummary }>('/api/admin/support/chats', { params });
+  }
+
+  supportChat(id: number) {
+    return this.http.get<{ data: SupportChat }>(`/api/admin/support/chats/${id}`);
+  }
+
+  updateSupportChat(id: number, action: string, agentId?: number | null) {
+    return this.http.patch<{ data: SupportChat }>(`/api/admin/support/chats/${id}`, { action, agent_id: agentId ?? null });
+  }
+
+  replySupportChat(id: number, body: string) {
+    return this.http.post<{ data: SupportChatMessage }>(`/api/admin/support/chats/${id}/messages`, { body });
+  }
+
+  supportTasks(params: Record<string, string> = {}) {
+    return this.http.get<{ data: SupportTask[]; summary: SupportTaskSummary }>('/api/admin/support/tasks', { params });
+  }
+
+  createSupportTask(payload: Record<string, unknown>) {
+    return this.http.post<{ data: SupportTask }>('/api/admin/support/tasks', payload);
+  }
+
+  updateSupportTask(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: SupportTask }>(`/api/admin/support/tasks/${id}`, payload);
+  }
+
+  deleteSupportTask(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/support/tasks/${id}`);
+  }
+
+  supportGuides(params: Record<string, string> = {}) {
+    return this.http.get<{ data: { categories: HelpCategory[]; articles: HelpArticle[] }; summary: GuideSummary }>(
+      '/api/admin/support/guides',
+      { params },
+    );
+  }
+
+  createSupportGuide(payload: Record<string, unknown>) {
+    return this.http.post<{ data: HelpArticle }>('/api/admin/support/guides', payload);
+  }
+
+  updateSupportGuide(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: HelpArticle }>(`/api/admin/support/guides/${id}`, payload);
+  }
+
+  deleteSupportGuide(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/support/guides/${id}`);
+  }
+
+  createGuideCategory(payload: Record<string, unknown>) {
+    return this.http.post<{ data: HelpCategory }>('/api/admin/support/guide-categories', payload);
+  }
+
+  supportCannedReplies() {
+    return this.http.get<{ data: SupportCannedReply[] }>('/api/admin/support/canned-replies');
+  }
+
+  // ------------------------------------------------- tenant-facing support
+
+  tenantSupportOverview() {
+    return this.http.get<{ data: TenantSupportOverview }>('/api/tenant/support/overview');
+  }
+
+  tenantTickets(params: Record<string, string> = {}) {
+    return this.http.get<{ data: SupportTicket[] }>('/api/tenant/support/tickets', { params });
+  }
+
+  tenantTicket(id: number) {
+    return this.http.get<{ data: SupportTicket }>(`/api/tenant/support/tickets/${id}`);
+  }
+
+  createTenantTicket(payload: Record<string, unknown>) {
+    return this.http.post<{ data: SupportTicket }>('/api/tenant/support/tickets', payload);
+  }
+
+  replyTenantTicket(id: number, body: string) {
+    return this.http.post<{ data: SupportTicket }>(`/api/tenant/support/tickets/${id}/messages`, { body });
+  }
+
+  rateTenantTicket(id: number, satisfaction: number, comment?: string) {
+    return this.http.post<{ data: SupportTicket }>(`/api/tenant/support/tickets/${id}/rate`, {
+      satisfaction,
+      satisfaction_comment: comment ?? null,
+    });
+  }
+
+  tenantChat() {
+    return this.http.get<{ data: SupportChat }>('/api/tenant/support/chat');
+  }
+
+  sendTenantChatMessage(body: string) {
+    return this.http.post<{ data: SupportChatMessage }>('/api/tenant/support/chat/messages', { body });
+  }
+
+  tenantSupportTasks() {
+    return this.http.get<{ data: SupportTask[] }>('/api/tenant/support/tasks');
+  }
+
+  updateTenantSupportTask(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: SupportTask }>(`/api/tenant/support/tasks/${id}`, payload);
+  }
+
+  tenantGuides(params: Record<string, string> = {}) {
+    return this.http.get<{ data: { categories: HelpCategory[]; articles: HelpArticle[] } }>(
+      '/api/tenant/support/guides',
+      { params },
+    );
+  }
+
+  readTenantGuide(id: number) {
+    return this.http.get<{ data: HelpArticle }>(`/api/tenant/support/guides/${id}`);
+  }
+
+  rateTenantGuide(id: number, helpful: boolean) {
+    return this.http.post<{ data: HelpArticle }>(`/api/tenant/support/guides/${id}/feedback`, { helpful });
   }
 
   adminBackupDownloadUrl(id: number) {

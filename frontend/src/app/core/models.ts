@@ -627,3 +627,251 @@ export interface AuditLogFacets {
   ips: AuditCountFacet[];
   tenants: AuditTenantFacet[];
 }
+
+// ------------------------------------------------------------ service desk
+
+export type TicketStatus = 'new' | 'open' | 'pending' | 'on_hold' | 'resolved' | 'closed';
+export type TicketPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type TicketChannel = 'portal' | 'email' | 'chat' | 'phone' | 'whatsapp';
+export type TicketCategory =
+  | 'billing' | 'payouts' | 'orders' | 'catalog' | 'technical' | 'account' | 'onboarding' | 'other';
+
+export interface SupportPersonRef {
+  id: number | null;
+  name: string;
+  email?: string | null;
+  type?: string;
+}
+
+export interface SupportTenantRef {
+  id: number;
+  name: string;
+  status?: string;
+}
+
+export interface SupportMessage {
+  id: number;
+  ticket_id: number;
+  author_id: number | null;
+  author_name: string;
+  author_role: 'agent' | 'requester' | 'system';
+  visibility: 'public' | 'internal';
+  body: string;
+  attachments?: unknown[];
+  created_at: string;
+}
+
+export interface SupportTicket {
+  id: number;
+  reference: string;
+  subject: string;
+  summary?: string | null;
+  category: TicketCategory;
+  channel: TicketChannel;
+  status: TicketStatus;
+  priority: TicketPriority;
+  tags: string[];
+  tenant: SupportTenantRef | null;
+  requester: SupportPersonRef;
+  assignee: SupportPersonRef | null;
+  first_response_at?: string | null;
+  last_reply_at?: string | null;
+  resolved_at?: string | null;
+  closed_at?: string | null;
+  sla_due_at?: string | null;
+  sla_minutes_remaining?: number | null;
+  sla_breached: boolean;
+  satisfaction?: number | null;
+  satisfaction_comment?: string | null;
+  messages_count: number;
+  created_at: string;
+  updated_at?: string;
+  messages?: SupportMessage[] | null;
+  tasks?: SupportTask[] | null;
+}
+
+export interface SupportTicketSummary {
+  all: number;
+  open: number;
+  unassigned: number;
+  breached: number;
+  resolved: number;
+  closed: number;
+}
+
+export type ChatStatus = 'queued' | 'active' | 'ended';
+
+export interface SupportChatMessage {
+  id: number;
+  chat_id: number;
+  author_id: number | null;
+  author_name: string;
+  author_role: 'agent' | 'visitor' | 'bot' | 'system';
+  body: string;
+  read_at?: string | null;
+  created_at: string;
+}
+
+export interface SupportChat {
+  id: number;
+  topic: string | null;
+  status: ChatStatus;
+  priority: TicketPriority;
+  visitor: SupportPersonRef;
+  tenant: SupportTenantRef | null;
+  agent: SupportPersonRef | null;
+  ticket_id: number | null;
+  started_at?: string | null;
+  answered_at?: string | null;
+  ended_at?: string | null;
+  last_message_at?: string | null;
+  wait_seconds?: number | null;
+  unread_count: number;
+  rating?: number | null;
+  messages?: SupportChatMessage[] | null;
+  typing?: boolean;
+}
+
+export interface SupportChatSummary {
+  queued: number;
+  active: number;
+  ended_today: number;
+  avg_wait_seconds: number;
+  unread: number;
+}
+
+export type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'review' | 'done';
+
+export interface TaskChecklistItem {
+  label: string;
+  done: boolean;
+}
+
+export interface SupportTask {
+  id: number;
+  title: string;
+  description?: string | null;
+  status: TaskStatus;
+  priority: TicketPriority;
+  owner_type: 'support' | 'tenant';
+  ticket_id: number | null;
+  ticket_reference?: string | null;
+  tenant: SupportTenantRef | null;
+  assignee: SupportPersonRef | null;
+  due_at?: string | null;
+  completed_at?: string | null;
+  checklist: TaskChecklistItem[];
+  labels: string[];
+  position: number;
+  overdue: boolean;
+  created_at?: string;
+}
+
+export interface SupportTaskSummary {
+  total: number;
+  open: number;
+  overdue: number;
+  due_today: number;
+  done_this_week: number;
+  by_status: Record<TaskStatus, number>;
+}
+
+export type GuideStatus = 'draft' | 'review' | 'published' | 'archived';
+
+export interface HelpCategory {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  icon: string;
+  position: number;
+  articles_count?: number;
+}
+
+export interface HelpArticle {
+  id: number;
+  category_id: number | null;
+  category: { id: number; name: string; slug: string; icon: string } | null;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  body?: string;
+  status: GuideStatus;
+  audience: 'tenant' | 'customer' | 'internal' | 'all';
+  tags: string[];
+  is_pinned: boolean;
+  read_minutes: number;
+  views: number;
+  helpful_yes: number;
+  helpful_no: number;
+  helpful_score: number | null;
+  author?: { id: number; name: string } | null;
+  published_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface GuideSummary {
+  total: number;
+  published: number;
+  draft: number;
+  review: number;
+  views: number;
+  avg_helpful: number;
+}
+
+export interface SupportAgent {
+  id: number;
+  name: string;
+  email: string;
+  open_tickets: number;
+  active_chats: number;
+  open_tasks: number;
+  csat: number | null;
+  status: 'online' | 'away' | 'offline';
+}
+
+export interface SupportCannedReply {
+  id: number;
+  title: string;
+  shortcut?: string | null;
+  category: string;
+  body: string;
+  uses: number;
+}
+
+export interface SupportOverview {
+  range_days: number;
+  kpis: {
+    open_tickets: number;
+    unassigned: number;
+    urgent: number;
+    breached: number;
+    created_in_range: number;
+    resolved_in_range: number;
+    avg_first_response_minutes: number;
+    avg_resolution_hours: number;
+    csat: number | null;
+    active_chats: number;
+    queued_chats: number;
+    open_tasks: number;
+    overdue_tasks: number;
+    published_guides: number;
+    guide_views: number;
+  };
+  by_status: { status: TicketStatus; count: number }[];
+  by_priority: { priority: TicketPriority; count: number }[];
+  by_category: { category: TicketCategory; count: number }[];
+  by_channel: { channel: TicketChannel; count: number }[];
+  volume: { label: string; date: string; created: number; resolved: number }[];
+  agents: SupportAgent[];
+  top_tenants: { id: number; name: string; tickets: number; open: number }[];
+  recent_tickets: SupportTicket[];
+  top_guides: HelpArticle[];
+}
+
+export interface TenantSupportOverview {
+  tickets: { open: number; awaiting_you: number; resolved: number; total: number };
+  tasks: { open: number; overdue: number; done: number; total: number };
+  chat: { status: ChatStatus | 'none'; unread: number };
+  guides: { published: number };
+}
