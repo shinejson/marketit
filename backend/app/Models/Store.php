@@ -26,6 +26,12 @@ class Store extends Model
         'delivery_days',
         'logo_path',
         'banner_path',
+        'theme_config',
+        'page_sections',
+        'seo_title',
+        'seo_description',
+        'customer_accounts_enabled',
+        'guest_checkout_enabled',
         'description',
         'contact_email',
         'contact_phone',
@@ -40,6 +46,10 @@ class Store extends Model
         return [
             'tax_inclusive' => 'boolean',
             'is_featured' => 'boolean',
+            'customer_accounts_enabled' => 'boolean',
+            'guest_checkout_enabled' => 'boolean',
+            'theme_config' => 'array',
+            'page_sections' => 'array',
             'delivery_fee' => 'decimal:2',
         ];
     }

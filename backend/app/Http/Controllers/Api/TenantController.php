@@ -162,6 +162,13 @@ class TenantController extends Controller
         return response()->json($this->paginate($stores));
     }
 
+    public function showStore(Store $store): JsonResponse
+    {
+        $this->authorize('view', $store);
+
+        return response()->json(['data' => $store->loadCount('products')]);
+    }
+
     public function storeStore(Request $request): JsonResponse
     {
         $user = $request->user()->load('roles');
@@ -182,7 +189,7 @@ class TenantController extends Controller
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash:ascii'],
             'description' => ['nullable', 'string'],
             'currency' => ['nullable', 'string', 'size:3'],
             'delivery_fee' => ['nullable', 'numeric', 'min:0'],
@@ -210,8 +217,23 @@ class TenantController extends Controller
         $this->authorize('update', $store);
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
-            'slug' => ['sometimes', 'string', 'max:255', Rule::unique('stores', 'slug')->ignore($store->id)->where('tenant_id', $store->tenant_id)],
+            'slug' => ['sometimes', 'string', 'max:255', 'alpha_dash:ascii', Rule::unique('stores', 'slug')->ignore($store->id)],
             'description' => ['nullable', 'string'],
+            'theme_config' => ['sometimes', 'array'],
+            'theme_config.primary_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_config.accent_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_config.font' => ['nullable', Rule::in(['modern', 'editorial', 'friendly'])],
+            'theme_config.hero_style' => ['nullable', Rule::in(['split', 'centered', 'minimal'])],
+            'page_sections' => ['sometimes', 'array', 'max:12'],
+            'page_sections.*.id' => ['required_with:page_sections', 'string', 'max:64'],
+            'page_sections.*.type' => ['required_with:page_sections', Rule::in(['hero', 'featured_products', 'rich_text', 'newsletter', 'trust_bar'])],
+            'page_sections.*.title' => ['nullable', 'string', 'max:255'],
+            'page_sections.*.subtitle' => ['nullable', 'string', 'max:1000'],
+            'page_sections.*.enabled' => ['required_with:page_sections', 'boolean'],
+            'seo_title' => ['nullable', 'string', 'max:70'],
+            'seo_description' => ['nullable', 'string', 'max:170'],
+            'customer_accounts_enabled' => ['sometimes', 'boolean'],
+            'guest_checkout_enabled' => ['sometimes', 'boolean'],
             'status' => ['sometimes', Rule::in(['draft', 'active', 'suspended'])],
             'currency' => ['nullable', 'string', 'size:3'],
             'tax_inclusive' => ['sometimes', 'boolean'],
@@ -388,9 +410,11 @@ class TenantController extends Controller
     {
         $slug = Str::slug($name) ?: 'store';
         $base = $slug;
-        $i = 1;
+        $i = 2;
 
-        while (Store::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('slug', $slug)->exists()) {
+        // Public storefronts live at /stores/{slug}; the slug therefore belongs to
+        // the whole platform rather than only to one tenant.
+        while (Store::withoutGlobalScopes()->where('slug', $slug)->exists()) {
             $slug = $base.'-'.$i++;
         }
 

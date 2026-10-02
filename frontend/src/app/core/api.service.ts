@@ -395,6 +395,10 @@ export class ApiService {
     return this.http.post<{ data: any }>('/api/tenant/stores', payload);
   }
 
+  sellerStore(id: number) {
+    return this.http.get<{ data: any }>(`/api/tenant/stores/${id}`);
+  }
+
   updateStore(id: number, payload: any) {
     return this.http.patch<{ data: any }>(`/api/tenant/stores/${id}`, payload);
   }

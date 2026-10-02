@@ -4,6 +4,7 @@ import { authGuard, marketingPortalGuard, roleGuard } from './core/auth.guard';
 const tenantConsoleChildren: Routes = [
   { path: '', loadComponent: () => import('./features/seller/dashboard.component').then((m) => m.SellerDashboardComponent) },
   { path: 'stores', loadComponent: () => import('./features/seller/stores.component').then((m) => m.SellerStoresComponent) },
+  { path: 'stores/:id', loadComponent: () => import('./features/seller/store-editor.component').then((m) => m.StoreEditorComponent) },
   { path: 'products', loadComponent: () => import('./features/seller/products.component').then((m) => m.SellerProductsComponent) },
   { path: 'orders', loadComponent: () => import('./features/seller/orders.component').then((m) => m.SellerOrdersComponent) },
   { path: 'inventory', loadComponent: () => import('./features/seller/inventory.component').then((m) => m.SellerInventoryComponent) },

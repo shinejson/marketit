@@ -96,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/stores', [TenantController::class, 'stores']);
         Route::post('/stores', [TenantController::class, 'storeStore']);
+        Route::get('/stores/{store}', [TenantController::class, 'showStore']);
         Route::patch('/stores/{store}', [TenantController::class, 'updateStore']);
         Route::delete('/stores/{store}', [TenantController::class, 'destroyStore']);
 
