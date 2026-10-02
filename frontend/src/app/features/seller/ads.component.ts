@@ -73,7 +73,7 @@ export class SellerAdsComponent {
     });
     this.api.sellerProducts().subscribe((res) => {
       this.products.set(res.data);
-      if (res.data[0]) this.form.product_id = res.data[0].id;
+      if (res.data[0]) this.form.product_id = String(res.data[0].id);
     });
   }
 

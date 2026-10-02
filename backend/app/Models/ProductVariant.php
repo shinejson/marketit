@@ -19,11 +19,14 @@ class ProductVariant extends Model
         'tenant_id',
         'product_id',
         'sku',
+        'name',
         'options',
         'price_override',
+        'cost_price',
         'weight',
         'barcode',
         'status',
+        'position',
     ];
 
     protected function casts(): array
@@ -31,7 +34,9 @@ class ProductVariant extends Model
         return [
             'options' => 'array',
             'price_override' => 'decimal:2',
+            'cost_price' => 'decimal:2',
             'weight' => 'decimal:3',
+            'position' => 'integer',
         ];
     }
 
