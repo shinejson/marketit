@@ -312,23 +312,59 @@ const MOBILE_BREAKPOINT = 900;
     /* ---------- Sidebar ---------- */
     aside {
       width: 240px; flex: none;
-      position: sticky; top: 0; height: 100vh; overflow-y: auto;
-      padding: 24px 16px; border-right: 1px solid var(--line);
-      background: #f7f1e4; display: flex; flex-direction: column; gap: 10px;
+      position: sticky; top: 0; height: 100vh;
+      overflow: hidden;
+      padding: 24px 16px 16px 16px; border-right: 1px solid var(--line);
+      background: #f7f1e4; display: flex; flex-direction: column; gap: 8px;
       transition: width .2s ease, transform .2s ease;
       z-index: 10;
     }
     /* Dark-chrome rules use :host-context, NOT :root[data-theme="dark"]: Angular's view encapsulation scopes :root inside component styles, so :root[data-theme] can never match and these rules used to be dead. */
     :host-context([data-theme="dark"]) aside { background: #1a1712; }
-    .brand-row { display: flex; align-items: center; }
+    .brand-row { display: flex; align-items: center; flex: none; }
     .brand { font-size: 22px; display: flex; align-items: center; gap: 2px; }
     .brand .mark {
       display: inline-flex; align-items: center; justify-content: center;
       width: 30px; height: 30px; border-radius: 9px; background: var(--ink); color: var(--paper);
       font-size: 16px; flex: none;
     }
-    .subtitle { margin: 2px 0 4px; font-size: 13px; }
-    nav { display: flex; flex-direction: column; gap: 2px; margin: 10px -16px auto -16px; padding: 0 16px; overflow-y: auto; }
+    .subtitle { margin: 2px 0 4px; font-size: 13px; flex: none; }
+    nav {
+      display: flex; flex-direction: column; gap: 2px;
+      margin: 8px -16px 0 -16px; padding: 0 16px 8px 16px;
+      overflow-y: auto; overflow-x: hidden;
+      flex: 1 1 auto; min-height: 0;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0,0,0,.18) transparent;
+    }
+    :host-context([data-theme="dark"]) nav {
+      scrollbar-color: rgba(255,255,255,.2) transparent;
+    }
+    nav::-webkit-scrollbar,
+    aside::-webkit-scrollbar {
+      width: 4px;
+    }
+    nav::-webkit-scrollbar-track,
+    aside::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    nav::-webkit-scrollbar-thumb,
+    aside::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,.18);
+      border-radius: 999px;
+    }
+    :host-context([data-theme="dark"]) nav::-webkit-scrollbar-thumb,
+    :host-context([data-theme="dark"]) aside::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,.2);
+    }
+    nav::-webkit-scrollbar-thumb:hover,
+    aside::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,0,0,.35);
+    }
+    :host-context([data-theme="dark"]) nav::-webkit-scrollbar-thumb:hover,
+    :host-context([data-theme="dark"]) aside::-webkit-scrollbar-thumb:hover {
+      background: rgba(255,255,255,.38);
+    }
     .section-label { margin: 14px 10px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; white-space: nowrap; }
     nav a {
       display: flex; align-items: center; gap: 11px;
@@ -342,6 +378,7 @@ const MOBILE_BREAKPOINT = 900;
     .logout {
       display: flex; align-items: center; gap: 10px; justify-content: flex-start;
       background: transparent; color: var(--ink); border: 1px solid var(--line);
+      margin-top: auto; flex: none;
     }
     .logout svg { width: 18px; height: 18px; flex: none; }
 
