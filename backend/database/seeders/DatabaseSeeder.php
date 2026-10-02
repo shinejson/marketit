@@ -93,6 +93,7 @@ class DatabaseSeeder extends Seeder
         $this->seedTenantOps();
         $this->call(BillingSeeder::class);
         $this->call(AccountingSeeder::class);
+        $this->call(SalesSeeder::class);
         $this->call(MarketingSeeder::class);
         $this->call(SupportSeeder::class);
         $this->call(AuditLogSeeder::class);
