@@ -6,7 +6,7 @@ Multi-tenant marketplace SaaS: Laravel API + Angular storefront, tenant console,
 
 - Backend: Laravel 12, Sanctum, SQLite (swap to MySQL in `.env`)
 - Frontend: Angular 19 standalone components
-- Payments: `PaymentGateway` interface with a mock driver
+- Payments: `PaymentGateway` interface with a mock driver plus hosted Stripe Checkout, Paystack and Flutterwave adapters configured from the admin console
 
 ## Demo accounts
 
@@ -89,7 +89,8 @@ Sign in as `admin@markethub.test` at `/admin/login` (or `admin.<your-domain>`) a
 | Live chat | Real-time-feeling chat inbox: waiting / live / ended queues with unread counts and wait timers, the live conversation with typing indicator and quick replies, claim / assign / end / reopen / escalate-to-ticket actions, and a visitor + session context rail. Auto-refreshes every 10s (pausable). |
 | Service tasks | Kanban board over To do / In progress / Blocked / Review / Done with HTML5 drag-and-drop, checklists you can tick from the card, overdue highlighting, owner filter (support team vs tenant actions), and a create/edit drawer. |
 | Help & guides | Knowledge base manager: collection sidebar, article cards with reads and helpful scores, one-click publish / unpublish / pin, and a split-screen Markdown editor with live preview. |
-| Settings | Ten-section configuration workspace: general, owner & company, branding (logo / dark logo / favicon / social image uploads, brand colours), commerce, billing, email (SMTP + test send), SMS (gateway, sender ID, encrypted credentials + test send), notifications, security, and backup & recovery (snapshot, download, restore, retention). Secrets are encrypted and write-only; every section resets to schema defaults. |
+| Settings | Configuration workspace for general, owner & company, branding (logo / dark logo / favicon / social image uploads, brand colours), commerce, billing, payments (Stripe Checkout, Paystack or Flutterwave hosted checkout, cards, mobile money, bank transfer and cash on delivery), email (SMTP + test send), SMS (gateway, sender ID, encrypted credentials + test send), notifications, security, and backup & recovery (snapshot, download, restore, retention). Provider secrets are encrypted and write-only; every section resets to schema defaults. |
+| Security centre | Active bearer sessions, one-click revocation for individual devices or all other sessions, session lifetime / login-throttling posture, admin 2FA reminder and a hardening checklist. |
 
 New API (all under `auth:sanctum` + `role:super_admin`):
 
@@ -105,7 +106,11 @@ PATCH  /api/admin/subscriptions/{subscription}   POST .../renew
 GET    /api/admin/invoices         PATCH /api/admin/invoices/{invoice}
 GET|PUT /api/admin/settings        POST /api/admin/settings/reset
 POST|DELETE /api/admin/settings/assets/{asset}   (brand_logo, brand_logo_dark, brand_favicon, brand_og_image)
+GET    /api/admin/settings/payment-status
 POST   /api/admin/settings/email/test            POST /api/admin/settings/sms/test
+GET    /api/payments/methods                     (public checkout capabilities)
+GET    /api/auth/sessions                        DELETE /api/auth/sessions
+DELETE /api/auth/sessions/{token}
 GET|POST /api/admin/backups        GET /api/admin/backups/{backup}/download
 POST   /api/admin/backups/{backup}/restore       DELETE /api/admin/backups/{backup}
 

@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Models\WebhookEvent;
 use App\Services\CheckoutService;
+use App\Services\Payment\PaymentConfiguration;
 use App\Services\Payment\PaymentGateway;
 use App\Services\Payment\WebhookRequest;
 use Illuminate\Http\JsonResponse;
@@ -18,31 +19,59 @@ class PaymentController extends Controller
     public function __construct(
         protected PaymentGateway $gateway,
         protected CheckoutService $checkout,
+        protected PaymentConfiguration $payments,
     ) {}
+
+    /** Public checkout capabilities; never returns provider credentials. */
+    public function methods(): JsonResponse
+    {
+        return response()->json(['data' => [
+            'provider' => $this->payments->provider(),
+            'mode' => $this->payments->get('payment_mode', 'test'),
+            'currency' => $this->payments->currency(),
+            'methods' => $this->payments->methods(),
+        ]]);
+    }
 
     public function intent(Request $request, int $orderId): JsonResponse
     {
+        $data = $request->validate(['payment_method' => ['nullable', 'string', 'max:32']]);
+        $paymentMethod = (string) ($data['payment_method'] ?? 'card');
+        if (! $this->payments->supports($paymentMethod)) {
+            return response()->json(['error' => ['code' => 'payment_method_unavailable', 'message' => 'That payment method is not available right now.']], 422);
+        }
+
         $order = Order::query()->where('user_id', $request->user()->id)->findOrFail($orderId);
         $existing = $order->payments()->where('status', PaymentTransaction::STATUS_INITIATED)->latest()->first();
-        if ($existing) {
-            $intent = $this->gateway->createIntent($order, (string) $order->grand_total);
+        if ($existing && data_get($existing->meta, 'checkout_url')) {
+            return response()->json(['data' => [
+                'type' => data_get($existing->meta, 'intent_type', 'redirect'),
+                'url' => data_get($existing->meta, 'checkout_url'),
+                'gateway_ref' => $existing->gateway_ref,
+            ]]);
+        }
 
-            return response()->json([
-                'data' => [
-                    'type' => $intent->type,
-                    'url' => $intent->url,
-                    'gateway_ref' => $existing->gateway_ref,
-                ],
+        $intent = $this->gateway->createIntent($order, (string) $order->grand_total, $paymentMethod);
+        if ($existing) {
+            $existing->update([
+                'gateway' => $this->payments->provider(),
+                'gateway_ref' => $intent->gatewayRef,
+                'meta' => array_merge($existing->meta ?? [], [
+                    'checkout_url' => $intent->url,
+                    'intent_type' => $intent->type,
+                    ...$intent->meta,
+                ]),
+            ]);
+        } else {
+            PaymentTransaction::query()->create([
+                'order_id' => $order->id,
+                'gateway' => $this->payments->provider(),
+                'gateway_ref' => $intent->gatewayRef,
+                'amount' => $order->grand_total,
+                'status' => PaymentTransaction::STATUS_INITIATED,
+                'meta' => ['checkout_url' => $intent->url, 'intent_type' => $intent->type, ...$intent->meta],
             ]);
         }
-        $intent = $this->gateway->createIntent($order, (string) $order->grand_total);
-        PaymentTransaction::query()->create([
-            'order_id' => $order->id,
-            'gateway' => config('markethub.payment_gateway'),
-            'gateway_ref' => $intent->gatewayRef,
-            'amount' => $order->grand_total,
-            'status' => PaymentTransaction::STATUS_INITIATED,
-        ]);
 
         return response()->json([
             'data' => [
@@ -55,13 +84,14 @@ class PaymentController extends Controller
 
     public function webhook(Request $request, string $gateway): JsonResponse
     {
+        abort_unless($gateway === $this->payments->provider(), 404, 'Payment provider is not active.');
         $result = $this->gateway->verifyAndParse(new WebhookRequest(
             payload: $request->all(),
             headers: $request->headers->all(),
             rawBody: $request->getContent(),
         ));
 
-        if (! $result) {
+        if (! $result || $result->eventId === '' || $result->gatewayRef === '') {
             return response()->json([
                 'error' => ['code' => 'invalid_webhook', 'message' => 'Signature verification failed.', 'fields' => null],
             ], 400);
@@ -97,6 +127,7 @@ class PaymentController extends Controller
 
     public function mockPay(Request $request): JsonResponse
     {
+        abort_unless($this->payments->provider() === 'mock', 404);
         $ref = $request->string('ref');
         $orderId = $request->integer('order');
         $tx = PaymentTransaction::query()->where('gateway_ref', $ref)->where('order_id', $orderId)->firstOrFail();

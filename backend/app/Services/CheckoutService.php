@@ -13,6 +13,7 @@ use App\Models\SellerOrder;
 use App\Models\SellerSettlement;
 use App\Models\User;
 use App\Services\Integration\EventBus;
+use App\Services\Payment\PaymentConfiguration;
 use App\Services\Payment\PaymentGateway;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,7 @@ class CheckoutService
     public function __construct(
         protected CartService $carts,
         protected PaymentGateway $gateway,
+        protected PaymentConfiguration $payments,
         protected EventBus $events,
     ) {}
 
@@ -37,7 +39,7 @@ class CheckoutService
         return $this->carts->groupedPayload($cart);
     }
 
-    public function checkout(User $user, int $shippingAddressId, string $idempotencyKey): array
+    public function checkout(User $user, int $shippingAddressId, string $idempotencyKey, string $paymentMethod = 'card'): array
     {
         $existing = CheckoutIdempotency::query()
             ->where('key', $idempotencyKey)
@@ -126,16 +128,16 @@ class CheckoutService
                 ]);
             }
 
-            $intent = $this->gateway->createIntent($order, (string) $order->grand_total);
+            $intent = $this->gateway->createIntent($order, (string) $order->grand_total, $paymentMethod);
 
             PaymentTransaction::query()->create([
                 'order_id' => $order->id,
-                'gateway' => config('markethub.payment_gateway'),
+                'gateway' => $this->payments->provider(),
                 'gateway_ref' => $intent->gatewayRef,
                 'amount' => $order->grand_total,
                 'status' => PaymentTransaction::STATUS_INITIATED,
                 'idempotency_key' => $idempotencyKey,
-                'meta' => $intent->meta,
+                'meta' => ['checkout_url' => $intent->url, 'intent_type' => $intent->type, ...$intent->meta],
             ]);
 
             $this->carts->clear($user);
@@ -159,6 +161,8 @@ class CheckoutService
                     'type' => $intent->type,
                     'url' => $intent->url,
                     'gateway_ref' => $intent->gatewayRef,
+                    'method' => $paymentMethod,
+                    'provider' => $this->payments->provider(),
                 ],
             ];
         });
