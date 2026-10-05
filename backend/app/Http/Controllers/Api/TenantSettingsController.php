@@ -7,6 +7,8 @@ use App\Models\Tenant;
 use App\Models\TenantSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 
 class TenantSettingsController extends Controller
 {
@@ -40,6 +42,9 @@ class TenantSettingsController extends Controller
             'tax_id' => ['nullable', 'string', 'max:64'],
             'support_email' => ['nullable', 'email'],
             'support_phone' => ['nullable', 'string', 'max:32'],
+            'default_markup_percent' => ['sometimes', 'numeric', 'min:0', 'max:1000'],
+            'default_discount_percent' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'tax_rate' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'goals' => ['sometimes', 'array'],
             'goals.finance' => ['sometimes', 'array'],
             'goals.sales' => ['sometimes', 'array'],
@@ -67,6 +72,27 @@ class TenantSettingsController extends Controller
         }
 
         return response()->json(['data' => $this->payload($tenant->fresh(), $settings->fresh())]);
+    }
+
+    public function uploadDocument(Request $request): JsonResponse
+    {
+        $tenant = $this->tenant($request);
+        $this->authorize('update', $tenant);
+        $data = $request->validate(['document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120']]);
+        $documents = $tenant->documents ?? [];
+        /** @var UploadedFile $file */
+        $file = $data['document'];
+        $documents[] = [
+            'key' => Str::lower(Str::random(10)),
+            'label' => 'Supporting document',
+            'path' => $file->store('tenant-documents/'.$tenant->slug, 'local'),
+            'original_name' => $file->getClientOriginalName(),
+            'mime' => $file->getClientMimeType(),
+            'size' => $file->getSize(),
+            'uploaded_at' => now()->toIso8601String(),
+        ];
+        $tenant->update(['documents' => $documents]);
+        return response()->json(['data' => ['documents' => $tenant->fresh()->documents ?? []]], 201);
     }
 
     protected function tenant(Request $request): Tenant
@@ -112,9 +138,13 @@ class TenantSettingsController extends Controller
                 'tax_id' => $settings->tax_id,
                 'support_email' => $settings->support_email,
                 'support_phone' => $settings->support_phone,
+                'default_markup_percent' => $settings->default_markup_percent,
+                'default_discount_percent' => $settings->default_discount_percent,
+                'tax_rate' => $settings->tax_rate,
                 'goals' => array_replace_recursive(TenantSetting::DEFAULT_GOALS, $settings->goals ?? []),
             ],
             'departments' => TenantSetting::DEPARTMENTS,
+            'documents' => collect($tenant->documents ?? [])->map(fn (array $doc) => collect($doc)->except('path')->all())->values()->all(),
         ];
     }
 }

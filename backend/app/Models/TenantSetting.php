@@ -32,6 +32,9 @@ class TenantSetting extends Model
         'tax_id',
         'support_email',
         'support_phone',
+        'default_markup_percent',
+        'default_discount_percent',
+        'tax_rate',
         'goals',
     ];
 

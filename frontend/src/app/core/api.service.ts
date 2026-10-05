@@ -432,6 +432,12 @@ export class ApiService {
     return this.http.patch<{ data: any }>('/api/tenant/settings', payload);
   }
 
+  uploadTenantDocument(file: File) {
+    const form = new FormData();
+    form.append('document', file);
+    return this.http.post<{ data: { documents: any[] } }>('/api/tenant/settings/documents', form);
+  }
+
   tenantBackups() {
     return this.http.get<{ data: any[] }>('/api/tenant/backups');
   }
