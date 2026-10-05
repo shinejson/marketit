@@ -691,6 +691,14 @@ export class ApiService {
     return this.http.post<{ data: any }>('/api/tenant/webhooks', payload);
   }
 
+  deleteWebhook(id: number) {
+    return this.http.delete<{ data: { ok: boolean } }>(`/api/tenant/webhooks/${id}`);
+  }
+
+  webhookDeliveries(id: number) {
+    return this.http.get<{ data: any[]; meta?: any }>(`/api/tenant/webhooks/${id}/deliveries`);
+  }
+
   webhookCatalog() {
     return this.http.get<{ data: string[] }>('/api/tenant/webhooks/catalog');
   }
