@@ -1,93 +1,56 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { ApiService } from '../../core/api.service';
 
+interface Backup { id:number; filename:string; size_bytes:number; status:string; type:string; tables?:string[]; created_at?:string; restored_at?:string|null; created_by?:{name?:string}; }
+
 @Component({
   selector: 'app-seller-backups',
-  imports: [DatePipe, DecimalPipe],
+  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink],
   template: `
-    <div class="head">
-      <div>
-        <h1>Backups</h1>
-        <p class="muted">Snapshot tenant catalogue, orders, and settings. Restore is operator-confirmed.</p>
-      </div>
-      <button class="btn ok" [disabled]="busy()" (click)="create()">Create backup</button>
+    <div class="backup-page">
+      <header class="page-head">
+        <div><p class="eyebrow">Tenant console / Data protection</p><h1>Backups</h1><p class="intro">Protect your catalogue, orders, finance records and workspace settings with downloadable snapshots.</p></div>
+        <button class="btn primary" type="button" [disabled]="busy()" (click)="create()"><span class="plus">+</span>{{ busy() ? 'Creating snapshot…' : 'Create backup' }}</button>
+      </header>
+      @if (msg()) { <div class="notice success">✓ {{ msg() }}</div> }
+      @if (err()) { <div class="notice error">{{ err() }} <button type="button" (click)="err.set('')">Dismiss</button></div> }
+
+      <section class="summary-grid">
+        <article class="card summary"><span class="summary-icon green">◌</span><div><small>Latest backup</small><strong>{{ latest() ? (latest()?.created_at | date:'MMM d, y') : 'Not created' }}</strong><em>{{ latest() ? (latest()?.created_at | date:'shortTime') : 'Create your first snapshot' }}</em></div></article>
+        <article class="card summary"><span class="summary-icon blue">▤</span><div><small>Available snapshots</small><strong>{{ completedCount() }}</strong><em>{{ failedCount() ? failedCount() + ' expired or failed' : 'All systems protected' }}</em></div></article>
+        <article class="card summary"><span class="summary-icon gold">◷</span><div><small>Retention policy</small><strong>{{ retentionDays() }} days</strong><em>Older snapshots are automatically expired</em></div><a routerLink="/tenant/settings" [queryParams]="{section:'commerce'}">Manage</a></article>
+      </section>
+
+      <section class="card workspace">
+        <div class="toolbar"><div><h2>Backup history</h2><p>Up to 50 recent snapshots are shown. Download an archive before requesting an operator restore.</p></div><div class="tools"><label class="search"><span>⌕</span><input [ngModel]="query()" (ngModelChange)="query.set($event)" placeholder="Search backups" /></label><select [ngModel]="filter()" (ngModelChange)="filter.set($event)"><option value="all">All statuses</option><option value="completed">Ready</option><option value="failed">Expired</option></select></div></div>
+        @if (loading()) { <div class="loading"><i></i><i></i><i></i><span>Loading backup history…</span></div> }
+        @if (!loading() && filtered().length) { <div class="table-wrap"><table><thead><tr><th>Snapshot</th><th>Created</th><th>Contents</th><th>Size</th><th>Status</th><th></th></tr></thead><tbody>@for (b of filtered(); track b.id) { <tr><td><div class="file"><span class="file-icon">JSON</span><div><b>{{ b.filename }}</b><small>{{ b.type === 'manual' ? 'Manual snapshot' : b.type }}</small></div></div></td><td><b>{{ b.created_at | date:'MMM d, y' }}</b><small>{{ b.created_at | date:'shortTime' }} · {{ b.created_by?.name || 'Tenant owner' }}</small></td><td><span class="contents">{{ b.tables?.length || 0 }} data sets</span></td><td>{{ formatBytes(b.size_bytes) }}</td><td><span class="badge" [class.ready]="b.status === 'completed'" [class.failed]="b.status !== 'completed'">{{ b.status === 'completed' ? 'Ready' : 'Expired' }}</span>@if (b.restored_at) { <small class="restored">Restore requested</small> }</td><td><div class="row-actions">@if (b.status === 'completed') { <button class="icon-btn" title="Download backup" type="button" (click)="downloadAuth($event,b.id)">↓</button><button class="restore-btn" type="button" (click)="requestRestore(b)">Restore</button> } @else { <span class="muted">Unavailable</span> }</div></td></tr> }</tbody></table></div> }
+        @if (!loading() && !filtered().length) { <div class="empty"><div>◌</div><h3>{{ query() || filter() !== 'all' ? 'No matching backups' : 'Your backup history is empty' }}</h3><p>{{ query() || filter() !== 'all' ? 'Try a different search or status filter.' : 'Create a snapshot now to protect your tenant data.' }}</p><button class="btn outline" type="button" (click)="create()" [disabled]="busy()">Create first backup</button></div> }
+      </section>
+
+      <section class="info-grid"><article class="card info"><span>✓</span><div><h3>What is included?</h3><p>Stores, categories, products, variants, inventory, orders, settlements, ads, accounting records and tenant settings.</p></div></article><article class="card info warning"><span>!</span><div><h3>Restore is operator-confirmed</h3><p>A restore request does not overwrite live data immediately. Download the snapshot and contact your platform operator before proceeding.</p></div></article></section>
+
+      @if (restoreTarget()) { <div class="modal-backdrop" (click)="restoreTarget.set(null)"><div class="modal card" (click)="$event.stopPropagation()"><div class="modal-icon">↺</div><h2>Request a restore?</h2><p>This will mark <b>{{ restoreTarget()?.filename }}</b> for operator review. Your live data will not change immediately.</p><div class="modal-actions"><button class="btn outline" type="button" (click)="restoreTarget.set(null)">Cancel</button><button class="btn primary" type="button" (click)="restore(restoreTarget()!.id)">Request restore</button></div></div></div> }
     </div>
-    @if (msg()) { <p class="ok">{{ msg() }}</p> }
-    @if (err()) { <p class="err">{{ err() }}</p> }
-    @for (b of backups(); track b.id) {
-      <div class="card pad row">
-        <div>
-          <strong>{{ b.filename }}</strong>
-          <p class="muted">{{ b.created_at | date:'medium' }} · {{ (b.size_bytes / 1024) | number:'1.1-1' }} KB · {{ b.status }}</p>
-        </div>
-        <div class="actions">
-          <a class="btn ghost" [href]="download(b.id)" (click)="downloadAuth($event, b.id)">Download</a>
-          <button class="btn" (click)="restore(b.id)">Mark restore</button>
-        </div>
-      </div>
-    }
-    @if (!backups().length) { <div class="empty card">No backups yet. Create the first snapshot.</div> }
   `,
   styles: [`
-    .head { display:flex; justify-content:space-between; align-items:flex-start; gap: 12px; }
-    .pad { padding: 14px; margin: 10px 0; }
-    .row { display:flex; justify-content:space-between; align-items:center; gap: 12px; flex-wrap: wrap; }
-    .actions { display:flex; gap: 8px; }
-    .ok { color: var(--ok); font-weight: 600; }
+    :host{display:block;max-width:1180px;margin:0 auto;padding-bottom:72px}.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:21px}.eyebrow{margin:0 0 6px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.page-head h1{margin:0;font-size:clamp(29px,3vw,38px)}.intro{margin:7px 0 0;color:var(--ink-soft);font-size:14px}.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:10px;padding:11px 16px;font-weight:750;cursor:pointer}.btn.primary{background:var(--accent-2);color:#fff}.btn.outline{border:1px solid var(--line);background:var(--card);color:var(--ink)}.btn:disabled{opacity:.55;cursor:not-allowed}.plus{font-size:18px;line-height:0}.notice{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;margin-bottom:16px;border-radius:10px;font-size:13px}.notice.success{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}.notice.error{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}.notice button{border:0;background:none;color:inherit;font-weight:800;text-decoration:underline;cursor:pointer}.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}.summary{display:flex;align-items:center;gap:12px;padding:17px;position:relative}.summary-icon{display:grid;place-items:center;width:39px;height:39px;border-radius:11px;font-size:19px}.summary-icon.green{background:#e3f1e9;color:#247451}.summary-icon.blue{background:#e3edf6;color:#356f91}.summary-icon.gold{background:#fbefda;color:#9a691b}.summary div{display:grid;gap:3px;min-width:0}.summary small{font-size:10px;color:var(--ink-soft);font-weight:800;letter-spacing:.08em;text-transform:uppercase}.summary strong{font:650 20px Fraunces,Georgia,serif}.summary em{color:var(--ink-soft);font-size:10px;font-style:normal}.summary a{position:absolute;right:15px;top:15px;color:var(--accent);font-size:10px;font-weight:800}.workspace{overflow:hidden}.toolbar{display:flex;justify-content:space-between;align-items:flex-end;gap:15px;padding:21px 22px 17px;border-bottom:1px solid var(--line)}.toolbar h2{margin:0;font-size:20px}.toolbar p{margin:4px 0 0;color:var(--ink-soft);font-size:12px}.tools{display:flex;gap:8px}.search{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--line);border-radius:9px}.search span{color:var(--ink-soft);font-size:19px}.search input{width:145px;border:0;outline:0;background:transparent;color:var(--ink);font-size:12px}.tools select{border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);padding:8px;font-size:12px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:720px}th{padding:12px 22px;text-align:left;color:var(--ink-soft);font-size:10px;letter-spacing:.1em;text-transform:uppercase}td{padding:14px 22px;border-top:1px solid var(--line);font-size:12px;white-space:nowrap}td small,.file div{display:grid;gap:3px}td small{color:var(--ink-soft);font-size:10px}.file{display:flex;align-items:center;gap:10px}.file-icon{display:grid;place-items:center;width:35px;height:35px;border-radius:8px;background:#f8e7df;color:var(--accent);font-size:8px;font-weight:850}.contents{padding:4px 7px;border-radius:5px;background:var(--paper-2);font-size:10px}.badge{display:inline-block;padding:5px 8px;border-radius:5px;font-size:10px;font-weight:800}.badge.ready{background:#e3f1e9;color:#247451}.badge.failed{background:#f8e7df;color:var(--danger)}.restored{display:block;margin-top:4px;color:var(--accent)!important}.row-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px}.icon-btn,.restore-btn{border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);padding:6px 8px;cursor:pointer;font-size:11px}.icon-btn{font-size:16px;color:var(--accent-2)}.restore-btn:hover,.icon-btn:hover{border-color:var(--accent)}.muted{color:var(--ink-soft);font-size:11px}.empty{text-align:center;padding:58px 20px}.empty>div{font-size:28px;color:var(--accent)}.empty h3{margin:10px 0 4px;font-size:18px}.empty p{margin:0 auto 18px;color:var(--ink-soft);font-size:12px}.loading{display:flex;align-items:center;justify-content:center;gap:7px;padding:55px;color:var(--ink-soft);font-size:12px}.loading i{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite}.loading i:nth-child(2){animation-delay:.15s}.loading i:nth-child(3){animation-delay:.3s}@keyframes pulse{50%{opacity:.25;transform:translateY(-3px)}}.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}.info{display:flex;gap:12px;padding:17px}.info>span{display:grid;place-items:center;flex:none;width:27px;height:27px;border-radius:8px;background:#e3f1e9;color:var(--ok);font-weight:800}.info.warning>span{background:#fbefda;color:#9a691b}.info h3{margin:0;font-size:14px}.info p{margin:5px 0 0;color:var(--ink-soft);font-size:11px;line-height:1.45}.modal-backdrop{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:20px;background:rgba(28,25,20,.5)}.modal{width:min(430px,100%);padding:27px;text-align:center}.modal-icon{display:grid;place-items:center;width:45px;height:45px;margin:0 auto 13px;border-radius:50%;background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);font-size:22px}.modal h2{margin:0;font-size:22px}.modal p{color:var(--ink-soft);font-size:13px;line-height:1.5}.modal-actions{display:flex;justify-content:center;gap:8px;margin-top:20px}@media(max-width:850px){.page-head,.toolbar{align-items:flex-start;flex-direction:column}.summary-grid{grid-template-columns:1fr}.tools{width:100%}.search{flex:1}.search input{width:100%}.info-grid{grid-template-columns:1fr}}@media(max-width:500px){.tools{flex-direction:column;width:100%}.tools select{width:100%}.toolbar{padding:17px}.page-head{padding:0 2px}}
   `],
 })
 export class SellerBackupsComponent {
-  private api = inject(ApiService);
-  private auth = inject(AuthService);
-  backups = signal<any[]>([]);
-  busy = signal(false);
-  msg = signal('');
-  err = signal('');
-
-  constructor() { this.reload(); }
-
-  reload() {
-    this.api.tenantBackups().subscribe({
-      next: (res) => this.backups.set(res.data),
-      error: (e) => this.err.set(e.error?.error?.message || 'Unable to load backups.'),
-    });
-  }
-
-  create() {
-    this.busy.set(true);
-    this.err.set('');
-    this.api.createBackup().subscribe({
-      next: () => { this.busy.set(false); this.msg.set('Backup created.'); this.reload(); },
-      error: (e) => { this.busy.set(false); this.err.set(e.error?.error?.message || 'Backup failed.'); },
-    });
-  }
-
-  restore(id: number) {
-    this.api.restoreBackup(id).subscribe({
-      next: (res) => { this.msg.set(res.data.message || 'Restore marked.'); this.reload(); },
-      error: (e) => this.err.set(e.error?.error?.message || 'Restore failed.'),
-    });
-  }
-
-  download(id: number) {
-    return this.api.backupDownloadUrl(id);
-  }
-
-  downloadAuth(ev: Event, id: number) {
-    ev.preventDefault();
-    const token = this.auth.token();
-    fetch(this.api.backupDownloadUrl(id), { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.blob())
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `tenant-backup-${id}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      })
-      .catch(() => this.err.set('Download failed.'));
-  }
+  private api=inject(ApiService); private auth=inject(AuthService);
+  backups=signal<Backup[]>([]); busy=signal(false); loading=signal(true); msg=signal(''); err=signal(''); query=signal(''); filter=signal('all'); restoreTarget=signal<Backup|null>(null);
+  filtered=computed(()=>this.backups().filter(b=>(this.filter()==='all'||(this.filter()==='completed'?b.status==='completed':b.status!=='completed'))&&(!this.query()||b.filename.toLowerCase().includes(this.query().toLowerCase()))));
+  latest=computed(()=>this.backups().find(b=>b.status==='completed')); completedCount=computed(()=>this.backups().filter(b=>b.status==='completed').length); failedCount=computed(()=>this.backups().filter(b=>b.status!=='completed').length); retentionDays=computed(()=>30);
+  constructor(){this.reload()}
+  reload(){this.loading.set(true);this.api.tenantBackups().subscribe({next:r=>{this.backups.set(r.data||[]);this.loading.set(false)},error:e=>{this.loading.set(false);this.err.set(e.error?.error?.message||'Unable to load backups.')}})}
+  create(){this.busy.set(true);this.msg.set('');this.err.set('');this.api.createBackup().subscribe({next:()=>{this.busy.set(false);this.msg.set('Backup created and is ready to download.');this.reload()},error:e=>{this.busy.set(false);this.err.set(e.error?.error?.message||'Backup failed.')}})}
+  requestRestore(b:Backup){this.restoreTarget.set(b)}
+  restore(id:number){this.restoreTarget.set(null);this.api.restoreBackup(id).subscribe({next:r=>{this.msg.set(r.data.message||'Restore request submitted.');this.reload()},error:e=>this.err.set(e.error?.error?.message||'Restore request failed.')})}
+  downloadAuth(ev:Event,id:number){ev.preventDefault();fetch(this.api.backupDownloadUrl(id),{headers:{Authorization:`Bearer ${this.auth.token()}`}}).then(r=>{if(!r.ok)throw new Error();return r.blob()}).then(blob=>{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`tenant-backup-${id}.json`;a.click();URL.revokeObjectURL(url)}).catch(()=>this.err.set('Download failed. Please try again.'))}
+  formatBytes(bytes:number){if(bytes<1024)return `${bytes} B`;if(bytes<1048576)return `${(bytes/1024).toFixed(1)} KB`;return `${(bytes/1048576).toFixed(1)} MB`}
 }

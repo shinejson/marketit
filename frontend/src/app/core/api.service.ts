@@ -432,6 +432,12 @@ export class ApiService {
     return this.http.patch<{ data: any }>('/api/tenant/settings', payload);
   }
 
+  uploadTenantDocument(file: File) {
+    const form = new FormData();
+    form.append('document', file);
+    return this.http.post<{ data: { documents: any[] } }>('/api/tenant/settings/documents', form);
+  }
+
   tenantBackups() {
     return this.http.get<{ data: any[] }>('/api/tenant/backups');
   }
@@ -637,6 +643,10 @@ export class ApiService {
     return this.http.post<{ data: any }>(`/api/tenant/domains/${id}/verify`, { force });
   }
 
+  deleteDomain(id: number) {
+    return this.http.delete<{ data: any }>(`/api/tenant/domains/${id}`);
+  }
+
   sellerAds(params: Record<string, string | number> = {}) {
     return this.http.get<{ data: AdWorkspace }>('/api/tenant/ads', { params });
   }
@@ -681,8 +691,28 @@ export class ApiService {
     return this.http.post<{ data: any }>('/api/tenant/webhooks', payload);
   }
 
+  deleteWebhook(id: number) {
+    return this.http.delete<{ data: { ok: boolean } }>(`/api/tenant/webhooks/${id}`);
+  }
+
+  webhookDeliveries(id: number) {
+    return this.http.get<{ data: any[]; meta?: any }>(`/api/tenant/webhooks/${id}/deliveries`);
+  }
+
   webhookCatalog() {
     return this.http.get<{ data: string[] }>('/api/tenant/webhooks/catalog');
+  }
+
+  aiSettings() {
+    return this.http.get<{ data: any }>('/api/tenant/ai/settings');
+  }
+
+  updateAiSettings(payload: any) {
+    return this.http.patch<{ data: any }>('/api/tenant/ai/settings', payload);
+  }
+
+  aiUsage() {
+    return this.http.get<{ data: { used: number; budget: number } }>('/api/tenant/ai/usage');
   }
 
   aiDescribe(productId: number) {

@@ -223,6 +223,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/settings', [TenantSettingsController::class, 'show']);
         Route::patch('/settings', [TenantSettingsController::class, 'update']);
+        Route::post('/settings/documents', [TenantSettingsController::class, 'uploadDocument']);
 
         Route::get('/backups', [TenantBackupController::class, 'index']);
         Route::post('/backups', [TenantBackupController::class, 'store']);

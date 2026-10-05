@@ -1,65 +1,43 @@
-import { Component, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 
+interface ApiKey { id:number; name:string; key_prefix:string; environment:string; scopes:string[]; revoked_at?:string|null; created_at?:string; last_used_at?:string|null; }
+
 @Component({
   selector: 'app-seller-api-keys',
-  imports: [FormsModule],
+  imports: [FormsModule, DatePipe],
   template: `
-    <h1>Seller API keys</h1>
-    <form class="card pad" (ngSubmit)="create()">
-      <div class="field"><label>Name</label><input [(ngModel)]="name" name="name" required /></div>
-      <p class="muted">Scopes: products:read, orders:read, orders:fulfill, inventory:write, settlements:read</p>
-      <button class="btn ok" type="submit">Create key</button>
-    </form>
-    @if (secret()) {
-      <div class="card pad">
-        <p>Copy this secret now. It will not be shown again.</p>
-        <code>{{ secret() }}</code>
+    <div class="api-page">
+      <header class="page-head"><div><p class="eyebrow">Tenant console / Developer tools</p><h1>API keys</h1><p class="intro">Securely connect your stores and internal systems to MarketHub with scoped access credentials.</p></div><span class="secure">⌁ Secrets shown once</span></header>
+      @if (notice()) { <div class="notice success">✓ {{ notice() }}</div> } @if (error()) { <div class="notice error">{{ error() }} <button type="button" (click)="error.set('')">Dismiss</button></div> }
+
+      @if (secret()) { <section class="card secret-card"><div class="secret-icon">!</div><div class="secret-copy"><p class="eyebrow">Copy your secret now</p><h2>New API key created</h2><p>This secret will not be shown again. Store it in your password manager or environment variables — never commit it to source control.</p><div class="secret-value"><code>{{ secret() }}</code><button type="button" (click)="copySecret()">{{ copied() ? 'Copied ✓' : 'Copy secret' }}</button></div></div><button class="close" type="button" (click)="secret.set('')">×</button></section> }
+
+      <div class="layout">
+        <main>
+          <section class="card panel create"><div class="panel-title"><div><p class="eyebrow">Create credential</p><h2>New API key</h2><p>Use a descriptive name and grant only the permissions this integration needs.</p></div><span class="lock">▣ Encrypted</span></div><form (ngSubmit)="create()"><div class="form-grid"><label class="field"><span>Key name</span><input [(ngModel)]="name" name="name" maxlength="80" placeholder="e.g. ERP sync" required /><small>Use the system or team that will use this key.</small></label><label class="field"><span>Environment</span><select [(ngModel)]="environment" name="environment"><option value="live">Live — production data</option><option value="test">Test — sandbox data</option></select><small>Test keys cannot access live operations.</small></label></div><div class="scope-head"><div><span>Permissions</span><small>Select the minimum access required.</small></div><button type="button" class="text-btn" (click)="toggleAll()">{{ allSelected() ? 'Clear all' : 'Select all' }}</button></div><div class="scopes">@for (scope of scopeOptions; track scope.key) { <label [class.selected]="scopes().includes(scope.key)"><input type="checkbox" [checked]="scopes().includes(scope.key)" (change)="toggleScope(scope.key)" /><span><b>{{ scope.label }}</b><small>{{ scope.description }}</small></span></label> }</div><div class="form-footer"><span><b>{{ scopes().length }}</b> permission{{ scopes().length === 1 ? '' : 's' }} selected</span><button class="btn primary" type="submit" [disabled]="busy() || !name.trim() || !scopes().length">{{ busy() ? 'Creating…' : 'Create API key' }} <b>→</b></button></div></form></section>
+
+          <section class="card panel"><div class="list-head"><div><p class="eyebrow">Access management</p><h2>Your API keys</h2></div><div class="list-tools"><span class="count">{{ activeCount() }} active</span><select [ngModel]="filter()" (ngModelChange)="filter.set($event)"><option value="all">All keys</option><option value="active">Active only</option><option value="revoked">Revoked</option></select></div></div>@if (loading()) { <div class="loading">Loading API keys…</div> } @for (key of filtered(); track key.id) { <article class="key-row"><div class="key-mark" [class.test]="key.environment === 'test'">⌘</div><div class="key-main"><div class="key-title"><b>{{ key.name }}</b><span class="env" [class.test]="key.environment === 'test'">{{ key.environment }}</span>@if (key.revoked_at) { <span class="revoked">Revoked</span> }</div><code>{{ key.key_prefix }}••••••••••••••••</code><small>Created {{ key.created_at | date:'MMM d, y' }} · {{ key.last_used_at ? 'Last used '+(key.last_used_at | date:'MMM d, y') : 'Not used yet' }}</small></div><div class="scope-summary">{{ key.scopes?.length || 0 }} scopes<br><small>· {{ key.scopes?.slice(0,2).join(', ') }}{{ (key.scopes?.length || 0) > 2 ? '…' : '' }}</small></div>@if (!key.revoked_at) { <button class="revoke" type="button" (click)="revoke(key)">Revoke</button> } @else { <span class="muted">Unavailable</span> }</article> } @empty { @if (!loading()) { <div class="empty"><div>⌘</div><h3>{{ filter() === 'all' ? 'No API keys yet' : 'No matching keys' }}</h3><p>Create a scoped key when you are ready to connect an integration.</p></div> } }</section>
+        </main>
+        <aside><section class="card side"><div class="side-icon">✓</div><h3>Keep your keys safe</h3><div class="side-list"><span>✓ Store secrets in environment variables</span><span>✓ Give each integration its own key</span><span>✓ Rotate keys when a team member leaves</span><span>✓ Revoke unused credentials promptly</span></div></section><section class="card side help"><h3>Integration guide</h3><p>Learn how to authenticate requests and handle rate limits in the developer documentation.</p><a href="/tenant/support">Open help centre <b>→</b></a></section></aside>
       </div>
-    }
-    @for (k of keys(); track k.id) {
-      <div class="card pad row">
-        <div>
-          <strong>{{ k.name }}</strong>
-          <p class="muted">{{ k.key_prefix }}… · {{ k.environment }} · {{ k.revoked_at ? 'revoked' : 'active' }}</p>
-        </div>
-        @if (!k.revoked_at) {
-          <button class="btn ghost" (click)="revoke(k.id)">Revoke</button>
-        }
-      </div>
-    }
+    </div>
   `,
   styles: [`
-    .pad { padding: 14px; margin: 10px 0; }
-    .row { display:flex; justify-content:space-between; align-items:center; }
-    code { word-break: break-all; }
+    :host{display:block;max-width:1180px;margin:0 auto;padding-bottom:70px}.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:20px}.eyebrow{margin:0 0 6px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.page-head h1{margin:0;font-size:clamp(29px,3vw,38px)}.intro{margin:7px 0 0;color:var(--ink-soft);font-size:14px}.secure,.lock{padding:7px 10px;border-radius:8px;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);font-size:10px;font-weight:800;white-space:nowrap}.notice{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;margin-bottom:16px;border-radius:10px;font-size:13px}.notice.success{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}.notice.error{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}.notice button,.close{border:0;background:none;color:inherit;text-decoration:underline;font-weight:800;cursor:pointer}.layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:18px}.layout main{display:grid;gap:16px}.panel{padding:21px 23px}.panel-title,.list-head{display:flex;justify-content:space-between;align-items:flex-start;gap:15px}.panel h2{margin:0;font-size:21px}.panel-title p:not(.eyebrow){margin:4px 0 0;color:var(--ink-soft);font-size:12px;line-height:1.45}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:19px}.field{display:flex;flex-direction:column;gap:6px}.field span,.scope-head>div>span{font-size:12px;font-weight:750}.field input,.field select{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:var(--card);color:var(--ink)}.field input:focus,.field select:focus{outline:2px solid color-mix(in srgb,var(--accent) 40%,transparent);border-color:var(--accent)}.field small,.scope-head small{color:var(--ink-soft);font-size:10.5px}.scope-head{display:flex;justify-content:space-between;align-items:flex-end;margin-top:22px;padding-bottom:9px;border-bottom:1px solid var(--line)}.scope-head>div{display:grid;gap:3px}.text-btn{border:0;background:none;color:var(--accent);font-size:11px;font-weight:800;cursor:pointer}.scopes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.scopes label{display:flex;gap:9px;padding:11px;border:1px solid var(--line);border-radius:9px;cursor:pointer}.scopes label.selected{border-color:color-mix(in srgb,var(--accent-2) 50%,var(--line));background:color-mix(in srgb,var(--ok) 5%,transparent)}.scopes input{accent-color:var(--accent-2);margin-top:2px}.scopes label span{display:grid;gap:3px}.scopes b{font-size:11px}.scopes small{color:var(--ink-soft);font-size:10px}.form-footer{display:flex;justify-content:space-between;align-items:center;margin-top:19px;color:var(--ink-soft);font-size:11px}.form-footer b{color:var(--ink)}.btn{display:inline-flex;align-items:center;gap:9px;border:0;border-radius:10px;padding:11px 16px;font-weight:750;cursor:pointer}.btn.primary{background:var(--accent-2);color:#fff}.btn:disabled{opacity:.55;cursor:not-allowed}.secret-card{display:flex;align-items:flex-start;gap:13px;padding:18px 20px;margin-bottom:16px;position:relative;border-color:color-mix(in srgb,var(--gold) 50%,var(--line));background:linear-gradient(110deg,color-mix(in srgb,var(--gold) 10%,var(--card)),var(--card) 65%)}.secret-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:9px;background:var(--gold);color:#fff;font-weight:900}.secret-copy{flex:1}.secret-copy h2{margin:0;font-size:18px}.secret-copy>p:not(.eyebrow){margin:4px 0 12px;color:var(--ink-soft);font-size:11px;line-height:1.45}.secret-value{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card)}.secret-value code{flex:1;word-break:break-all;color:var(--ink);font-size:11px}.secret-value button{border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--paper-2);color:var(--ink);font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer}.close{position:absolute;right:13px;top:10px;text-decoration:none;font-size:19px}.list-head{align-items:center;margin-bottom:12px}.list-head h2{margin:0}.list-tools{display:flex;align-items:center;gap:9px}.count{color:var(--ok);font-size:11px;font-weight:800}.list-tools select{border:1px solid var(--line);border-radius:8px;padding:7px;background:var(--card);color:var(--ink);font-size:11px}.key-row{display:flex;align-items:center;gap:11px;padding:14px 0;border-top:1px solid var(--line)}.key-mark{display:grid;place-items:center;flex:none;width:35px;height:35px;border-radius:9px;background:#e3f1e9;color:var(--ok);font-size:18px}.key-mark.test{background:#e3edf6;color:#356f91}.key-main{flex:1;min-width:0}.key-title{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.key-title b{font-size:13px}.key-main code{display:block;margin-top:5px;color:var(--ink-soft);font-size:10px}.key-main>small{display:block;margin-top:4px;color:var(--ink-soft);font-size:10px}.env,.revoked{padding:3px 6px;border-radius:4px;background:#e3f1e9;color:var(--ok);font-size:9px;font-weight:850;text-transform:uppercase}.env.test{background:#e3edf6;color:#356f91}.revoked{background:#f8e7df;color:var(--danger)}.scope-summary{min-width:130px;color:var(--ink);font-size:11px;font-weight:750}.scope-summary small{color:var(--ink-soft);font-size:9px;font-weight:500}.revoke{border:1px solid var(--line);border-radius:7px;padding:7px 9px;background:var(--card);color:var(--danger);font-size:10px;font-weight:750;cursor:pointer}.muted{color:var(--ink-soft);font-size:11px}.empty{text-align:center;padding:40px 15px}.empty div{font-size:28px;color:var(--accent)}.empty h3{margin:9px 0 4px;font-size:17px}.empty p{margin:0;color:var(--ink-soft);font-size:11px}.loading{text-align:center;padding:30px;color:var(--ink-soft);font-size:12px}.side{padding:20px}.side-icon{display:grid;place-items:center;width:37px;height:37px;margin-bottom:12px;border-radius:11px;background:#e3f1e9;color:var(--ok);font-size:18px;font-weight:800}.side h3{margin:0;font-size:16px}.side p{color:var(--ink-soft);font-size:11px;line-height:1.5}.side-list{display:grid;gap:10px;margin-top:15px;padding-top:14px;border-top:1px solid var(--line);color:var(--ok);font-size:11px;font-weight:700}.help{margin-top:15px}.help a{color:var(--accent);font-size:11px;font-weight:800}.help a b{margin-left:4px}@media(max-width:850px){.layout{grid-template-columns:1fr}.layout aside{display:grid;grid-template-columns:1fr 1fr;gap:14px}.help{margin-top:0}}@media(max-width:620px){.page-head{align-items:flex-start;flex-direction:column}.layout aside{display:block}.help{margin-top:14px}.form-grid,.scopes{grid-template-columns:1fr}.key-row{align-items:flex-start;flex-wrap:wrap}.scope-summary{margin-left:46px}.revoke{margin-left:auto}.list-head{align-items:flex-start;flex-direction:column}.list-tools{width:100%;justify-content:space-between}}
   `],
 })
 export class SellerApiKeysComponent {
-  private api = inject(ApiService);
-  keys = signal<any[]>([]);
-  name = 'ERP sync';
-  secret = signal('');
-
-  constructor() { this.reload(); }
-
-  reload() {
-    this.api.sellerApiKeys().subscribe((res) => this.keys.set(res.data));
-  }
-
-  create() {
-    this.api.createApiKey({
-      name: this.name,
-      scopes: ['products:read', 'orders:read', 'orders:fulfill', 'inventory:write', 'settlements:read'],
-      environment: 'live',
-    }).subscribe((res) => {
-      this.secret.set(res.data.secret);
-      this.reload();
-    });
-  }
-
-  revoke(id: number) {
-    this.api.revokeApiKey(id).subscribe(() => this.reload());
-  }
+  private api=inject(ApiService); keys=signal<ApiKey[]>([]); loading=signal(true); busy=signal(false); error=signal(''); notice=signal(''); secret=signal(''); copied=signal(false); name=''; environment='live'; scopes=signal<string[]>(['products:read','orders:read']); filter=signal('all');
+  scopeOptions=[{key:'products:read',label:'Read products',description:'View catalogue and product details'},{key:'products:write',label:'Manage products',description:'Create and update catalogue items'},{key:'orders:read',label:'Read orders',description:'View order and customer details'},{key:'orders:fulfill',label:'Fulfil orders',description:'Update fulfilment and order status'},{key:'inventory:write',label:'Manage inventory',description:'Update stock and availability'},{key:'settlements:read',label:'Read settlements',description:'View payout and settlement records'},{key:'webhooks:manage',label:'Manage webhooks',description:'Create and configure event hooks'}];
+  filtered=computed(()=>this.keys().filter(k=>this.filter()==='all'||(this.filter()==='active'&&!k.revoked_at)||(this.filter()==='revoked'&&!!k.revoked_at))); activeCount=computed(()=>this.keys().filter(k=>!k.revoked_at).length); allSelected=computed(()=>this.scopes().length===this.scopeOptions.length);
+  constructor(){this.reload()}
+  reload(){this.loading.set(true);this.api.sellerApiKeys().subscribe({next:r=>{this.keys.set(r.data||[]);this.loading.set(false)},error:e=>{this.loading.set(false);this.error.set(e.error?.error?.message||'Unable to load API keys.')}})}
+  toggleScope(key:string){this.scopes.update(items=>items.includes(key)?items.filter(x=>x!==key):[...items,key])}
+  toggleAll(){this.scopes.set(this.allSelected()?[]:this.scopeOptions.map(x=>x.key))}
+  create(){this.busy.set(true);this.error.set('');this.notice.set('');this.api.createApiKey({name:this.name.trim(),scopes:this.scopes(),environment:this.environment}).subscribe({next:r=>{this.secret.set(r.data.secret);this.name='';this.busy.set(false);this.notice.set('API key created.');this.reload()},error:e=>{this.busy.set(false);this.error.set(e.error?.error?.message||'Could not create API key.')}})}
+  revoke(key:ApiKey){if(!confirm(`Revoke ${key.name}? Existing requests using this key will stop working immediately.`))return;this.api.revokeApiKey(key.id).subscribe({next:()=>{this.notice.set(`${key.name} was revoked.`);this.reload()},error:e=>this.error.set(e.error?.error?.message||'Could not revoke API key.')})}
+  copySecret(){navigator.clipboard?.writeText(this.secret()).then(()=>{this.copied.set(true);setTimeout(()=>this.copied.set(false),1800)}).catch(()=>this.error.set('Could not copy the secret.'))}
 }
