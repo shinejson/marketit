@@ -1,12 +1,13 @@
 import { Component, Input, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CurrencyPipe } from '@angular/common';
+
 import { ProductCard } from '../core/models';
 import { ApiService } from '../core/api.service';
+import { MoneyPipe } from './money.pipe';
 
 @Component({
   selector: 'app-product-card',
-  imports: [RouterLink, CurrencyPipe],
+  imports: [RouterLink, MoneyPipe],
   template: `
     <a class="card item" [routerLink]="['/products', product.slug]" (click)="onClick()">
       <div class="thumb" [style.backgroundImage]="bg">
@@ -16,8 +17,8 @@ import { ApiService } from '../core/api.service';
         <span class="pill">{{ product.sponsored ? 'Sponsored' : product.store?.name }}</span>
         <h3>{{ product.name }}</h3>
         <p class="price">
-          {{ +product.price | currency }}
-          @if (product.on_sale && product.compare_at_price) { <s>{{ +product.compare_at_price | currency }}</s> }
+          {{ +product.price | money:sourceCurrency() }}
+          @if (product.on_sale && product.compare_at_price) { <s>{{ +product.compare_at_price | money:sourceCurrency() }}</s> }
         </p>
       </div>
     </a>
@@ -35,6 +36,11 @@ import { ApiService } from '../core/api.service';
 export class ProductCardComponent {
   private api = inject(ApiService);
   @Input({ required: true }) product!: ProductCard;
+  /** Prices come denominated in the owning store's currency. */
+  sourceCurrency(): string | null {
+    return this.product.currency || this.product.store?.currency || null;
+  }
+
   get bg() {
     return this.product.image ? `url('${this.product.image}')` : 'linear-gradient(135deg,#1f4b3a,#c45c26)';
   }

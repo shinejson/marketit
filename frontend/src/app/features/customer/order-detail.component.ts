@@ -1,11 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { ApiService } from '../../core/api.service';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 @Component({
   selector: 'app-order-detail',
-  imports: [CurrencyPipe, DatePipe],
+  imports: [MoneyPipe, DatePipe],
   template: `
     <div class="wrap page">
       @if (order(); as o) {
@@ -16,11 +17,11 @@ import { ApiService } from '../../core/api.service';
           <section class="card pad">
             <h3>{{ so.store?.name || ('Store #' + so.store_id) }} — {{ so.status }}</h3>
             @for (item of so.items; track item.id) {
-              <p>{{ item.qty }} x {{ item.product_name }} · {{ +item.unit_price | currency }}</p>
+              <p>{{ item.qty }} x {{ item.product_name }} · {{ +item.unit_price | money }}</p>
             }
           </section>
         }
-        <h2>{{ +o.grand_total | currency }}</h2>
+        <h2>{{ +o.grand_total | money }}</h2>
         @if (o.status === 'pending_payment' || o.status === 'paid') {
           <button class="btn ghost" (click)="cancel(o.id)">Cancel order</button>
         }

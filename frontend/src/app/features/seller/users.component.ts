@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe, TitleCasePipe } from '@angular/common';
+import { DatePipe, TitleCasePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -17,6 +17,7 @@ import {
   TenantSystemUserStats,
   TenantUserStatus,
 } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type Tab = 'system' | 'customers' | 'roles';
 type CustomerFilter = '' | 'active' | 'blocked' | 'repeat' | 'social' | 'password';
@@ -75,7 +76,7 @@ const PROVIDER_GLYPHS: Record<string, string> = {
  */
 @Component({
   selector: 'app-seller-users',
-  imports: [FormsModule, DatePipe, CurrencyPipe, TitleCasePipe, RouterLink],
+  imports: [FormsModule, DatePipe, MoneyPipe, TitleCasePipe, RouterLink],
   template: `
     <div class="users-shell">
       <header class="page-head">
@@ -323,8 +324,8 @@ const PROVIDER_GLYPHS: Record<string, string> = {
           </article>
           <article class="metric-card value">
             <div class="metric-top"><span class="metric-icon gold">◈</span></div>
-            <p>Customer revenue</p><h2>{{ customerStats()?.revenue ?? 0 | currency: 'USD':'symbol':'1.0-0' }}</h2>
-            <small>Avg {{ customerStats()?.average_spend ?? 0 | currency: 'USD':'symbol':'1.0-0' }} per customer</small>
+            <p>Customer revenue</p><h2>{{ customerStats()?.revenue ?? 0 | money:'':'symbol':'1.0-0' }}</h2>
+            <small>Avg {{ customerStats()?.average_spend ?? 0 | money:'':'symbol':'1.0-0' }} per customer</small>
           </article>
           <article class="metric-card" [class.urgent]="(customerStats()?.blocked ?? 0) > 0">
             <div class="metric-top"><span class="metric-icon rose">⦸</span></div>
@@ -410,8 +411,8 @@ const PROVIDER_GLYPHS: Record<string, string> = {
                         </div>
                       </td>
                       <td class="right"><strong>{{ customer.orders_count }}</strong></td>
-                      <td class="right"><strong>{{ customer.total_spent | currency: 'USD':'symbol':'1.2-2' }}</strong></td>
-                      <td class="right">{{ customer.average_order_value | currency: 'USD':'symbol':'1.2-2' }}</td>
+                      <td class="right"><strong>{{ customer.total_spent | money:'':'symbol':'1.2-2' }}</strong></td>
+                      <td class="right">{{ customer.average_order_value | money:'':'symbol':'1.2-2' }}</td>
                       <td>
                         @if (customer.last_order_at) { <strong>{{ customer.last_order_at | date: 'd MMM y' }}</strong> }
                         @else { <small>—</small> }
@@ -763,8 +764,8 @@ const PROVIDER_GLYPHS: Record<string, string> = {
           <div class="drawer-body">
             <section class="stat-row">
               <div><b>{{ customer.orders_count }}</b><span>Orders</span></div>
-              <div><b>{{ customer.total_spent | currency: 'USD':'symbol':'1.0-0' }}</b><span>Spend</span></div>
-              <div><b>{{ customer.average_order_value | currency: 'USD':'symbol':'1.0-0' }}</b><span>Avg order</span></div>
+              <div><b>{{ customer.total_spent | money:'':'symbol':'1.0-0' }}</b><span>Spend</span></div>
+              <div><b>{{ customer.average_order_value | money:'':'symbol':'1.0-0' }}</b><span>Avg order</span></div>
               <div><b>{{ customer.last_order_at ? (customer.last_order_at | date: 'd MMM') : '—' }}</b><span>Last order</span></div>
             </section>
 
@@ -824,7 +825,7 @@ const PROVIDER_GLYPHS: Record<string, string> = {
                     <li>
                       <span>#{{ order.order_id }}</span>
                       <span class="chip-tag">{{ order.status.replace('_', ' ') | titlecase }}</span>
-                      <b>{{ order.total | currency: 'USD':'symbol':'1.2-2' }}</b>
+                      <b>{{ order.total | money:'':'symbol':'1.2-2' }}</b>
                       <small>{{ order.placed_at | date: 'd MMM y' }}</small>
                     </li>
                   }

@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -13,6 +13,7 @@ import {
   StockMovementType,
   StockState,
 } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type StateFilter = '' | 'in_stock' | 'low_stock' | 'out_of_stock' | 'reserved' | 'expiring';
 type SortValue = 'available_asc' | 'available_desc' | 'value_desc' | 'name_asc' | 'name_desc' | 'updated_desc' | 'expiry_asc';
@@ -48,7 +49,7 @@ const MOVEMENT_ACTIONS: { type: StockMovementType; label: string; hint: string }
 
 @Component({
   selector: 'app-seller-inventory',
-  imports: [FormsModule, CurrencyPipe, DatePipe, RouterLink],
+  imports: [FormsModule, MoneyPipe, DatePipe, RouterLink],
   template: `
     <div class="inventory-shell">
       <header class="page-head">
@@ -103,8 +104,8 @@ const MOVEMENT_ACTIONS: { type: StockMovementType; label: string; hint: string }
         </article>
         <article class="metric-card value">
           <div class="metric-top"><span class="metric-icon gold">◈</span></div>
-          <p>Stock value</p><h2>{{ stats()?.retail_value ?? 0 | currency:'USD':'symbol':'1.0-0' }}</h2>
-          <small>Cost {{ stats()?.cost_value ?? 0 | currency:'USD':'symbol':'1.0-0' }}</small>
+          <p>Stock value</p><h2>{{ stats()?.retail_value ?? 0 | money:'':'symbol':'1.0-0' }}</h2>
+          <small>Cost {{ stats()?.cost_value ?? 0 | money:'':'symbol':'1.0-0' }}</small>
         </article>
       </section>
 
@@ -245,8 +246,8 @@ const MOVEMENT_ACTIONS: { type: StockMovementType; label: string; hint: string }
                       </div>
                     </td>
                     <td class="right financial-cell">
-                      <strong>{{ row.retail_value | currency:'USD':'symbol':'1.0-0' }}</strong>
-                      <small>cost {{ row.cost_value | currency:'USD':'symbol':'1.0-0' }}</small>
+                      <strong>{{ row.retail_value | money:'':'symbol':'1.0-0' }}</strong>
+                      <small>cost {{ row.cost_value | money:'':'symbol':'1.0-0' }}</small>
                     </td>
                     <td><span class="stock-pill" [class]="row.state">{{ stateLabel(row.state) }}</span></td>
                     <td class="right" (click)="$event.stopPropagation()">

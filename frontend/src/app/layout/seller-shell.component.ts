@@ -1,7 +1,9 @@
 import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ApiService } from '../core/api.service';
 import { AuthService } from '../core/auth.service';
+import { CurrencyService } from '../core/currency.service';
 import { ThemeService } from '../core/theme.service';
 
 type IconName =
@@ -271,6 +273,14 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
               }
             </div>
 
+            <a
+              class="currency-chip"
+              [routerLink]="tenantLink('settings')"
+              [title]="'Workspace currency: ' + currency.displayMeta().name + ' — change it in settings'"
+            >
+              <b>{{ currency.displayMeta().symbol }}</b><span>{{ currency.display() }}</span>
+            </a>
+
             <button
               type="button"
               class="icon-btn"
@@ -298,6 +308,7 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
                       <p class="pill">{{ auth.user()?.tenant_name }}</p>
                     }
                   </div>
+                  <a [routerLink]="tenantLink('profile')" (click)="closeMenus()">My profile &amp; activity</a>
                   <a [routerLink]="tenantLink()" (click)="closeMenus()">Dashboard</a>
                   @if (isOwner()) {
                     <a [routerLink]="tenantLink('settings')" (click)="closeMenus()">Account settings</a>
@@ -742,6 +753,10 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
     .profile-info .email { font-size: 12px; margin: 2px 0 6px; }
     .profile-panel a { display: block; padding: 9px 10px; border-radius: 10px; font-weight: 600; font-size: 13.5px; }
     .profile-panel a:hover { background: var(--paper-2); }
+    .currency-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; color: var(--ink); font-size: 12px; font-weight: 700; }
+    .currency-chip:hover { background: var(--paper-2); }
+    .currency-chip b { color: var(--accent); }
+    .currency-chip span { color: var(--ink-soft); letter-spacing: .04em; }
     .logout-btn { width: 100%; text-align: left; background: none; border: 0; padding: 9px 10px; border-radius: 10px; font-weight: 600; font-size: 13.5px; color: var(--danger); cursor: pointer; }
     .logout-btn:hover { background: var(--paper-2); }
 
@@ -872,6 +887,8 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
 export class SellerShellComponent {
   auth = inject(AuthService);
   theme = inject(ThemeService);
+  currency = inject(CurrencyService);
+  private api = inject(ApiService);
   private router = inject(Router);
 
   isOwner = computed(() => this.auth.hasRole('tenant_owner'));
@@ -955,7 +972,10 @@ export class SellerShellComponent {
   showSearchPanel = computed(() => this.searchFocused());
 
   searchIndex = computed<SearchEntry[]>(() => {
-    const items: SearchEntry[] = [{ label: 'Dashboard', path: this.tenantLink(), icon: 'home', section: 'Overview' }];
+    const items: SearchEntry[] = [
+      { label: 'Dashboard', path: this.tenantLink(), icon: 'home', section: 'Overview' },
+      { label: 'My profile & activity', path: this.tenantLink('profile'), icon: 'users', section: 'Account' },
+    ];
     if (this.canViewAccounting()) {
       for (const a of this.accountingItems) {
         items.push({ label: a.label, path: this.tenantLink(a.key), icon: a.icon, section: 'Accounting' });
@@ -1015,6 +1035,20 @@ export class SellerShellComponent {
   });
 
   constructor() {
+    // Every price inside the console renders in the workspace currency, so the
+    // shell resolves it once on entry and hands it to the CurrencyService.
+    this.api.tenantCurrency().subscribe({
+      next: (res) => {
+        this.currency.applyCatalog(res.data);
+        // Not persisted: the console follows the workspace, while the
+        // storefront keeps the shopper's own pick.
+        this.currency.setDisplay(res.data.code, false);
+      },
+      error: () => {
+        /* fall back to the platform base currency */
+      },
+    });
+
     effect(() => {
       if (typeof window === 'undefined' || this.isMobile()) return;
       try {

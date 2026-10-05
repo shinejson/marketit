@@ -1,12 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CurrencyPipe } from '@angular/common';
+
 import { ApiService } from '../../core/api.service';
 import { CartPayload } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 @Component({
   selector: 'app-cart',
-  imports: [RouterLink, CurrencyPipe],
+  imports: [RouterLink, MoneyPipe],
   template: `
     <div class="wrap page">
       <h1>Cart</h1>
@@ -20,24 +21,24 @@ import { CartPayload } from '../../core/models';
               <div class="row">
                 <div>
                   <strong>{{ item.product_name }}</strong>
-                  <p class="muted">{{ item.sku }} · {{ +item.unit_price | currency }}</p>
+                  <p class="muted">{{ item.sku }} · {{ +item.unit_price | money }}</p>
                 </div>
                 <div class="qty">
                   <button class="btn ghost" (click)="setQty(item.id, item.qty - 1)">-</button>
                   <span>{{ item.qty }}</span>
                   <button class="btn ghost" (click)="setQty(item.id, item.qty + 1)">+</button>
                 </div>
-                <strong>{{ +item.line_total | currency }}</strong>
+                <strong>{{ +item.line_total | money }}</strong>
               </div>
             }
-            <p class="muted">Store subtotal {{ +g.subtotal | currency }} · delivery {{ +g.store.delivery_fee | currency }}@if (+g.tax! > 0) { · tax {{ +g.tax! | currency }} }</p>
+            <p class="muted">Store subtotal {{ +g.subtotal | money }} · delivery {{ +g.store.delivery_fee | money }}@if (+g.tax! > 0) { · tax {{ +g.tax! | money }} }</p>
           </section>
         }
         <aside class="card totals">
-          <p>Items {{ +cart()!.totals.subtotal | currency }}</p>
-          <p>Delivery {{ +cart()!.totals.delivery_total | currency }}</p>
-          @if (+cart()!.totals.tax_total > 0) { <p>Tax {{ +cart()!.totals.tax_total | currency }}</p> }
-          <h2>Total {{ +cart()!.totals.grand_total | currency }}</h2>
+          <p>Items {{ +cart()!.totals.subtotal | money }}</p>
+          <p>Delivery {{ +cart()!.totals.delivery_total | money }}</p>
+          @if (+cart()!.totals.tax_total > 0) { <p>Tax {{ +cart()!.totals.tax_total | money }}</p> }
+          <h2>Total {{ +cart()!.totals.grand_total | money }}</h2>
           <a routerLink="/checkout" class="btn accent">Checkout</a>
         </aside>
       }

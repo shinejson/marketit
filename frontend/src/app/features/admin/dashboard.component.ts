@@ -1,13 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AdminOverview, Kpi } from '../../core/models';
 import { BarChartComponent, DonutChartComponent, LineChartComponent } from '../../shared/charts.component';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 @Component({
   selector: 'app-admin-dashboard',
-  imports: [CurrencyPipe, DecimalPipe, DatePipe, RouterLink, LineChartComponent, BarChartComponent, DonutChartComponent],
+  imports: [MoneyPipe, DecimalPipe, DatePipe, RouterLink, LineChartComponent, BarChartComponent, DonutChartComponent],
   template: `
     <header class="head">
       <div>
@@ -33,7 +34,7 @@ import { BarChartComponent, DonutChartComponent, LineChartComponent } from '../.
         @for (card of cards(); track card.key) {
           <div class="card kpi">
             <p class="muted label">{{ card.label }}</p>
-            <h2>{{ card.kpi.format === 'currency' ? (card.kpi.value | currency: 'USD') : (card.kpi.value | number) }}</h2>
+            <h2>{{ card.kpi.format === 'currency' ? (card.kpi.value | money:'') : (card.kpi.value | number) }}</h2>
             <p class="delta" [class]="card.kpi.direction">
               <span class="arrow">{{ card.kpi.direction === 'up' ? '▲' : card.kpi.direction === 'down' ? '▼' : '■' }}</span>
               {{ card.kpi.change > 0 ? '+' : '' }}{{ card.kpi.change | number: '1.0-1' }}% vs previous {{ d.range.days }}d
@@ -85,8 +86,8 @@ import { BarChartComponent, DonutChartComponent, LineChartComponent } from '../.
                   <tr>
                     <td>{{ t.name }}</td>
                     <td>{{ t.orders }}</td>
-                    <td>{{ t.revenue | currency: 'USD' }}</td>
-                    <td>{{ t.commission | currency: 'USD' }}</td>
+                    <td>{{ t.revenue | money:'' }}</td>
+                    <td>{{ t.commission | money:'' }}</td>
                   </tr>
                 }
               </tbody>

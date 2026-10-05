@@ -210,12 +210,16 @@ class MarketController extends Controller
             'min_order_qty' => (int) ($p->min_order_qty ?? 1),
             'brand' => $p->brand,
             'status' => $p->status,
+            // Prices are denominated in the owning store's currency; the client
+            // converts into whatever the shopper is browsing in.
+            'currency' => $p->store?->currency ?? config('markethub.currency', 'USD'),
             'image' => $p->primaryImage()?->url,
             'images' => $p->images->map(fn ($i) => ['id' => $i->id, 'url' => $i->url, 'is_primary' => $i->is_primary])->all(),
             'store' => $p->store ? [
                 'id' => $p->store->id,
                 'name' => $p->store->name,
                 'slug' => $p->store->slug,
+                'currency' => $p->store->currency,
                 'delivery_fee' => (string) $p->store->delivery_fee,
             ] : null,
             'category' => $p->category ? [

@@ -190,6 +190,7 @@ class DatabaseSeeder extends Seeder
 
         $this->seedPhase3();
         $this->seedTenantOps();
+        $this->call(CurrencySeeder::class);
         $this->call(BillingSeeder::class);
         $this->call(AccountingSeeder::class);
         $this->call(SalesSeeder::class);

@@ -1,10 +1,11 @@
-import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AnalyticsKpi, TenantAnalyticsReport } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type MetricKey = 'gmv' | 'orders' | 'views';
 
@@ -30,7 +31,7 @@ const STATUS_TONES: Record<string, string> = {
 
 @Component({
   selector: 'app-seller-analytics',
-  imports: [FormsModule, CurrencyPipe, DecimalPipe, DatePipe, RouterLink],
+  imports: [FormsModule, MoneyPipe, DecimalPipe, DatePipe, RouterLink],
   template: `
     <div class="analytics-shell">
       <header class="page-head">
@@ -76,8 +77,8 @@ const STATUS_TONES: Record<string, string> = {
         <section class="kpi-grid">
           <article class="metric-card value">
             <div class="metric-top"><span class="metric-icon gold">◈</span><span class="trend" [class.up]="r.kpis.gmv.direction === 'up'" [class.down]="r.kpis.gmv.direction === 'down'">{{ deltaChip(r.kpis.gmv) }}</span></div>
-            <p>Revenue</p><h2>{{ r.kpis.gmv.value | currency:'USD':'symbol':'1.0-0' }}</h2>
-            <small>Previous {{ r.kpis.gmv.previous | currency:'USD':'symbol':'1.0-0' }}</small>
+            <p>Revenue</p><h2>{{ r.kpis.gmv.value | money:'':'symbol':'1.0-0' }}</h2>
+            <small>Previous {{ r.kpis.gmv.previous | money:'':'symbol':'1.0-0' }}</small>
           </article>
           <article class="metric-card">
             <div class="metric-top"><span class="metric-icon blue">▦</span><span class="trend" [class.up]="r.kpis.orders.direction === 'up'" [class.down]="r.kpis.orders.direction === 'down'">{{ deltaChip(r.kpis.orders) }}</span></div>
@@ -86,8 +87,8 @@ const STATUS_TONES: Record<string, string> = {
           </article>
           <article class="metric-card">
             <div class="metric-top"><span class="metric-icon slate">⌀</span><span class="trend" [class.up]="r.kpis.aov.direction === 'up'" [class.down]="r.kpis.aov.direction === 'down'">{{ deltaChip(r.kpis.aov) }}</span></div>
-            <p>Average order value</p><h2>{{ r.kpis.aov.value | currency }}</h2>
-            <small>Previous {{ r.kpis.aov.previous | currency }}</small>
+            <p>Average order value</p><h2>{{ r.kpis.aov.value | money }}</h2>
+            <small>Previous {{ r.kpis.aov.previous | money }}</small>
           </article>
           <article class="metric-card">
             <div class="metric-top"><span class="metric-icon plum">👥</span><span class="trend" [class.up]="r.kpis.customers.direction === 'up'" [class.down]="r.kpis.customers.direction === 'down'">{{ deltaChip(r.kpis.customers) }}</span></div>
@@ -175,7 +176,7 @@ const STATUS_TONES: Record<string, string> = {
                     <span class="mix-label">{{ statusLabel(s.status) }}</span>
                     <div class="mix-bar"><i [style.width.%]="sharePercent(s.count)" [style.background]="statusTone(s.status)"></i></div>
                     <b>{{ s.count }}</b>
-                    <span class="muted">{{ s.gmv | currency:'USD':'symbol':'1.0-0' }}</span>
+                    <span class="muted">{{ s.gmv | money:'':'symbol':'1.0-0' }}</span>
                   </div>
                 }
               </div>
@@ -201,7 +202,7 @@ const STATUS_TONES: Record<string, string> = {
                         <td><strong>{{ p.name }}</strong>@if (p.sku) { <small class="mono">{{ p.sku }}</small> }</td>
                         <td class="right">{{ p.units | number }}</td>
                         <td class="right">{{ p.orders | number }}</td>
-                        <td class="right"><strong>{{ p.revenue | currency }}</strong></td>
+                        <td class="right"><strong>{{ p.revenue | money }}</strong></td>
                       </tr>
                     }
                   </tbody>
@@ -223,8 +224,8 @@ const STATUS_TONES: Record<string, string> = {
                       <tr>
                         <td><strong>{{ s.name }}</strong><small>{{ s.currency }}</small></td>
                         <td class="right">{{ s.orders | number }}</td>
-                        <td class="right">{{ s.gmv | currency }}</td>
-                        <td class="right"><strong>{{ s.net | currency }}</strong></td>
+                        <td class="right">{{ s.gmv | money }}</td>
+                        <td class="right"><strong>{{ s.net | money }}</strong></td>
                       </tr>
                     }
                   </tbody>
@@ -244,8 +245,8 @@ const STATUS_TONES: Record<string, string> = {
               <div><p>Impressions</p><strong>{{ r.ads.impressions | number }}</strong></div>
               <div><p>Clicks</p><strong>{{ r.ads.clicks | number }}</strong></div>
               <div><p>CTR</p><strong>{{ r.ads.ctr | number:'1.0-2' }}%</strong></div>
-              <div><p>Spend</p><strong>{{ r.ads.spend | currency }}</strong></div>
-              <div><p>Avg CPC</p><strong>{{ r.ads.avg_cpc | currency:'USD':'symbol':'1.2-4' }}</strong></div>
+              <div><p>Spend</p><strong>{{ r.ads.spend | money }}</strong></div>
+              <div><p>Avg CPC</p><strong>{{ r.ads.avg_cpc | money:'':'symbol':'1.2-4' }}</strong></div>
               <div><p>Cost of revenue</p><strong>{{ adShare() }}%</strong></div>
             </div>
           </section>
@@ -256,17 +257,17 @@ const STATUS_TONES: Record<string, string> = {
               <div><p>Buyers</p><strong>{{ r.customers.buyers | number }}</strong></div>
               <div><p>Repeat buyers</p><strong>{{ r.customers.repeat_buyers | number }}</strong></div>
               <div><p>Repeat rate</p><strong>{{ r.customers.repeat_rate | number:'1.0-1' }}%</strong></div>
-              <div><p>Revenue per buyer</p><strong>{{ r.customers.revenue_per_buyer | currency }}</strong></div>
-              <div><p>Commission</p><strong>{{ r.kpis.commission.value | currency }}</strong></div>
-              <div><p>Net settlement</p><strong>{{ r.kpis.net.value | currency }}</strong></div>
+              <div><p>Revenue per buyer</p><strong>{{ r.customers.revenue_per_buyer | money }}</strong></div>
+              <div><p>Commission</p><strong>{{ r.kpis.commission.value | money }}</strong></div>
+              <div><p>Net settlement</p><strong>{{ r.kpis.net.value | money }}</strong></div>
             </div>
           </section>
         </div>
 
         @if (report()?.lifetime; as lifetime) {
           <p class="lifetime-note">
-            All time: <b>{{ +lifetime.gmv | currency }}</b> revenue across {{ lifetime.orders }} orders ·
-            commission {{ +lifetime.commission | currency }} ({{ lifetime.take_rate }}% take rate).
+            All time: <b>{{ +lifetime.gmv | money }}</b> revenue across {{ lifetime.orders }} orders ·
+            commission {{ +lifetime.commission | money }} ({{ lifetime.take_rate }}% take rate).
           </p>
         }
       }

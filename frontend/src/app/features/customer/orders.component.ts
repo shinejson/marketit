@@ -1,11 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { ApiService } from '../../core/api.service';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 @Component({
   selector: 'app-orders',
-  imports: [RouterLink, CurrencyPipe, DatePipe],
+  imports: [RouterLink, MoneyPipe, DatePipe],
   template: `
     <div class="wrap page">
       <h1>Your orders</h1>
@@ -19,7 +20,7 @@ import { ApiService } from '../../core/api.service';
             <p class="muted">{{ o.placed_at | date:'medium' }}</p>
           </div>
           <span class="pill">{{ o.status }}</span>
-          <strong>{{ +o.grand_total | currency }}</strong>
+          <strong>{{ +o.grand_total | money }}</strong>
         </a>
       }
     </div>
