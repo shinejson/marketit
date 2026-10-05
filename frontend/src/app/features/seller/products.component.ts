@@ -482,6 +482,9 @@ const PRESET_GLYPHS: Record<string, string> = {
                   <label class="field"><span>Tax class</span>
                     <input [(ngModel)]="draft.tax_class" name="tax_class" placeholder="standard / zero-rated" />
                   </label>
+                  <label class="field"><span>Tax rate override <small>% — blank uses the workspace default</small></span>
+                    <input type="number" min="0" max="100" step="0.01" [(ngModel)]="draft.tax_rate" name="tax_rate" placeholder="e.g. 15" />
+                  </label>
                   <label class="field"><span>Sold by</span>
                     <select [(ngModel)]="draft.unit" name="unit">
                       @for (unit of units(); track unit.value) { <option [value]="unit.value">{{ unit.label }}</option> }
@@ -1126,6 +1129,7 @@ export class SellerProductsComponent {
       compare_at_price: product.compare_at_price ? +product.compare_at_price : null,
       cost_price: product.cost_price ? +product.cost_price : null,
       tax_class: product.tax_class ?? '',
+      tax_rate: product.tax_rate !== null && product.tax_rate !== undefined ? +product.tax_rate : null,
       unit: product.unit || 'piece',
       unit_amount: product.unit_amount ? +product.unit_amount : null,
       min_order_qty: product.min_order_qty ?? 1,
@@ -1379,6 +1383,7 @@ export class SellerProductsComponent {
       compare_at_price: this.nullableNumber(this.draft.compare_at_price),
       cost_price: this.nullableNumber(this.draft.cost_price),
       tax_class: this.draft.tax_class || null,
+      tax_rate: this.nullableNumber(this.draft.tax_rate),
 
       unit: this.draft.unit,
       unit_amount: this.nullableNumber(this.draft.unit_amount),
@@ -1527,6 +1532,7 @@ export class SellerProductsComponent {
       compare_at_price: null as number | null,
       cost_price: null as number | null,
       tax_class: '',
+      tax_rate: null as number | null,
       unit: 'piece',
       unit_amount: null as number | null,
       min_order_qty: 1,

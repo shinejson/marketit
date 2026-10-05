@@ -7,7 +7,7 @@ import { ThemeService } from '../core/theme.service';
 type IconName =
   | 'home' | 'finance' | 'sales' | 'operations' | 'marketing' | 'store' | 'orders' | 'products'
   | 'inventory' | 'ads' | 'analytics' | 'users' | 'settings' | 'backups' | 'domains' | 'apikeys'
-  | 'webhooks' | 'ai' | 'search' | 'bell' | 'sun' | 'moon' | 'chevron' | 'menu' | 'lifebuoy';
+  | 'webhooks' | 'ai' | 'search' | 'bell' | 'sun' | 'moon' | 'chevron' | 'menu' | 'lifebuoy' | 'activity';
 
 interface NavEntry {
   key: string;
@@ -360,6 +360,9 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
           }
           @case ('backups') {
             <ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" /><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+          }
+          @case ('activity') {
+            <path d="M12 8v5l3 2" /><circle cx="12" cy="12" r="9" />
           }
           @case ('domains') {
             <circle cx="12" cy="12" r="9" /><line x1="3" y1="12" x2="21" y2="12" /><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z" />
@@ -923,6 +926,7 @@ export class SellerShellComponent {
   readonly adminItems: NavEntry[] = [
     { key: 'users', label: 'Users & permissions', icon: 'users' },
     { key: 'settings', label: 'Settings', icon: 'settings' },
+    { key: 'activity', label: 'Activity log', icon: 'activity' },
     { key: 'backups', label: 'Backups', icon: 'backups' },
     { key: 'domains', label: 'Domains', icon: 'domains' },
     { key: 'api-keys', label: 'API keys', icon: 'apikeys' },

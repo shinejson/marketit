@@ -192,11 +192,22 @@ class MarketController extends Controller
 
     protected function productCard(Product $p, bool $detailed = false): array
     {
+        $compareAt = $p->compare_at_price !== null ? (float) $p->compare_at_price : null;
+        $onSale = $compareAt !== null && $compareAt > (float) $p->price;
+
         $payload = [
             'id' => $p->id,
             'name' => $p->name,
             'slug' => $p->slug,
             'price' => (string) $p->price,
+            'compare_at_price' => $p->compare_at_price !== null ? (string) $p->compare_at_price : null,
+            'on_sale' => $onSale,
+            'discount_percent' => $onSale ? (int) round((1 - ((float) $p->price / $compareAt)) * 100) : null,
+            'tax_class' => $p->tax_class,
+            'tax_rate' => $p->tax_rate !== null ? (string) $p->tax_rate : null,
+            'unit' => $p->unit,
+            'unit_amount' => $p->unit_amount !== null ? (string) $p->unit_amount : null,
+            'min_order_qty' => (int) ($p->min_order_qty ?? 1),
             'brand' => $p->brand,
             'status' => $p->status,
             'image' => $p->primaryImage()?->url,
@@ -205,6 +216,7 @@ class MarketController extends Controller
                 'id' => $p->store->id,
                 'name' => $p->store->name,
                 'slug' => $p->store->slug,
+                'delivery_fee' => (string) $p->store->delivery_fee,
             ] : null,
             'category' => $p->category ? [
                 'id' => $p->category->id,
@@ -223,6 +235,10 @@ class MarketController extends Controller
         ];
         if ($detailed) {
             $payload['description'] = $p->description;
+            $payload['short_description'] = $p->short_description;
+            $payload['tags'] = $p->tags ?? [];
+            $payload['condition'] = $p->condition;
+            $payload['warranty_months'] = $p->warranty_months;
         }
 
         return $payload;
