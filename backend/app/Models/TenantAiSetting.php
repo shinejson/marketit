@@ -11,6 +11,10 @@ class TenantAiSetting extends Model
 
     protected $fillable = [
         'tenant_id',
+        'provider',
+        'endpoint',
+        'model',
+        'api_key',
         'tone',
         'length',
         'banned_words',
@@ -22,6 +26,7 @@ class TenantAiSetting extends Model
     protected function casts(): array
     {
         return [
+            'api_key' => 'encrypted',
             'banned_words' => 'array',
             'opted_out' => 'boolean',
         ];

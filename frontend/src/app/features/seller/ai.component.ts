@@ -1,74 +1,33 @@
-import { Component, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 
+interface AiSettings { provider:string; endpoint:string; model:string; api_key_set:boolean; tone:string; length:string; language:string; monthly_token_budget:number; opted_out:boolean; }
+
 @Component({
   selector: 'app-seller-ai',
-  imports: [FormsModule],
+  imports: [FormsModule, DecimalPipe],
   template: `
-    <h1>Mock AI studio</h1>
-    <form class="card pad" (ngSubmit)="describe()">
-      <div class="field"><label>Product</label>
-        <select [(ngModel)]="productId" name="product_id">
-          @for (p of products(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
-        </select>
-      </div>
-      <div class="row">
-        <button class="btn ok" type="submit">Generate description</button>
-        <button class="btn ghost" type="button" (click)="categorize()">Suggest category</button>
-      </div>
-    </form>
-    @if (insight(); as i) {
-      <div class="card pad"><h3>Insights</h3><p>{{ i.narrative || i.summary || JSON.stringify(i) }}</p></div>
-    }
-    @for (g of gens(); track g.id) {
-      <div class="card pad">
-        <p class="muted">{{ g.feature }} · {{ g.review_status }}</p>
-        <p>{{ g.output }}</p>
-        @if (g.review_status === 'draft') {
-          <div class="row">
-            <button class="btn ok" (click)="review(g.id, 'approved')">Approve</button>
-            <button class="btn ghost" (click)="review(g.id, 'rejected')">Reject</button>
-          </div>
-        }
-      </div>
-    }
+    <div class="ai-page">
+      <header class="page-head"><div><p class="eyebrow">Tenant console / Intelligence</p><h1>AI platform</h1><p class="intro">Connect your own AI provider to power product content and insights. Your credentials stay private to this tenant.</p></div><span class="secure">⌁ Tenant-owned credentials</span></header>
+      @if (notice()) { <div class="notice success">✓ {{ notice() }}</div> } @if (error()) { <div class="notice error">{{ error() }} <button type="button" (click)="error.set('')">Dismiss</button></div> }
+      @if (settings()) { <section class="card connection"><div class="connection-icon" [class.connected]="settings()?.api_key_set">{{ settings()?.api_key_set ? '✓' : '↯' }}</div><div><p class="eyebrow">Connection status</p><h2>{{ settings()?.api_key_set ? 'Your AI platform is connected' : 'Connect an AI platform' }}</h2><p>{{ settings()?.api_key_set ? settings()?.provider + ' · ' + settings()?.model : 'Add an API key below to enable AI-assisted tools for your team.' }}</p></div><span class="connection-state" [class.on]="settings()?.api_key_set">{{ settings()?.api_key_set ? 'Connected' : 'Not connected' }}</span></section> }
+      <div class="layout"><main>
+        <section class="card panel"><div class="panel-title"><div><p class="eyebrow">Provider connection</p><h2>Bring your own AI</h2><p>MarketHub sends requests through your selected provider. We do not use a shared platform key for your tenant.</p></div><span class="lock">▣ Encrypted at rest</span></div><form (ngSubmit)="save()"><div class="form-grid"><label class="field"><span>AI provider</span><select [(ngModel)]="form.provider" name="provider"><option value="OpenAI">OpenAI</option><option value="Anthropic">Anthropic</option><option value="Google Gemini">Google Gemini</option><option value="OpenAI-compatible">OpenAI-compatible</option></select></label><label class="field"><span>Model</span><input [(ngModel)]="form.model" name="model" placeholder="gpt-4o-mini" /><small>Use a model available in your provider account.</small></label><label class="field wide"><span>API endpoint</span><input type="url" [(ngModel)]="form.endpoint" name="endpoint" placeholder="https://api.openai.com/v1" /><small>Leave the default provider endpoint, or enter your compatible gateway URL.</small></label><label class="field wide"><span>API key</span><div class="key-input"><input [type]="showKey() ? 'text' : 'password'" [(ngModel)]="form.api_key" name="api_key" [placeholder]="settings()?.api_key_set ? 'Saved securely — enter a new key to rotate' : 'Paste your provider API key'" /><button type="button" (click)="showKey.set(!showKey())">{{ showKey() ? 'Hide' : 'Show' }}</button></div><small>Only an encrypted reference is retained. The full key is never displayed after saving.</small></label></div><div class="form-footer"><span>Changes apply to new AI requests.</span><button class="btn primary" type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save connection' }} <b>→</b></button></div></form></section>
+        <section class="card panel"><div class="panel-title"><div><p class="eyebrow">Content preferences</p><h2>Set your AI style</h2><p>These defaults guide generated product descriptions and category suggestions.</p></div></div><div class="form-grid"><label class="field"><span>Writing tone</span><select [(ngModel)]="form.tone" name="tone"><option value="warm">Warm and helpful</option><option value="luxury">Premium and refined</option><option value="playful">Playful and energetic</option></select></label><label class="field"><span>Response length</span><select [(ngModel)]="form.length" name="length"><option value="short">Short and concise</option><option value="medium">Balanced</option><option value="long">Detailed</option></select></label><label class="field"><span>Output language</span><select [(ngModel)]="form.language" name="language"><option value="en">English</option><option value="fr">French</option><option value="sw">Swahili</option></select></label><label class="field"><span>Monthly token budget</span><input type="number" min="1000" step="1000" [(ngModel)]="form.monthly_token_budget" name="budget" /><small>Requests stop when this limit is reached.</small></label></div><label class="toggle"><input type="checkbox" [(ngModel)]="form.opted_out" name="opted_out" /><span><b>Disable AI features</b><small>Stop AI requests while keeping this connection saved.</small></span></label><div class="banned"><span>Restricted terms</span><input [(ngModel)]="bannedInput" name="banned" placeholder="Add words separated by commas" /></div></section>
+        <section class="card panel usage"><div class="panel-title"><div><p class="eyebrow">Usage this month</p><h2>Keep spend predictable</h2></div><span class="usage-number">{{ usageUsed() | number:'1.0-0' }} / {{ form.monthly_token_budget | number:'1.0-0' }} tokens</span></div><div class="progress"><i [style.width.%]="usagePercent()"></i></div><p class="usage-note">{{ usagePercent() }}% of your monthly allowance used. Usage is based on input and output tokens.</p></section>
+      </main><aside><section class="card side"><div class="side-icon">⌁</div><h3>Your key, your control</h3><p>Connect a provider account owned by your business. MarketHub never shares your credentials with another tenant.</p><div class="side-list"><span>✓ Encrypted credentials</span><span>✓ Provider-level billing</span><span>✓ Configurable model</span><span>✓ Monthly budget guardrail</span></div></section><section class="card side"><h3>Before you connect</h3><p>Check that your provider account has API access and billing enabled. OpenAI-compatible gateways should expose a chat completions endpoint.</p></section></aside></div>
+    </div>
   `,
   styles: [`
-    .pad { padding: 14px; margin: 10px 0; }
-    .row { display:flex; gap: 10px; }
+    :host{display:block;max-width:1180px;margin:0 auto;padding-bottom:70px}.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:20px}.eyebrow{margin:0 0 6px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.page-head h1{margin:0;font-size:clamp(29px,3vw,38px)}.intro{margin:7px 0 0;color:var(--ink-soft);font-size:14px}.secure,.lock{padding:7px 10px;border-radius:8px;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);font-size:10px;font-weight:800;white-space:nowrap}.notice{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;margin-bottom:16px;border-radius:10px;font-size:13px}.notice.success{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}.notice.error{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}.notice button{border:0;background:none;color:inherit;text-decoration:underline;font-weight:800;cursor:pointer}.connection{display:flex;align-items:center;gap:13px;padding:17px 20px;margin-bottom:16px}.connection-icon,.side-icon{display:grid;place-items:center;flex:none;width:39px;height:39px;border-radius:11px;background:#fbefda;color:#9a691b;font-size:20px;font-weight:850}.connection-icon.connected{background:#e3f1e9;color:var(--ok)}.connection h2{margin:0;font-size:18px}.connection p:not(.eyebrow){margin:4px 0 0;color:var(--ink-soft);font-size:11px}.connection-state{margin-left:auto;padding:5px 8px;border-radius:5px;background:#fbefda;color:#9a691b;font-size:9px;font-weight:850;text-transform:uppercase}.connection-state.on{background:#e3f1e9;color:var(--ok)}.layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:18px}.layout main{display:grid;gap:16px}.panel{padding:21px 23px}.panel-title{display:flex;justify-content:space-between;align-items:flex-start;gap:15px}.panel h2{margin:0;font-size:21px}.panel-title p:not(.eyebrow){margin:4px 0 0;color:var(--ink-soft);font-size:12px;line-height:1.45}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:19px}.field{display:flex;flex-direction:column;gap:6px}.field.wide{grid-column:1/-1}.field span{font-size:12px;font-weight:750}.field input,.field select{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:var(--card);color:var(--ink)}.field input:focus,.field select:focus{outline:2px solid color-mix(in srgb,var(--accent) 40%,transparent);border-color:var(--accent)}.field small,.toggle small{color:var(--ink-soft);font-size:10.5px}.key-input{display:flex;border:1px solid var(--line);border-radius:9px;background:var(--card);overflow:hidden}.key-input input{border:0;outline:0}.key-input button{border:0;border-left:1px solid var(--line);background:var(--paper-2);color:var(--ink);padding:0 10px;font-size:10px;font-weight:800;cursor:pointer}.form-footer{display:flex;justify-content:space-between;align-items:center;margin-top:20px;color:var(--ink-soft);font-size:11px}.btn{display:inline-flex;align-items:center;gap:9px;border:0;border-radius:10px;padding:11px 16px;font-weight:750;cursor:pointer}.btn.primary{background:var(--accent-2);color:#fff}.btn:disabled{opacity:.55;cursor:not-allowed}.toggle{display:flex;align-items:flex-start;gap:9px;margin-top:21px;padding:12px;border:1px solid var(--line);border-radius:9px}.toggle span{display:grid;gap:4px}.banned{display:grid;gap:7px;margin-top:13px}.banned span{font-size:11px;font-weight:750}.banned input{border:1px solid var(--line);border-radius:9px;padding:10px;background:var(--card);color:var(--ink)}.usage-number{color:var(--ink-soft);font-size:11px;font-weight:750}.progress{height:9px;margin-top:19px;overflow:hidden;border-radius:99px;background:var(--paper-2)}.progress i{display:block;height:100%;border-radius:inherit;background:var(--accent-2);transition:width .3s}.usage-note{color:var(--ink-soft);font-size:11px}.side{padding:20px;margin-bottom:15px}.side h3{margin:0;font-size:16px}.side p{color:var(--ink-soft);font-size:11px;line-height:1.5}.side-list{display:grid;gap:10px;margin-top:15px;padding-top:14px;border-top:1px solid var(--line);color:var(--ok);font-size:11px;font-weight:700}@media(max-width:850px){.layout{grid-template-columns:1fr}.connection{align-items:flex-start}.connection-state{margin-left:auto}}@media(max-width:620px){.page-head{align-items:flex-start;flex-direction:column}.form-grid{grid-template-columns:1fr}.field.wide{grid-column:auto}.form-footer{align-items:flex-start;flex-direction:column;gap:12px}.connection{flex-wrap:wrap}.connection-state{margin-left:52px}}
   `],
 })
 export class SellerAiComponent {
-  JSON = JSON;
-  private api = inject(ApiService);
-  products = signal<any[]>([]);
-  gens = signal<any[]>([]);
-  insight = signal<any>(null);
-  productId = '';
-
-  constructor() {
-    this.api.sellerProducts().subscribe((res) => {
-      this.products.set(res.data);
-      if (res.data[0]) this.productId = String(res.data[0].id);
-    });
-    this.reload();
-    this.api.aiInsights().subscribe((res) => this.insight.set(res.data));
-  }
-
-  reload() {
-    this.api.aiGenerations().subscribe((res) => this.gens.set(res.data));
-  }
-
-  describe() {
-    this.api.aiDescribe(+this.productId).subscribe(() => this.reload());
-  }
-
-  categorize() {
-    this.api.aiCategorize(+this.productId).subscribe(() => this.reload());
-  }
-
-  review(id: number, status: string) {
-    this.api.reviewGeneration(id, status).subscribe(() => this.reload());
-  }
+  private api=inject(ApiService); settings=signal<AiSettings|null>(null); form:any={provider:'OpenAI',endpoint:'https://api.openai.com/v1',model:'gpt-4o-mini',tone:'warm',length:'medium',language:'en',monthly_token_budget:50000,opted_out:false,api_key:''}; saving=signal(false); showKey=signal(false); notice=signal(''); error=signal(''); secret=signal(''); copied=signal(false); usageUsed=signal(0); bannedInput='';
+  usagePercent=computed(()=>Math.min(100,Math.round((this.usageUsed()/(Number(this.form.monthly_token_budget)||1))*100)));
+  constructor(){this.api.aiSettings().subscribe({next:r=>{this.settings.set(r.data);this.form={...this.form,...r.data,api_key:''}},error:e=>this.error.set(e.error?.error?.message||'Could not load AI settings.')});this.api.aiUsage().subscribe({next:r=>this.usageUsed.set(r.data.used||0)})}
+  save(){this.saving.set(true);this.error.set('');const payload={...this.form,banned_words:this.bannedInput.split(',').map((x:string)=>x.trim()).filter(Boolean)};this.api.updateAiSettings(payload).subscribe({next:r=>{this.settings.set(r.data);this.form={...this.form,...r.data,api_key:''};this.saving.set(false);this.notice.set('AI platform settings saved securely.')},error:e=>{this.saving.set(false);this.error.set(e.error?.error?.message||'Could not save AI settings.')}})}
+  copySecret(){navigator.clipboard?.writeText(this.secret()).then(()=>this.copied.set(true)).catch(()=>this.error.set('Could not copy key.'))}
 }

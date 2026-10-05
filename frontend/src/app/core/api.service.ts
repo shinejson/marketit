@@ -703,6 +703,18 @@ export class ApiService {
     return this.http.get<{ data: string[] }>('/api/tenant/webhooks/catalog');
   }
 
+  aiSettings() {
+    return this.http.get<{ data: any }>('/api/tenant/ai/settings');
+  }
+
+  updateAiSettings(payload: any) {
+    return this.http.patch<{ data: any }>('/api/tenant/ai/settings', payload);
+  }
+
+  aiUsage() {
+    return this.http.get<{ data: { used: number; budget: number } }>('/api/tenant/ai/usage');
+  }
+
   aiDescribe(productId: number) {
     return this.http.post<{ data: any }>('/api/tenant/ai/describe', { product_id: productId });
   }

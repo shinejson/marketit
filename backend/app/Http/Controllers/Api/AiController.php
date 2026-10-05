@@ -29,21 +29,44 @@ class AiController extends Controller
             ['tone' => 'warm', 'length' => 'medium', 'language' => 'en', 'monthly_token_budget' => 50000],
         );
 
-        return response()->json(['data' => $settings]);
+        return response()->json(['data' => $this->settingsPayload($settings)]);
     }
 
     public function updateSettings(Request $request): JsonResponse
     {
         $data = $request->validate([
+            'provider' => ['nullable', 'in:OpenAI,Anthropic,Google Gemini,OpenAI-compatible'],
+            'endpoint' => ['nullable', 'url', 'max:500'],
+            'model' => ['nullable', 'string', 'max:100'],
+            'api_key' => ['nullable', 'string', 'max:500'],
+            'monthly_token_budget' => ['nullable', 'integer', 'min:1000', 'max:10000000'],
+            'language' => ['nullable', 'string', 'max:8'],
             'tone' => ['nullable', 'in:warm,luxury,playful'],
             'length' => ['nullable', 'in:short,medium,long'],
             'banned_words' => ['nullable', 'array'],
             'opted_out' => ['nullable', 'boolean'],
         ]);
         $settings = TenantAiSetting::query()->firstOrCreate(['tenant_id' => $request->user()->tenantId()]);
-        $settings->update(array_filter($data, fn ($v) => $v !== null));
+        $settings->update(array_filter($data, fn ($v, $key) => $v !== null && ($key !== 'api_key' || $v !== ''), ARRAY_FILTER_USE_BOTH));
 
-        return response()->json(['data' => $settings->fresh()]);
+        return response()->json(['data' => $this->settingsPayload($settings->fresh())]);
+    }
+
+    protected function settingsPayload(TenantAiSetting $settings): array
+    {
+        return [
+            'id' => $settings->id,
+            'provider' => $settings->provider ?: 'OpenAI',
+            'endpoint' => $settings->endpoint ?: 'https://api.openai.com/v1',
+            'model' => $settings->model ?: 'gpt-4o-mini',
+            'api_key_set' => filled($settings->api_key),
+            'tone' => $settings->tone,
+            'length' => $settings->length,
+            'language' => $settings->language,
+            'banned_words' => $settings->banned_words ?? [],
+            'monthly_token_budget' => $settings->monthly_token_budget,
+            'opted_out' => (bool) $settings->opted_out,
+        ];
     }
 
     public function describe(Request $request): JsonResponse
