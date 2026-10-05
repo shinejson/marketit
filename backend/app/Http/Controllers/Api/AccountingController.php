@@ -120,6 +120,37 @@ class AccountingController extends Controller
         return $this->paginated($query, $request);
     }
 
+    /** Read one invoice with everything a detail or print view needs. */
+    public function showInvoice(AccountingInvoice $invoice): JsonResponse
+    {
+        return response()->json([
+            'data' => $invoice->load([
+                'contact:id,name,email,address,tax_id,currency',
+                'items',
+                'payments:id,invoice_id,reference,amount,method,paid_on',
+            ]),
+        ]);
+    }
+
+    /**
+     * Delete handles the end of the CRUD set. Only unpaid drafts can be
+     * removed — once an invoice is sent the audit-safe path is to void it,
+     * which updateInvoice already covers.
+     */
+    public function destroyInvoice(AccountingInvoice $invoice): JsonResponse
+    {
+        if ($invoice->status !== 'draft') {
+            throw ValidationException::withMessages(['invoice' => 'Only draft invoices can be deleted. Void a sent invoice instead.']);
+        }
+        if ($invoice->payments()->exists() || (float) $invoice->amount_paid > 0) {
+            throw ValidationException::withMessages(['invoice' => 'An invoice with recorded payments cannot be deleted.']);
+        }
+
+        $invoice->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
+    }
+
     public function storeInvoice(Request $request): JsonResponse
     {
         $tenantId = (int) $request->user()->tenantId();

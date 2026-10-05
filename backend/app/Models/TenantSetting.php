@@ -19,6 +19,20 @@ class TenantSetting extends Model
         'marketing' => ['ad_ctr' => 2.5, 'campaigns_active' => 2],
     ];
 
+    /** Receipt builder defaults — merged under whatever the tenant saved. */
+    public const DEFAULT_RECEIPT = [
+        'header_line' => '',
+        'address_line' => '',
+        'footer_note' => 'Thank you for your business!',
+        'tax_label' => 'Tax',
+        'show_tax_breakdown' => true,
+        'show_discounts' => true,
+        'show_sku' => true,
+        'show_logo' => false,
+        'paper_size' => 'a4',
+        'accent_color' => '#1f4b3a',
+    ];
+
     protected $fillable = [
         'tenant_id',
         'timezone',
@@ -36,6 +50,7 @@ class TenantSetting extends Model
         'default_discount_percent',
         'tax_rate',
         'goals',
+        'receipt',
     ];
 
     protected function casts(): array
@@ -45,6 +60,7 @@ class TenantSetting extends Model
             'notify_orders' => 'boolean',
             'notify_payouts' => 'boolean',
             'goals' => 'array',
+            'receipt' => 'array',
             'fiscal_year_start_month' => 'integer',
             'backup_retention_days' => 'integer',
         ];
@@ -61,5 +77,11 @@ class TenantSetting extends Model
         $custom = $this->goals[$department] ?? [];
 
         return array_merge($defaults, is_array($custom) ? $custom : []);
+    }
+
+    /** Receipt template with every default filled in, ready for print views. */
+    public function receiptTemplate(): array
+    {
+        return array_merge(self::DEFAULT_RECEIPT, is_array($this->receipt) ? $this->receipt : []);
     }
 }

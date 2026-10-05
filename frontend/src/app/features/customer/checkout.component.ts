@@ -12,7 +12,11 @@ import { Address, CartPayload, PaymentMethodsPayload } from '../../core/models';
     <div class="wrap page">
       <h1>Checkout</h1>
       @if (quote(); as q) {
-        <p class="muted">{{ q.groups.length }} store(s) · grand total {{ +q.totals.grand_total | currency }}</p>
+        <p class="muted">
+          {{ q.groups.length }} store(s) · items {{ +q.totals.subtotal | currency }} · delivery {{ +q.totals.delivery_total | currency }}
+          @if (+q.totals.tax_total > 0) { · tax {{ +q.totals.tax_total | currency }} }
+          · <b>total {{ +q.totals.grand_total | currency }}</b>
+        </p>
       }
       <section class="card pad">
         <h3>Shipping address</h3>

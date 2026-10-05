@@ -127,6 +127,24 @@ export class ApiService {
     return this.http.delete<{ data: CartPayload }>(`/api/cart/items/${id}`);
   }
 
+  // ----------------------------- customer quotes (RFQ)
+
+  myQuotes(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<SalesQuote[]>>('/api/quotes', { params });
+  }
+
+  myQuote(id: number) {
+    return this.http.get<{ data: SalesQuote }>(`/api/quotes/${id}`);
+  }
+
+  requestQuote(payload: { store_id: number; message?: string; items: { product_id: number; quantity: number }[] }) {
+    return this.http.post<{ data: SalesQuote }>('/api/quotes', payload);
+  }
+
+  respondQuote(id: number, action: 'accept' | 'decline') {
+    return this.http.post<{ data: SalesQuote }>(`/api/quotes/${id}/respond`, { action });
+  }
+
   paymentMethods() {
     return this.http.get<{ data: PaymentMethodsPayload }>('/api/payments/methods');
   }
@@ -209,6 +227,14 @@ export class ApiService {
 
   updateAccountingInvoice(id: number, status: string) {
     return this.http.patch<{ data: AccountingInvoice }>(`/api/tenant/accounting/invoices/${id}`, { status });
+  }
+
+  accountingInvoice(id: number) {
+    return this.http.get<{ data: AccountingInvoice }>(`/api/tenant/accounting/invoices/${id}`);
+  }
+
+  deleteAccountingInvoice(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/accounting/invoices/${id}`);
   }
 
   recordAccountingPayment(id: number, payload: Record<string, unknown>) {
@@ -339,6 +365,11 @@ export class ApiService {
     return this.http.patch<{ data: SalesQuote }>(`/api/tenant/sales/quotes/${id}`, { status });
   }
 
+  /** Full draft edit: customer fields, items and totals (optionally sends). */
+  updateSalesQuoteFull(id: number, payload: any) {
+    return this.http.patch<{ data: SalesQuote }>(`/api/tenant/sales/quotes/${id}`, payload);
+  }
+
   salesCustomers(params: Record<string, string | number> = {}) {
     return this.http.get<Paginated<SalesCustomer[]>>('/api/tenant/sales/customers', { params });
   }
@@ -436,6 +467,16 @@ export class ApiService {
     const form = new FormData();
     form.append('document', file);
     return this.http.post<{ data: { documents: any[] } }>('/api/tenant/settings/documents', form);
+  }
+
+  // ----------------------------- tenant activity log
+
+  tenantAuditLogs(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<AuditLogEntry[]> & { stats: AuditLogStats }>('/api/tenant/audit-logs', { params });
+  }
+
+  tenantAuditFacets() {
+    return this.http.get<{ data: AuditLogFacets }>('/api/tenant/audit-logs/facets');
   }
 
   tenantBackups() {

@@ -30,12 +30,13 @@ import { CartPayload } from '../../core/models';
                 <strong>{{ +item.line_total | currency }}</strong>
               </div>
             }
-            <p class="muted">Store subtotal {{ +g.subtotal | currency }} · delivery {{ +g.store.delivery_fee | currency }}</p>
+            <p class="muted">Store subtotal {{ +g.subtotal | currency }} · delivery {{ +g.store.delivery_fee | currency }}@if (+g.tax! > 0) { · tax {{ +g.tax! | currency }} }</p>
           </section>
         }
         <aside class="card totals">
           <p>Items {{ +cart()!.totals.subtotal | currency }}</p>
           <p>Delivery {{ +cart()!.totals.delivery_total | currency }}</p>
+          @if (+cart()!.totals.tax_total > 0) { <p>Tax {{ +cart()!.totals.tax_total | currency }}</p> }
           <h2>Total {{ +cart()!.totals.grand_total | currency }}</h2>
           <a routerLink="/checkout" class="btn accent">Checkout</a>
         </aside>

@@ -322,9 +322,12 @@ class SalesController extends Controller
     {
         $this->refreshExpiring();
         $query = SalesQuote::query()
-            ->with(['customer:id,name,company', 'opportunity:id,number,title', 'items'])
+            ->with(['customer:id,name,company', 'customerUser:id,name,email', 'opportunity:id,number,title', 'items'])
             ->latest('issue_date');
         $this->applySearchAndStatus($query, $request, ['number', 'customer_name', 'customer_email']);
+        if ($request->filled('source')) {
+            $query->where('source', (string) $request->string('source'));
+        }
 
         return $this->paginated($query, $request);
     }
@@ -385,14 +388,66 @@ class SalesController extends Controller
 
     public function updateQuote(Request $request, SalesQuote $quote): JsonResponse
     {
+        $tenantId = (int) $request->user()->tenantId();
         $data = $request->validate([
-            'status' => ['required', Rule::in(SalesQuote::STATUSES)],
+            'status' => ['sometimes', Rule::in(SalesQuote::STATUSES)],
+            // Draft-content edits (pricing review) — same shape as storeQuote.
+            'customer_id' => ['nullable', Rule::exists('sales_customers', 'id')->where('tenant_id', $tenantId)],
+            'customer_name' => ['sometimes', 'string', 'max:180'],
+            'customer_email' => ['nullable', 'email', 'max:180'],
+            'issue_date' => ['sometimes', 'date'],
+            'expiry_date' => ['sometimes', 'date'],
+            'currency' => ['nullable', 'string', 'size:3'],
+            'discount_total' => ['nullable', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string', 'max:3000'],
+            'items' => ['sometimes', 'array', 'min:1', 'max:100'],
+            'items.*.description' => ['required', 'string', 'max:255'],
+            'items.*.quantity' => ['required', 'numeric', 'gt:0'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'items.*.tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
-        if (! $quote->canTransitionTo($data['status'])) {
+
+        if (isset($data['expiry_date']) && ! isset($data['issue_date'])) {
+            $data['issue_date'] = $quote->issue_date->format('Y-m-d');
+            $request->merge(['issue_date' => $data['issue_date']]);
+        }
+        if (isset($data['issue_date'], $data['expiry_date']) && $data['expiry_date'] < $data['issue_date']) {
+            throw ValidationException::withMessages(['expiry_date' => 'The expiry date must be on or after the issue date.']);
+        }
+
+        $edits = collect($data)->except(['status']);
+        if ($edits->isNotEmpty() && $quote->status !== 'draft') {
+            throw ValidationException::withMessages(['quote' => 'Only draft quotes can be edited.']);
+        }
+        if (! $edits->isNotEmpty() && ! isset($data['status'])) {
+            throw ValidationException::withMessages(['quote' => 'Nothing to update.']);
+        }
+        if (isset($data['status']) && ! $quote->canTransitionTo($data['status'])) {
             throw ValidationException::withMessages(['status' => "Cannot move a {$quote->status} quote to {$data['status']}."]);
         }
 
-        DB::transaction(function () use ($quote, $data) {
+        DB::transaction(function () use ($quote, $data, $edits) {
+            if ($edits->isNotEmpty()) {
+                if (isset($data['items'])) {
+                    [$subtotal, $tax, $items] = $this->lineTotals($data['items']);
+                    $quote->items()->delete();
+                    $quote->items()->createMany($items);
+                    $discount = min((float) ($data['discount_total'] ?? $quote->discount_total), $subtotal + $tax);
+                    $edits->put('subtotal', $subtotal);
+                    $edits->put('tax_total', $tax);
+                    $edits->put('discount_total', $discount);
+                    $edits->put('total', round($subtotal + $tax - $discount, 2));
+                } elseif (isset($data['discount_total'])) {
+                    $discount = min((float) $data['discount_total'], (float) $quote->subtotal + (float) $quote->tax_total);
+                    $edits->put('discount_total', $discount);
+                    $edits->put('total', round((float) $quote->subtotal + (float) $quote->tax_total - $discount, 2));
+                }
+                $quote->update($edits->all());
+            }
+
+            if (! isset($data['status'])) {
+                return;
+            }
             $updates = ['status' => $data['status']];
             if ($data['status'] === 'sent') {
                 $updates['sent_at'] = $quote->sent_at ?? now();
@@ -416,7 +471,7 @@ class SalesController extends Controller
             }
         });
 
-        return response()->json(['data' => $quote->fresh()->load(['customer:id,name,company', 'opportunity:id,number,title', 'items'])]);
+        return response()->json(['data' => $quote->fresh()->load(['customer:id,name,company', 'customerUser:id,name,email', 'opportunity:id,number,title', 'items'])]);
     }
 
     public function customers(Request $request): JsonResponse
