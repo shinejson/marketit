@@ -1,59 +1,44 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
+
+interface Domain { id:number; domain:string; status:string; cert_status:string; dns_verified_at?:string|null; last_check_at?:string|null; check_attempts?:number; }
+interface TxtRecord { name:string; value:string; }
 
 @Component({
   selector: 'app-seller-domains',
   imports: [FormsModule],
   template: `
-    <h1>Custom domains</h1>
-    <form class="card pad" (ngSubmit)="add()">
-      <div class="field"><label>Hostname</label><input [(ngModel)]="host" name="host" placeholder="shop.example.com" required /></div>
-      <button class="btn ok" type="submit">Request</button>
-    </form>
-    @if (txt()) {
-      <div class="card pad">
-        <p>Add this TXT record, then verify.</p>
-        <p><strong>{{ txt()?.name }}</strong></p>
-        <p class="muted">{{ txt()?.value }}</p>
+    <div class="domains-page">
+      <header class="page-head"><div><p class="eyebrow">Tenant console / Storefront</p><h1>Custom domains</h1><p class="intro">Connect a domain you own so customers can reach your storefront at a branded address.</p></div><span class="secure">⌁ TLS managed by MarketHub</span></header>
+      @if (notice()) { <div class="notice success">✓ {{ notice() }}</div> } @if (error()) { <div class="notice error">{{ error() }} <button type="button" (click)="error.set('')">Dismiss</button></div> }
+
+      <div class="layout">
+        <main>
+          <section class="card panel connect"><div class="panel-title"><div><p class="eyebrow">Connect a domain</p><h2>Bring your own domain</h2><p>Enter a hostname such as <b>shop.example.com</b>. We will generate a verification record for you.</p></div><span class="step">1 / 2</span></div><form (ngSubmit)="add()"><label class="field"><span>Domain or subdomain</span><div class="domain-input"><span>https://</span><input [(ngModel)]="host" name="host" placeholder="shop.example.com" required /></div><small>Use a subdomain for the simplest setup. Do not include a path or trailing slash.</small></label><button class="btn primary" type="submit" [disabled]="busy() || !host.trim()">{{ busy() ? 'Requesting…' : 'Request connection' }} <b>→</b></button></form></section>
+
+          @if (txt()) { <section class="card panel dns"><div class="panel-title"><div><p class="eyebrow">Verification required</p><h2>Add this DNS record</h2><p>Sign in to your DNS provider and add the TXT record below. DNS changes can take a few minutes to propagate.</p></div><span class="step active">2 / 2</span></div><div class="record"><div><small>Record type</small><b>TXT</b></div><div class="record-name"><small>Name / host</small><b>{{ txt()?.name }}</b></div><div class="record-value"><small>Value</small><b>{{ txt()?.value }}</b></div><button class="copy" type="button" (click)="copy(txt()!.value)">{{ copied() ? 'Copied ✓' : 'Copy value' }}</button></div><div class="dns-actions"><button class="btn primary" type="button" (click)="verifyPending()" [disabled]="busy()">Check DNS now</button><span>We will check the record and issue TLS automatically when it matches.</span></div></section> }
+
+          <section class="card panel"><div class="list-head"><div><p class="eyebrow">Your domains</p><h2>Domain health</h2></div><span class="count">{{ activeCount() }} active</span></div>@if (loading()) { <div class="loading">Loading domain health…</div> } @for (d of domains(); track d.id) { <article class="domain-row"><div class="domain-mark">{{ d.status === 'active' ? '✓' : d.status === 'failed' ? '!' : '↗' }}</div><div class="domain-main"><div class="domain-title"><b>{{ d.domain }}</b><span class="status" [class.good]="d.status === 'active'" [class.bad]="d.status === 'failed'">{{ label(d.status) }}</span></div><small>{{ d.status === 'active' ? 'Your storefront is reachable on this domain' : d.status === 'failed' ? 'Verification expired — request a new check' : 'Waiting for DNS verification' }}</small></div><div class="cert"><small>Certificate</small><b [class.good-text]="d.cert_status === 'issued'">{{ certLabel(d.cert_status) }}</b></div><div class="row-actions"><button class="icon-btn" type="button" title="Verify DNS" (click)="verify(d)" [disabled]="busy() || d.status === 'active'">↻</button><button class="remove" type="button" (click)="remove(d)">Remove</button></div></article> } @empty { @if (!loading()) { <div class="empty"><div>⌁</div><h3>No custom domains yet</h3><p>Connect your first domain to give your storefront a branded home.</p></div> } }</section>
+        </main>
+        <aside><section class="card side"><div class="side-icon">✓</div><h3>Secure by default</h3><p>Every active domain receives an automatically managed TLS certificate. Your visitors will always connect over HTTPS.</p><div class="side-list"><span>✓ DNS verification</span><span>✓ Automatic certificate</span><span>✓ Renewal monitoring</span></div></section><section class="card side help"><h3>Need help?</h3><p>Find step-by-step DNS instructions for popular providers in the help centre.</p><a href="/tenant/support">Open help centre <b>→</b></a></section></aside>
       </div>
-    }
-    @for (d of domains(); track d.id) {
-      <div class="card pad row">
-        <div>
-          <strong>{{ d.domain }}</strong>
-          <p class="muted">{{ d.status }} · cert {{ d.cert_status }}</p>
-        </div>
-        <button class="btn ghost" (click)="verify(d.id)">Verify</button>
-      </div>
-    }
+    </div>
   `,
   styles: [`
-    .pad { padding: 14px; margin: 10px 0; }
-    .row { display:flex; justify-content:space-between; align-items:center; }
+    :host{display:block;max-width:1180px;margin:0 auto;padding-bottom:70px}.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:20px}.eyebrow{margin:0 0 6px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.page-head h1{margin:0;font-size:clamp(29px,3vw,38px)}.intro{margin:7px 0 0;color:var(--ink-soft);font-size:14px}.secure{padding:7px 10px;border-radius:8px;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);font-size:10px;font-weight:800;white-space:nowrap}.notice{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;margin-bottom:16px;border-radius:10px;font-size:13px}.notice.success{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}.notice.error{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}.notice button{border:0;background:none;color:inherit;text-decoration:underline;font-weight:800;cursor:pointer}.layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:18px}.layout main{display:grid;gap:16px}.panel{padding:21px 23px}.panel-title,.list-head{display:flex;justify-content:space-between;align-items:flex-start;gap:15px}.panel h2{margin:0;font-size:21px}.panel-title p:not(.eyebrow){margin:4px 0 0;color:var(--ink-soft);font-size:12px;line-height:1.45}.step{padding:6px 9px;border-radius:7px;background:var(--paper-2);color:var(--ink-soft);font-size:10px;font-weight:850;white-space:nowrap}.step.active{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}.field{display:flex;flex-direction:column;gap:6px;margin-top:20px}.field>span{font-size:12px;font-weight:750}.field small{color:var(--ink-soft);font-size:10.5px}.domain-input{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden}.domain-input>span{padding-left:12px;color:var(--ink-soft);font-size:13px}.domain-input input{flex:1;border:0;outline:0;padding:11px 8px;background:transparent;color:var(--ink);font-size:13px}.connect .btn{margin-top:17px}.btn{display:inline-flex;align-items:center;gap:10px;border:0;border-radius:10px;padding:11px 16px;font-weight:750;cursor:pointer}.btn.primary{background:var(--accent-2);color:#fff}.btn:disabled{opacity:.55;cursor:not-allowed}.record{display:grid;grid-template-columns:85px 1.2fr 1.5fr auto;gap:13px;margin-top:19px;padding:15px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--paper-2) 35%,transparent)}.record div{display:grid;gap:5px;min-width:0}.record small,.cert small{color:var(--ink-soft);font-size:10px}.record b{overflow:hidden;text-overflow:ellipsis;font-size:11px}.copy{align-self:center;border:1px solid var(--line);border-radius:7px;padding:7px 9px;background:var(--card);color:var(--ink);font-size:10px;font-weight:750;cursor:pointer}.dns-actions{display:flex;align-items:center;gap:12px;margin-top:15px}.dns-actions span{color:var(--ink-soft);font-size:10.5px}.list-head{align-items:center;margin-bottom:12px}.list-head h2{margin:0}.count{color:var(--ok);font-size:11px;font-weight:800}.domain-row{display:flex;align-items:center;gap:11px;padding:15px 0;border-top:1px solid var(--line)}.domain-mark{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:9px;background:var(--paper-2);color:var(--accent);font-weight:800}.domain-main{flex:1;min-width:0}.domain-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.domain-title b{font-size:13px}.domain-main small{display:block;margin-top:4px;color:var(--ink-soft);font-size:10.5px}.status{padding:4px 7px;border-radius:5px;background:#fbefda;color:#9a691b;font-size:9px;font-weight:850}.status.good{background:#e3f1e9;color:#247451}.status.bad{background:#f8e7df;color:var(--danger)}.cert{display:grid;gap:4px;min-width:100px}.cert b{font-size:11px}.good-text{color:var(--ok)}.row-actions{display:flex;align-items:center;gap:6px}.icon-btn,.remove{border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);padding:6px 8px;cursor:pointer;font-size:11px}.icon-btn{font-size:15px;color:var(--accent-2)}.remove{color:var(--danger);font-size:10px}.empty{text-align:center;padding:40px 15px}.empty div{font-size:27px;color:var(--accent)}.empty h3{margin:9px 0 4px;font-size:17px}.empty p{margin:0;color:var(--ink-soft);font-size:11px}.loading{text-align:center;padding:30px;color:var(--ink-soft);font-size:12px}.side{padding:20px}.side-icon{display:grid;place-items:center;width:37px;height:37px;margin-bottom:12px;border-radius:11px;background:#e3f1e9;color:var(--ok);font-size:18px;font-weight:800}.side h3{margin:0;font-size:16px}.side p{color:var(--ink-soft);font-size:11px;line-height:1.5}.side-list{display:grid;gap:8px;margin-top:15px;padding-top:14px;border-top:1px solid var(--line);color:var(--ok);font-size:11px;font-weight:700}.help{margin-top:15px}.help a{color:var(--accent);font-size:11px;font-weight:800}.help a b{margin-left:4px}@media(max-width:850px){.layout{grid-template-columns:1fr}.layout aside{display:grid;grid-template-columns:1fr 1fr;gap:14px}.help{margin-top:0}.record{grid-template-columns:1fr 1fr}.record-value{grid-column:1/-1}.copy{justify-self:start}.domain-row{flex-wrap:wrap}.cert{margin-left:45px}.row-actions{margin-left:auto}}@media(max-width:520px){.page-head{align-items:flex-start;flex-direction:column}.layout aside{display:block}.help{margin-top:14px}.record{grid-template-columns:1fr}.record-value{grid-column:auto}.dns-actions{align-items:flex-start;flex-direction:column}.domain-row{align-items:flex-start}.cert{width:100%;margin-left:45px}.row-actions{margin-left:45px}.remove{padding:7px 10px}}
   `],
 })
 export class SellerDomainsComponent {
-  private api = inject(ApiService);
-  domains = signal<any[]>([]);
-  host = '';
-  txt = signal<{ name: string; value: string } | null>(null);
-
-  constructor() { this.reload(); }
-
-  reload() {
-    this.api.sellerDomains().subscribe((res) => this.domains.set(res.data));
-  }
-
-  add() {
-    this.api.addDomain(this.host).subscribe((res) => {
-      this.txt.set({ name: res.data.txt_name, value: res.data.txt_value });
-      this.host = '';
-      this.reload();
-    });
-  }
-
-  verify(id: number) {
-    this.api.verifyDomain(id, true).subscribe(() => this.reload());
-  }
+  private api=inject(ApiService); domains=signal<Domain[]>([]); host=''; txt=signal<TxtRecord|null>(null); busy=signal(false); loading=signal(true); notice=signal(''); error=signal(''); copied=signal(false); pendingId=signal<number|null>(null);
+  activeCount=computed(()=>this.domains().filter(d=>d.status==='active').length);
+  constructor(){this.reload()}
+  reload(){this.loading.set(true);this.api.sellerDomains().subscribe({next:r=>{this.domains.set(r.data||[]);this.loading.set(false)},error:e=>{this.loading.set(false);this.error.set(e.error?.error?.message||'Unable to load domains.')}})}
+  add(){this.busy.set(true);this.notice.set('');this.error.set('');this.api.addDomain(this.host.trim()).subscribe({next:r=>{this.txt.set({name:r.data.txt_name,value:r.data.txt_value});this.pendingId.set(r.data.domain.id);this.host='';this.busy.set(false);this.notice.set('Domain requested. Add the DNS record to continue.');this.reload()},error:e=>{this.busy.set(false);this.error.set(e.error?.error?.message||'Could not request this domain.')}})}
+  verifyPending(){const id=this.pendingId();if(id)this.verify(this.domains().find(d=>d.id===id));}
+  verify(d?:Domain){if(!d)return;this.busy.set(true);this.api.verifyDomain(d.id).subscribe({next:r=>{this.busy.set(false);this.notice.set(r.data.status==='active'?'Domain verified and TLS is active.':'DNS record not found yet. Try again after propagation.');this.reload()},error:e=>{this.busy.set(false);this.error.set(e.error?.error?.message||'Verification check failed.')}})}
+  remove(d:Domain){if(!confirm(`Remove ${d.domain} from this tenant?`))return;this.api.deleteDomain(d.id).subscribe({next:()=>{this.notice.set('Domain removed.');this.reload()},error:e=>this.error.set(e.error?.error?.message||'Could not remove domain.')})}
+  copy(value:string){navigator.clipboard?.writeText(value).then(()=>{this.copied.set(true);setTimeout(()=>this.copied.set(false),1800)}).catch(()=>this.error.set('Could not copy the DNS value.'))}
+  label(status:string){return ({active:'Active',dns_pending:'DNS pending',requested:'Requested',failed:'Verification failed',tls_provisioning:'TLS provisioning',verified:'Verified',removed:'Removed'} as any)[status]||status}
+  certLabel(status:string){return ({issued:'Active',pending:'Pending',none:'Not issued',failed:'Failed'} as any)[status]||status}
 }

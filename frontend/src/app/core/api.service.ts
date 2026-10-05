@@ -643,6 +643,10 @@ export class ApiService {
     return this.http.post<{ data: any }>(`/api/tenant/domains/${id}/verify`, { force });
   }
 
+  deleteDomain(id: number) {
+    return this.http.delete<{ data: any }>(`/api/tenant/domains/${id}`);
+  }
+
   sellerAds(params: Record<string, string | number> = {}) {
     return this.http.get<{ data: AdWorkspace }>('/api/tenant/ads', { params });
   }
