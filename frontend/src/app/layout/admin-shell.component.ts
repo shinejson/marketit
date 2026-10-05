@@ -108,7 +108,7 @@ const MOBILE_BREAKPOINT = 900;
             <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'search' }" />
             <input
               type="text"
-              placeholder="Search tenants, users, subscriptions, settings…"
+              placeholder="Search…"
               [value]="searchTerm()"
               (input)="onSearchInput($event)"
               (focus)="onSearchFocus()"
@@ -480,10 +480,114 @@ const MOBILE_BREAKPOINT = 900;
 
     @media (max-width: 720px) {
       .who { display: none; }
-      .search { position: static; }
-      .search-results { position: absolute; left: 12px; right: 12px; width: auto; top: 62px; }
-      .topnav { padding: 10px 14px; gap: 8px; }
-      .body { padding: 18px; }
+      .topnav {
+        padding: 8px 12px;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .icon-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        flex: none;
+      }
+      .icon-btn svg {
+        width: 17px;
+        height: 17px;
+      }
+      .top-actions {
+        gap: 6px;
+        flex: none;
+      }
+      .profile-btn {
+        height: 36px;
+        padding: 3px 6px 3px 3px;
+        gap: 4px;
+        flex: none;
+      }
+      .profile-btn svg {
+        width: 12px;
+        height: 12px;
+      }
+      .avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+      }
+      .search {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+      }
+      .search svg {
+        left: 10px;
+        width: 15px;
+        height: 15px;
+      }
+      .search input {
+        height: 36px;
+        padding: 0 10px 0 32px;
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .search-results {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        width: min(340px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+      }
+      .notif-panel {
+        max-width: calc(100vw - 24px);
+        right: -40px;
+      }
+      .profile-panel {
+        max-width: calc(100vw - 24px);
+        right: 0;
+      }
+      .body { padding: 16px 12px; }
+    }
+
+    @media (max-width: 480px) {
+      .topnav {
+        padding: 8px 10px;
+        gap: 6px;
+      }
+      .top-actions {
+        gap: 4px;
+      }
+      .icon-btn {
+        width: 34px;
+        height: 34px;
+      }
+      .profile-btn {
+        height: 34px;
+        padding: 2px 4px 2px 2px;
+      }
+      .avatar {
+        width: 26px;
+        height: 26px;
+        font-size: 10.5px;
+      }
+      .profile-btn svg {
+        display: none;
+      }
+      .search input {
+        height: 34px;
+        padding: 0 8px 0 28px;
+        font-size: 12.5px;
+      }
+      .search svg {
+        left: 9px;
+        width: 13px;
+        height: 13px;
+      }
+      .notif-panel {
+        right: -80px;
+      }
     }
   `],
 })

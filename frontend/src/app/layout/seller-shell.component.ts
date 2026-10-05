@@ -34,6 +34,8 @@ interface NotificationItem {
 const SIDEBAR_KEY = 'mh_tenant_sidebar_collapsed';
 const MOBILE_BREAKPOINT = 900;
 
+type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'commerce' | 'admin';
+
 @Component({
   selector: 'app-seller-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, NgTemplateOutlet],
@@ -65,86 +67,124 @@ const MOBILE_BREAKPOINT = 900;
 
           @if (canViewAccounting()) {
           <p class="section-label label-text">Accounting</p>
-          <button type="button" class="nav-group label-text" [class.open]="accountingOpen()" (click)="toggleAccounting()" aria-label="Toggle accounting menu" [attr.aria-expanded]="accountingOpen()">
-            <span class="nav-group-copy">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'finance' }" />
-              <span>Finance & accounts</span>
-            </span>
-            <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
-          </button>
-          @if (accountingOpen() || collapsed()) {
-            <div class="subnav" [class.rail]="collapsed()">
+          <div class="nav-group-wrapper" [class.open]="accountingOpen()">
+            <button type="button" class="nav-group" [class.open]="accountingOpen()" (click)="toggleAccounting()" aria-label="Toggle accounting menu" [attr.aria-expanded]="accountingOpen()" [title]="collapsed() ? 'Finance & accounts' : ''">
+              <span class="nav-group-copy">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'finance' }" />
+                <span class="label-text">Finance & accounts</span>
+              </span>
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+            </button>
+            <div class="subnav" [class.open]="accountingOpen()">
+              <div class="flyout-header">Finance & accounts</div>
               @for (item of accountingItems; track item.key) {
                 <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
-                  <i [class]="item.faIcon || ''" aria-hidden="true"></i><span class="label-text">{{ item.label }}</span>
+                  <i [class]="item.faIcon || ''" aria-hidden="true"></i><span>{{ item.label }}</span>
                 </a>
               }
             </div>
-          }
+          </div>
           }
 
           @if (canViewSales()) {
           <p class="section-label label-text">Sales</p>
-          <button type="button" class="nav-group label-text" [class.open]="salesOpen()" (click)="toggleSales()" aria-label="Toggle sales menu" [attr.aria-expanded]="salesOpen()">
-            <span class="nav-group-copy">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'sales' }" />
-              <span>Sales workspace</span>
-            </span>
-            <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
-          </button>
-          @if (salesOpen() || collapsed()) {
-            <div class="subnav" [class.rail]="collapsed()">
+          <div class="nav-group-wrapper" [class.open]="salesOpen()">
+            <button type="button" class="nav-group" [class.open]="salesOpen()" (click)="toggleSales()" aria-label="Toggle sales menu" [attr.aria-expanded]="salesOpen()" [title]="collapsed() ? 'Sales workspace' : ''">
+              <span class="nav-group-copy">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'sales' }" />
+                <span class="label-text">Sales workspace</span>
+              </span>
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+            </button>
+            <div class="subnav" [class.open]="salesOpen()">
+              <div class="flyout-header">Sales workspace</div>
               @for (item of salesItems; track item.key) {
                 <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
-                  <i [class]="item.faIcon || ''" aria-hidden="true"></i><span class="label-text">{{ item.label }}</span>
+                  <i [class]="item.faIcon || ''" aria-hidden="true"></i><span>{{ item.label }}</span>
                 </a>
               }
             </div>
-          }
+          </div>
           }
 
           @if (canViewOperations()) {
           <p class="section-label label-text">Operations</p>
-          <button type="button" class="nav-group label-text" [class.open]="operationsOpen()" (click)="toggleOperations()" aria-label="Toggle operations menu" [attr.aria-expanded]="operationsOpen()">
-            <span class="nav-group-copy">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'operations' }" />
-              <span>Operations</span>
-            </span>
-            <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
-          </button>
-          @if (operationsOpen() || collapsed()) {
-            <div class="subnav" [class.rail]="collapsed()">
+          <div class="nav-group-wrapper" [class.open]="operationsOpen()">
+            <button type="button" class="nav-group" [class.open]="operationsOpen()" (click)="toggleOperations()" aria-label="Toggle operations menu" [attr.aria-expanded]="operationsOpen()" [title]="collapsed() ? 'Operations' : ''">
+              <span class="nav-group-copy">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'operations' }" />
+                <span class="label-text">Operations</span>
+              </span>
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+            </button>
+            <div class="subnav" [class.open]="operationsOpen()">
+              <div class="flyout-header">Operations</div>
               @for (item of operationsItems; track item.key) {
-                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''"><i [class]="item.faIcon || ''" aria-hidden="true"></i><span class="label-text">{{ item.label }}</span></a>
+                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''"><i [class]="item.faIcon || ''" aria-hidden="true"></i><span>{{ item.label }}</span></a>
               }
             </div>
-          }
+          </div>
           }
 
           @if (canViewMarketing()) {
           <p class="section-label label-text">Marketing</p>
-          <button type="button" class="nav-group label-text" [class.open]="marketingOpen()" (click)="toggleMarketing()" aria-label="Toggle marketing menu" [attr.aria-expanded]="marketingOpen()">
-            <span class="nav-group-copy">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'marketing' }" />
-              <span>Marketing</span>
-            </span>
-            <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
-          </button>
-          @if (marketingOpen() || collapsed()) {
-            <div class="subnav" [class.rail]="collapsed()">
+          <div class="nav-group-wrapper" [class.open]="marketingOpen()">
+            <button type="button" class="nav-group" [class.open]="marketingOpen()" (click)="toggleMarketing()" aria-label="Toggle marketing menu" [attr.aria-expanded]="marketingOpen()" [title]="collapsed() ? 'Marketing' : ''">
+              <span class="nav-group-copy">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'marketing' }" />
+                <span class="label-text">Marketing</span>
+              </span>
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+            </button>
+            <div class="subnav" [class.open]="marketingOpen()">
+              <div class="flyout-header">Marketing</div>
               @for (item of marketingItems; track item.key) {
-                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''"><i [class]="item.faIcon || ''" aria-hidden="true"></i><span class="label-text">{{ item.label }}</span></a>
+                <a [routerLink]="tenantLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''"><i [class]="item.faIcon || ''" aria-hidden="true"></i><span>{{ item.label }}</span></a>
               }
             </div>
-          }
+          </div>
           }
 
           <p class="section-label label-text">Commerce</p>
-          @for (c of commerceItems; track c.key) {
-            <a [routerLink]="tenantLink(c.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? c.label : ''">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: c.icon }" />
-              <span class="label-text">{{ c.label }}</span>
-            </a>
+          <div class="nav-group-wrapper" [class.open]="commerceOpen()">
+            <button type="button" class="nav-group" [class.open]="commerceOpen()" (click)="toggleCommerce()" aria-label="Toggle commerce menu" [attr.aria-expanded]="commerceOpen()" [title]="collapsed() ? 'Commerce' : ''">
+              <span class="nav-group-copy">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'store' }" />
+                <span class="label-text">Commerce</span>
+              </span>
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+            </button>
+            <div class="subnav grouped-subnav" [class.open]="commerceOpen()">
+              <div class="flyout-header">Commerce</div>
+              @for (c of commerceItems; track c.key) {
+                <a [routerLink]="tenantLink(c.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? c.label : ''">
+                  <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: c.icon }" />
+                  <span>{{ c.label }}</span>
+                </a>
+              }
+            </div>
+          </div>
+
+          @if (isOwner()) {
+            <p class="section-label label-text">Admin</p>
+            <div class="nav-group-wrapper nav-group-bottom" [class.open]="adminOpen()">
+              <button type="button" class="nav-group" [class.open]="adminOpen()" (click)="toggleAdmin()" aria-label="Toggle admin menu" [attr.aria-expanded]="adminOpen()" [title]="collapsed() ? 'Admin' : ''">
+                <span class="nav-group-copy">
+                  <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'settings' }" />
+                  <span class="label-text">Admin</span>
+                </span>
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+              </button>
+              <div class="subnav grouped-subnav" [class.open]="adminOpen()">
+                <div class="flyout-header">Admin</div>
+                @for (a of adminItems; track a.key) {
+                  <a [routerLink]="tenantLink(a.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? a.label : ''">
+                    <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: a.icon }" />
+                    <span>{{ a.label }}</span>
+                  </a>
+                }
+              </div>
+            </div>
           }
 
           <p class="section-label label-text">Support</p>
@@ -152,16 +192,6 @@ const MOBILE_BREAKPOINT = 900;
             <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'lifebuoy' }" />
             <span class="label-text">Help centre</span>
           </a>
-
-          @if (isOwner()) {
-            <p class="section-label label-text">Admin</p>
-            @for (a of adminItems; track a.key) {
-              <a [routerLink]="tenantLink(a.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? a.label : ''">
-                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: a.icon }" />
-                <span class="label-text">{{ a.label }}</span>
-              </a>
-            }
-          }
         </nav>
 
         <button class="btn ghost logout" (click)="auth.logout()" [title]="collapsed() ? 'Log out' : ''">
@@ -180,7 +210,7 @@ const MOBILE_BREAKPOINT = 900;
             <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'search' }" />
             <input
               type="text"
-              placeholder="Search pages, orders, products…"
+              placeholder="Search…"
               [value]="searchTerm()"
               (input)="onSearchInput($event)"
               (focus)="onSearchFocus()"
@@ -455,10 +485,26 @@ const MOBILE_BREAKPOINT = 900;
     .nav-group svg { width: 18px; height: 18px; flex: none; }
     .nav-group > svg { width: 13px; height: 13px; transition: transform .18s ease; }
     .nav-group.open > svg { transform: rotate(180deg); }
-    .subnav { display: flex; flex-direction: column; gap: 1px; margin: 1px 0 4px 15px; padding-left: 11px; border-left: 1px solid var(--line); }
-    .subnav a { min-height: 30px; padding: 6px 9px; gap: 8px; border-radius: 9px; color: var(--ink-soft); font-size: 12px; }
+    .subnav {
+      display: none;
+      flex-direction: column;
+      gap: 1px;
+      margin: 1px 0 4px 15px;
+      padding-left: 11px;
+      border-left: 1px solid var(--line);
+    }
+    .subnav.open { display: flex; }
+    .flyout-header { display: none; }
+    .subnav a {
+      min-height: 30px; padding: 6px 9px; gap: 8px; border-radius: 9px;
+      color: var(--ink-soft); font-size: 12px; display: flex; align-items: center;
+      text-decoration: none;
+    }
+    .subnav a:hover { background: rgba(0,0,0,.06); }
+    :host-context([data-theme="dark"]) .subnav a:hover { background: rgba(255,255,255,.07); }
     .subnav a.on { background: color-mix(in srgb, var(--accent-2) 14%, transparent); color: var(--accent-2); }
     .subnav a i { width: 15px; text-align: center; font-size: 11px; flex: none; }
+    .subnav a svg { width: 15px; height: 15px; flex: none; }
     .logout {
       display: flex; align-items: center; gap: 10px; justify-content: flex-start;
       background: transparent; color: var(--ink); border: 1px solid var(--line);
@@ -468,16 +514,131 @@ const MOBILE_BREAKPOINT = 900;
 
     /* Collapsed = icon-only rail (desktop) */
     @media (min-width: 901px) {
-      aside.collapsed { width: 76px; padding-left: 14px; padding-right: 14px; }
+      aside.collapsed {
+        width: 76px;
+        padding-left: 14px;
+        padding-right: 14px;
+        overflow: visible;
+        z-index: 30;
+      }
       aside.collapsed .label-text { display: none; }
       aside.collapsed .brand { justify-content: center; }
       aside.collapsed nav a { justify-content: center; padding: 10px; }
-      aside.collapsed nav { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
-      aside.collapsed .section-label { text-align: center; }
-      aside.collapsed .subnav { margin: 0; padding: 0; border: 0; }
-      aside.collapsed .subnav a { min-height: 34px; padding: 8px; }
-      aside.collapsed .subnav a i { font-size: 14px; }
+      aside.collapsed nav {
+        margin-left: -14px;
+        margin-right: -14px;
+        padding-left: 14px;
+        padding-right: 14px;
+        overflow: visible;
+      }
+      aside.collapsed .section-label { display: none; }
       aside.collapsed .logout { justify-content: center; }
+      aside.collapsed .nav-group-wrapper {
+        position: relative;
+        width: 100%;
+      }
+      aside.collapsed .nav-group {
+        justify-content: center;
+        padding: 10px;
+        border-radius: 12px;
+      }
+      aside.collapsed .nav-group > svg { display: none; }
+      aside.collapsed .nav-group-copy { justify-content: center; }
+
+      /* In collapsed mode, hide inline subnav by default */
+      aside.collapsed .subnav {
+        display: none !important;
+      }
+
+      /* Hover state reveals the floating flyout menu to the right */
+      aside.collapsed .nav-group-wrapper:hover .nav-group {
+        background: rgba(0,0,0,.06);
+      }
+      :host-context([data-theme="dark"]) aside.collapsed .nav-group-wrapper:hover .nav-group {
+        background: rgba(255,255,255,.07);
+      }
+
+      aside.collapsed .nav-group-wrapper:hover .subnav {
+        display: flex !important;
+        flex-direction: column;
+        position: absolute;
+        left: calc(100% + 8px);
+        top: 0;
+        min-width: 220px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        background: #f7f1e4;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+        padding: 8px;
+        margin: 0;
+        z-index: 1000;
+      }
+      :host-context([data-theme="dark"]) aside.collapsed .nav-group-wrapper:hover .subnav {
+        background: #1f1c16;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.55);
+      }
+
+      /* Bottom-anchored flyout for lower groups like Admin */
+      aside.collapsed .nav-group-wrapper.nav-group-bottom:hover .subnav {
+        top: auto;
+        bottom: 0;
+      }
+
+      /* Invisible hover bridge to prevent losing hover when moving mouse towards the flyout */
+      aside.collapsed .nav-group-wrapper:hover .subnav::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -12px;
+        width: 12px;
+      }
+
+      /* Flyout header in collapsed mode */
+      aside.collapsed .nav-group-wrapper .flyout-header {
+        display: block;
+        padding: 6px 10px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 4px;
+      }
+
+      /* Subnav links inside flyout */
+      aside.collapsed .nav-group-wrapper .subnav a {
+        justify-content: flex-start !important;
+        padding: 7px 10px !important;
+        min-height: 32px;
+        gap: 10px;
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--ink);
+        white-space: nowrap;
+      }
+      aside.collapsed .nav-group-wrapper .subnav a svg,
+      aside.collapsed .nav-group-wrapper .subnav a i {
+        width: 15px;
+        height: 15px;
+        font-size: 12px;
+        text-align: center;
+        flex: none;
+      }
+      aside.collapsed .nav-group-wrapper .subnav a:hover {
+        background: rgba(0,0,0,.06);
+      }
+      :host-context([data-theme="dark"]) aside.collapsed .nav-group-wrapper .subnav a:hover {
+        background: rgba(255,255,255,.08);
+      }
+      aside.collapsed .nav-group-wrapper .subnav a.on {
+        background: var(--ink);
+        color: var(--paper);
+      }
     }
 
     /* Collapsed = hidden off-canvas drawer (mobile) */
@@ -583,11 +744,126 @@ const MOBILE_BREAKPOINT = 900;
 
     @media (max-width: 720px) {
       .who { display: none; }
-      .search { position: static; }
-      .search-results { position: absolute; left: 12px; right: 12px; width: auto; top: 62px; }
-      .topnav { padding: 10px 14px; gap: 8px; }
-      .body { padding: 18px; }
+      .topnav {
+        padding: 8px 12px;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .icon-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        flex: none;
+      }
+      .icon-btn svg {
+        width: 17px;
+        height: 17px;
+      }
+      .top-actions {
+        gap: 6px;
+        flex: none;
+      }
+      .profile-btn {
+        height: 36px;
+        padding: 3px 6px 3px 3px;
+        gap: 4px;
+        flex: none;
+      }
+      .profile-btn svg {
+        width: 12px;
+        height: 12px;
+      }
+      .avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+      }
+      .search {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+      }
+      .search svg {
+        left: 10px;
+        width: 15px;
+        height: 15px;
+      }
+      .search input {
+        height: 36px;
+        padding: 0 10px 0 32px;
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .search-results {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        width: min(340px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+      }
+      .notif-panel {
+        max-width: calc(100vw - 24px);
+        right: -40px;
+      }
+      .profile-panel {
+        max-width: calc(100vw - 24px);
+        right: 0;
+      }
+      .body { padding: 16px 12px; }
     }
+
+    @media (max-width: 480px) {
+      .topnav {
+        padding: 8px 10px;
+        gap: 6px;
+      }
+      .top-actions {
+        gap: 4px;
+      }
+      .icon-btn {
+        width: 34px;
+        height: 34px;
+      }
+      .profile-btn {
+        height: 34px;
+        padding: 2px 4px 2px 2px;
+      }
+      .avatar {
+        width: 26px;
+        height: 26px;
+        font-size: 10.5px;
+      }
+      .profile-btn svg {
+        display: none;
+      }
+      .search input {
+        height: 34px;
+        padding: 0 8px 0 28px;
+        font-size: 12.5px;
+      }
+      .search svg {
+        left: 9px;
+        width: 13px;
+        height: 13px;
+      }
+      .notif-panel {
+        right: -80px;
+      }
+    }
+
+    .group-divider {
+      height: 1px; margin: 8px 0 6px; background: var(--line); }
+    .subnav-title {
+      padding: 2px 8px 0; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; }
+    .grouped-subnav { margin-top: 0; }
+    .grouped-subnav .subnav-title { margin-top: 2px; }
+    .grouped-subnav a {
+      padding-left: 10px;
+    }
+    .grouped-subnav .label-text { overflow: visible; }
   `],
 })
 export class SellerShellComponent {
@@ -654,11 +930,15 @@ export class SellerShellComponent {
     { key: 'ai', label: 'AI', icon: 'ai' },
   ];
 
-  /** Workspace menus start closed to keep the sidebar compact. */
-  accountingOpen = signal(false);
-  salesOpen = signal(false);
-  operationsOpen = signal(false);
-  marketingOpen = signal(false);
+  activeSection = signal<SidebarSection | null>(this.initialSection());
+
+  /** Accordion menu state: opening one dropdown automatically closes the others. */
+  accountingOpen = computed(() => this.activeSection() === 'accounting');
+  salesOpen = computed(() => this.activeSection() === 'sales');
+  operationsOpen = computed(() => this.activeSection() === 'operations');
+  marketingOpen = computed(() => this.activeSection() === 'marketing');
+  commerceOpen = computed(() => this.activeSection() === 'commerce');
+  adminOpen = computed(() => this.activeSection() === 'admin');
 
   /** Sidebar collapse (icon rail on desktop, off-canvas drawer on mobile). */
   collapsed = signal(this.initialCollapsed());
@@ -688,7 +968,6 @@ export class SellerShellComponent {
     if (this.canViewMarketing()) {
       for (const item of this.marketingItems) items.push({ label: item.label, path: this.tenantLink(item.key), icon: item.icon, section: 'Marketing' });
     }
-    items.push({ label: 'Help centre', path: this.tenantLink('support'), icon: 'lifebuoy', section: 'Support' });
     for (const c of this.commerceItems) {
       items.push({ label: c.label, path: this.tenantLink(c.key), icon: c.icon, section: 'Commerce' });
     }
@@ -751,20 +1030,53 @@ export class SellerShellComponent {
     this.collapsed.update((v) => !v);
   }
 
+  private initialSection(): SidebarSection | null {
+    if (typeof window === 'undefined') return 'commerce';
+    const url = window.location.pathname || this.router.url;
+    if (url.includes('/accounting') || url.includes('/departments/finance')) return 'accounting';
+    if (url.includes('/sales') || url.includes('/departments/sales')) return 'sales';
+    if (url.includes('/operations') || url.includes('/departments/operations')) return 'operations';
+    if (url.includes('/marketing') || url.includes('/departments/marketing')) return 'marketing';
+    if (
+      url.includes('/users') ||
+      url.includes('/settings') ||
+      url.includes('/backups') ||
+      url.includes('/domains') ||
+      url.includes('/api-keys') ||
+      url.includes('/webhooks') ||
+      url.includes('/ai')
+    ) {
+      return 'admin';
+    }
+    return 'commerce';
+  }
+
+  toggleSection(section: SidebarSection) {
+    this.activeSection.update((current) => (current === section ? null : section));
+  }
+
   toggleAccounting() {
-    this.accountingOpen.update((value) => !value);
+    this.toggleSection('accounting');
   }
 
   toggleSales() {
-    this.salesOpen.update((value) => !value);
+    this.toggleSection('sales');
   }
 
   toggleOperations() {
-    this.operationsOpen.update((value) => !value);
+    this.toggleSection('operations');
   }
 
   toggleMarketing() {
-    this.marketingOpen.update((value) => !value);
+    this.toggleSection('marketing');
+  }
+
+  toggleCommerce() {
+    this.toggleSection('commerce');
+  }
+
+  toggleAdmin() {
+    this.toggleSection('admin');
   }
 
   onNavigate() {

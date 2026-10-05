@@ -106,11 +106,43 @@
   .row-btn:hover { border-color: var(--accent); color: var(--accent); }
   .row-btn.ghost { background: transparent; color: var(--muted); }
   .row-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
-
-  .table-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 15px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; flex-wrap: wrap; }
-  .pager { display: flex; gap: 6px; }
-  .pager button { border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--ink); padding: 6px 11px; font-size: 11.5px; font-weight: 700; cursor: pointer; }
-  .pager button:disabled { opacity: .45; cursor: not-allowed; }
+  .row-action {
+    display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 4px;
+    border: none; background: transparent; color: var(--muted); cursor: pointer; padding: 0; border-radius: 8px;
+    transition: color .14s ease, background .14s ease, transform .12s ease;
+  }
+  .row-action:first-child { margin-left: 0; }
+  .row-action svg {
+    width: 15px; height: 15px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .row-action.menu { width: 30px; height: 30px; }
+  .row-action:hover, .row-action:focus-visible { color: var(--ink); background: color-mix(in srgb, var(--tint-subtle) 80%, transparent); }
+  .row-action.warn:hover { color: #b7811d; }
+  .row-action.danger:hover { color: var(--danger); }
+  .row-toolbar { position: relative; display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px; }
+  .row-toolbar .row-action.menu {
+    opacity: 0; pointer-events: none; transform: scale(.95);
+    transition: opacity .12s ease, transform .12s ease, background .12s ease, color .12s ease;
+  }
+  .row-toolbar:hover .row-action.menu,
+  .row-toolbar:focus-within .row-action.menu,
+  .row-toolbar .action-menu {
+    opacity: 1; pointer-events: auto; transform: scale(1);
+  }
+  .action-menu {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; min-width: 160px;
+    padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: 0 18px 40px rgba(0,0,0,.12);
+  }
+  .action-item {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: none; border-radius: 9px; background: transparent;
+    color: var(--ink); text-align: left; font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .action-item svg {
+    width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none;
+  }
+  .action-item:hover { background: color-mix(in srgb, var(--tint-subtle) 80%, transparent); }
+  .action-item.warn:hover { color: #b7811d; }
+  .action-item.danger:hover { color: var(--danger); }
 
   // -------------------------------------------------------- empty/skeleton
   .empty-state { display: grid; justify-items: center; gap: 7px; padding: 56px 24px; text-align: center; }

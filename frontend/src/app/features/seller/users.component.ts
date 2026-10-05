@@ -254,18 +254,37 @@ const PROVIDER_GLYPHS: Record<string, string> = {
                         } @else { <small>Never</small> }
                       </td>
                       <td class="right">
-                        @if (canManageUsers()) {
-                          <button class="row-btn" type="button" (click)="openEdit(user)">Edit</button>
-                          @if (!user.is_owner || (userStats()?.owners ?? 0) > 1) {
-                            <button class="row-btn ghost" type="button" (click)="toggleStatus(user)">
-                              {{ user.status === 'suspended' ? 'Restore' : 'Suspend' }}
-                            </button>
+                        <div class="row-toolbar" (click)="$event.stopPropagation()">
+                          <button class="row-action menu" type="button" (click)="toggleActionMenu('user-' + user.id)" [attr.aria-expanded]="actionMenu() === 'user-' + user.id" [attr.aria-label]="'User actions for ' + user.name" title="More actions">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+                          </button>
+                          @if (actionMenu() === 'user-' + user.id) {
+                            <div class="action-menu" role="menu" aria-label="User actions">
+                              <button type="button" class="action-item" (click)="openEdit(user); closeActionMenu()" role="menuitem">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>
+                                <span>Edit</span>
+                              </button>
+                              @if (!user.is_owner || (userStats()?.owners ?? 0) > 1) {
+                                <button type="button" class="action-item warn" (click)="toggleStatus(user); closeActionMenu()" role="menuitem">
+                                  @if (user.status === 'suspended') {
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 1 18 0 9 9 0 0 1-18 0Z"/><path d="M8 8v8"/><path d="M16 8v8"/></svg>
+                                  } @else {
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14"/><path d="M16 5v14"/></svg>
+                                  }
+                                  <span>{{ user.status === 'suspended' ? 'Restore' : 'Suspend' }}</span>
+                                </button>
+                              }
+                              <button type="button" class="action-item" (click)="resetPassword(user); closeActionMenu()" role="menuitem">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 1 1 10 0v3"/><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M12 15v2"/></svg>
+                                <span>Reset password</span>
+                              </button>
+                              <button type="button" class="action-item danger" (click)="removeUser(user); closeActionMenu()" role="menuitem">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 12h10l1-12"/><path d="M9 7V4h6v3"/></svg>
+                                <span>Remove</span>
+                              </button>
+                            </div>
                           }
-                          <button class="row-btn ghost" type="button" (click)="resetPassword(user)">Reset password</button>
-                          <button class="row-btn danger" type="button" (click)="removeUser(user)">Remove</button>
-                        } @else {
-                          <small>View only</small>
-                        }
+                        </div>
                       </td>
                     </tr>
                   }
@@ -407,12 +426,29 @@ const PROVIDER_GLYPHS: Record<string, string> = {
                       </td>
                       <td><span class="state-pill" [class]="customer.status">{{ customer.status | titlecase }}</span></td>
                       <td class="right">
-                        <button class="row-btn" type="button" (click)="openCustomer(customer); $event.stopPropagation()">View</button>
-                        @if (canManageCustomers()) {
-                          <button class="row-btn ghost" type="button" (click)="toggleBlock(customer); $event.stopPropagation()">
-                            {{ customer.status === 'blocked' ? 'Unblock' : 'Block' }}
+                        <div class="row-toolbar" (click)="$event.stopPropagation()">
+                          <button class="row-action menu" type="button" (click)="toggleActionMenu('customer-' + customer.id)" [attr.aria-expanded]="actionMenu() === 'customer-' + customer.id" [attr.aria-label]="'Customer actions for ' + customer.name" title="More actions">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
                           </button>
-                        }
+                          @if (actionMenu() === 'customer-' + customer.id) {
+                            <div class="action-menu" role="menu" aria-label="Customer actions">
+                              <button type="button" class="action-item" (click)="openCustomer(customer); closeActionMenu(); $event.stopPropagation()" role="menuitem">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>
+                                <span>View</span>
+                              </button>
+                              @if (canManageCustomers()) {
+                                <button type="button" class="action-item warn" (click)="toggleBlock(customer); closeActionMenu(); $event.stopPropagation()" role="menuitem">
+                                  @if (customer.status === 'blocked') {
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 0 1 12.1-5.1L6.9 17.1A7 7 0 0 1 5 12Z"/><path d="M18.5 6.5A7 7 0 0 1 6.9 17.1L17.1 6.9Z"/></svg>
+                                  } @else {
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/><path d="M9 9h6v6H9z"/></svg>
+                                  }
+                                  <span>{{ customer.status === 'blocked' ? 'Unblock' : 'Block' }}</span>
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
                       </td>
                     </tr>
                   }
@@ -471,13 +507,29 @@ const PROVIDER_GLYPHS: Record<string, string> = {
               </div>
               <footer>
                 @if (canManageRoles()) {
-                  <button class="row-btn" type="button" (click)="openRole(role)" [disabled]="role.is_owner_role">
-                    {{ role.is_owner_role ? 'Locked' : 'Edit permissions' }}
-                  </button>
-                  <button class="row-btn ghost" type="button" (click)="duplicateRole(role)">Duplicate</button>
-                  @if (!role.is_system) {
-                    <button class="row-btn danger" type="button" (click)="deleteRole(role)">Delete</button>
-                  }
+                  <div class="row-toolbar" (click)="$event.stopPropagation()">
+                    <button class="row-action menu" type="button" (click)="toggleActionMenu('role-' + role.id)" [attr.aria-expanded]="actionMenu() === 'role-' + role.id" [attr.aria-label]="'Role actions for ' + role.name" title="More actions">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+                    </button>
+                    @if (actionMenu() === 'role-' + role.id) {
+                      <div class="action-menu" role="menu" aria-label="Role actions">
+                        <button type="button" class="action-item" (click)="openRole(role); closeActionMenu()" role="menuitem">
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>
+                          <span>{{ role.is_owner_role ? 'Locked' : 'Edit' }}</span>
+                        </button>
+                        <button type="button" class="action-item" (click)="duplicateRole(role); closeActionMenu()" role="menuitem">
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1.5 1.5 0 0 1 1.5-1.5H15"/></svg>
+                          <span>Duplicate</span>
+                        </button>
+                        @if (!role.is_system) {
+                          <button type="button" class="action-item danger" (click)="deleteRole(role); closeActionMenu()" role="menuitem">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 12h10l1-12"/><path d="M9 7V4h6v3"/></svg>
+                            <span>Delete</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
                 } @else {
                   <small>Only administrators can change roles.</small>
                 }
@@ -828,6 +880,7 @@ export class SellerUsersComponent {
 
   editor = signal<UserEditor | null>(null);
   roleEditor = signal<RoleEditor | null>(null);
+  actionMenu = signal<string | null>(null);
   activeCustomer = signal<TenantCustomer | null>(null);
   customerDraft = { segment: '', status: 'active', tags: '', notes: '', marketing: false };
 
@@ -871,8 +924,17 @@ export class SellerUsersComponent {
   // ----------------------------------------------------------------- loading
 
   setTab(tab: Tab) {
+    this.closeActionMenu();
     this.tab.set(tab);
     if (tab === 'customers' && !this.customers().length) this.loadCustomers(1);
+  }
+
+  toggleActionMenu(id: string) {
+    this.actionMenu.update((current) => (current === id ? null : id));
+  }
+
+  closeActionMenu() {
+    this.actionMenu.set(null);
   }
 
   refresh() {
