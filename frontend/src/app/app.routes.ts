@@ -59,6 +59,7 @@ export const routes: Routes = [
     data: { portal: 'tenant' },
   },
   { path: 'seller/login', redirectTo: 'tenant/login' },
+  { path: 'tenants/login', redirectTo: 'tenant/login' },
   {
     path: '',
     canActivate: [marketingPortalGuard],
@@ -85,6 +86,12 @@ export const routes: Routes = [
   },
   {
     path: 'tenant',
+    canActivate: [roleGuard('tenant_owner', 'store_staff')],
+    loadComponent: () => import('./layout/seller-shell.component').then((m) => m.SellerShellComponent),
+    children: tenantConsoleChildren,
+  },
+  {
+    path: 'tenants',
     canActivate: [roleGuard('tenant_owner', 'store_staff')],
     loadComponent: () => import('./layout/seller-shell.component').then((m) => m.SellerShellComponent),
     children: tenantConsoleChildren,

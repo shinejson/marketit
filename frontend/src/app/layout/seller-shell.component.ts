@@ -1022,7 +1022,11 @@ export class SellerShellComponent {
   }
 
   tenantLink(path = ''): string {
-    const base = this.router.url.startsWith('/seller') ? '/seller' : '/tenant';
+    const base = this.router.url.startsWith('/seller')
+      ? '/seller'
+      : this.router.url.startsWith('/tenants')
+        ? '/tenants'
+        : '/tenant';
     return path ? `${base}/${path}` : base;
   }
 

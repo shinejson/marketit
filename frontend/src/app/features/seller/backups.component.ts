@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -9,7 +9,7 @@ interface Backup { id:number; filename:string; size_bytes:number; status:string;
 
 @Component({
   selector: 'app-seller-backups',
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink],
+  imports: [DatePipe, FormsModule, RouterLink],
   template: `
     <div class="backup-page">
       <header class="page-head">
