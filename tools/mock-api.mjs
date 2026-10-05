@@ -10,6 +10,7 @@
 import http from 'node:http';
 import { handleSupport } from './support-mock.mjs';
 import { handleTenant } from './tenant-mock.mjs';
+import { handleCurrency } from './currency-mock.mjs';
 import { handleAccounting } from './accounting-mock.mjs';
 import { handleProducts } from './products-mock.mjs';
 import { handleAccess } from './access-mock.mjs';
@@ -333,6 +334,9 @@ const server = http.createServer(async (req, res) => {
 
   // ---- tenant console (dashboard + departments)
   if (handleTenant(req, res, url, method, readBody, json)) return;
+
+  // ---- currency catalog, tenant settings and my-account profile
+  if (await handleCurrency(req, res, url, method, readBody, json)) return;
 
   // ---- tenant catalog (/tenant/products)
   if (await handleProducts(req, res, url, method, readBody, json)) return;

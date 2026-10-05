@@ -37,6 +37,10 @@ class TenantSetting extends Model
         'tenant_id',
         'timezone',
         'currency',
+        'base_currency',
+        'currency_rate',
+        'currency_converted_at',
+        'auto_convert_prices',
         'fiscal_year_start_month',
         'notify_low_stock',
         'notify_orders',
@@ -57,6 +61,9 @@ class TenantSetting extends Model
     {
         return [
             'notify_low_stock' => 'boolean',
+            'auto_convert_prices' => 'boolean',
+            'currency_rate' => 'float',
+            'currency_converted_at' => 'datetime',
             'notify_orders' => 'boolean',
             'notify_payouts' => 'boolean',
             'goals' => 'array',

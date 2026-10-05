@@ -1,14 +1,17 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CurrencyPipe, DatePipe, UpperCasePipe } from '@angular/common';
+import { DatePipe, UpperCasePipe } from '@angular/common';
 import { ApiService } from '../../core/api.service';
-import { DEFAULT_RECEIPT, TenantReceipt } from '../../core/models';
+import { CurrencyOption, CurrencyService } from '../../core/currency.service';
+import { CurrencyConversionPreview, CurrencyConversionResult, DEFAULT_RECEIPT, TenantReceipt } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 interface TenantDocument { key: string; label: string; original_name: string; mime?: string; size?: number; uploaded_at?: string; }
 
 @Component({
   selector: 'app-seller-settings',
-  imports: [FormsModule, CurrencyPipe, DatePipe, UpperCasePipe],
+  imports: [FormsModule, MoneyPipe, DatePipe, DecimalPipe, UpperCasePipe],
   template: `
     <div class="settings-page">
       <header class="page-head">
@@ -47,11 +50,61 @@ interface TenantDocument { key: string; label: string; original_name: string; mi
                 </div>
               </section>
               <section class="card panel"><div class="panel-title"><div><p class="eyebrow">Communication</p><h2>Contact & regional settings</h2><p>Choose where operational and payout messages are sent.</p></div></div>
-                <div class="form-grid"><label class="field"><span>Support email</span><input type="email" [(ngModel)]="form.support_email" name="support" /></label><label class="field"><span>Payout email</span><input type="email" [(ngModel)]="form.payout_email" name="payout" /></label><label class="field"><span>Timezone</span><select [(ngModel)]="form.timezone" name="timezone"><option>Africa/Accra</option><option>Africa/Lagos</option><option>Africa/Nairobi</option><option>UTC</option></select></label><label class="field"><span>Currency</span><select [(ngModel)]="form.currency" name="currency"><option>GHS</option><option>USD</option><option>NGN</option><option>KES</option><option>ZAR</option></select></label></div>
+                <div class="form-grid"><label class="field"><span>Support email</span><input type="email" [(ngModel)]="form.support_email" name="support" /></label><label class="field"><span>Payout email</span><input type="email" [(ngModel)]="form.payout_email" name="payout" /></label><label class="field"><span>Timezone</span><select [(ngModel)]="form.timezone" name="timezone"><option>Africa/Accra</option><option>Africa/Lagos</option><option>Africa/Nairobi</option><option>UTC</option></select></label><label class="field"><span>Currency</span><input [value]="currencyLabel()" readonly /><small>Managed under <b>Commerce defaults → Currency &amp; conversion</b>.</small></label></div>
               </section>
             }
 
             @if (tab() === 'commerce') {
+              <section class="card panel currency-panel">
+                <div class="panel-title">
+                  <div><p class="eyebrow">Money</p><h2>Currency &amp; conversion</h2><p>Pick the currency this workspace trades in. Stored prices are converted at the live rate, so nothing is silently relabelled.</p></div>
+                  <span class="rate-chip">1 {{ baseCurrency() }} = {{ rateFor(form.currency) | number:'1.2-4' }} {{ form.currency }}</span>
+                </div>
+
+                <div class="form-grid">
+                  <label class="field"><span>Workspace currency</span>
+                    <select [(ngModel)]="form.currency" name="currency" (change)="onCurrencyChange()">
+                      @for (c of currencies(); track c.code) { <option [value]="c.code">{{ c.code }} — {{ c.name }} ({{ c.symbol }})</option> }
+                    </select>
+                    <small>Catalogue, invoices, quotes, budgets and reports all render in this currency.</small>
+                  </label>
+                  <label class="field"><span>Exchange rate <em>vs {{ baseCurrency() }}</em></span>
+                    <input [value]="rateFor(form.currency)" readonly />
+                    <small>From the platform rate table — ask an administrator to refresh it if the market has moved.</small>
+                  </label>
+                </div>
+
+                <div class="checks">
+                  <label><input type="checkbox" [(ngModel)]="convertPrices" name="convert_prices" /><span><b>Convert existing prices</b><small>Multiply every stored amount by the rate: 100 {{ savedCurrency() }} becomes {{ symbolFor(form.currency) }}{{ 100 * conversionFactor() | number:'1.2-2' }}. Turn this off only if your prices are already quoted in {{ form.currency }}.</small></span></label>
+                </div>
+
+                @if (currencyDirty()) {
+                  <div class="conv-preview">
+                    <p class="preview-head"><b>Switching {{ savedCurrency() }} → {{ form.currency }}</b> @if (previewLoading()) { <span class="muted">calculating…</span> } @else { <span class="muted">× {{ conversionFactor() | number:'1.2-4' }}</span> }</p>
+                    @if (preview(); as pv) {
+                      @if (pv.sample && pv.sample.length) {
+                        <table class="conv-table">
+                          <thead><tr><th>Product</th><th>Now</th><th>After</th></tr></thead>
+                          <tbody>
+                            @for (row of pv.sample; track row.id) {
+                              <tr><td>{{ row.name }}</td><td class="muted">{{ symbolFor(savedCurrency()) }}{{ row.before | number:'1.2-2' }}</td><td><b>{{ symbolFor(form.currency) }}{{ row.after | number:'1.2-2' }}</b></td></tr>
+                            }
+                          </tbody>
+                        </table>
+                      }
+                      @if (recordCounts(pv).length) {
+                        <p class="muted records">Will re-price: @for (r of recordCounts(pv); track r.label) { <span class="tag">{{ r.count | number }} {{ r.label }}</span> }</p>
+                      }
+                    }
+                    <p class="muted hint">The change applies when you press <b>Save changes</b>.</p>
+                  </div>
+                }
+
+                @if (conversion(); as done) {
+                  <div class="notice success conv-done">✓ Re-priced {{ done.rows | number }} record{{ done.rows === 1 ? '' : 's' }} from {{ done.from }} to {{ done.to }} at × {{ done.factor | number:'1.2-4' }}.</div>
+                }
+              </section>
+
               <section class="card panel"><div class="panel-title"><div><p class="eyebrow">Commerce defaults</p><h2>Pricing & discounts</h2><p>Set safe defaults for new products. Store-level pricing always takes priority.</p></div></div>
                 <div class="form-grid"><label class="field"><span>Default markup <em>Percent</em></span><div class="input-unit"><input type="number" min="0" step="0.1" [(ngModel)]="form.default_markup_percent" name="markup" /><i>%</i></div><small>Applied when a product has no markup.</small></label><label class="field"><span>Default discount <em>Percent</em></span><div class="input-unit"><input type="number" min="0" max="100" step="0.1" [(ngModel)]="form.default_discount_percent" name="discount" /><i>%</i></div><small>Maximum automatic discount on new campaigns.</small></label><label class="field"><span>Default tax rate <em>Percent</em></span><div class="input-unit"><input type="number" min="0" max="100" step="0.1" [(ngModel)]="form.tax_rate" name="tax" /><i>%</i></div></label><label class="field"><span>Fiscal year begins</span><select [(ngModel)]="form.fiscal_year_start_month" name="fiscal"><option [ngValue]="1">January</option><option [ngValue]="4">April</option><option [ngValue]="7">July</option><option [ngValue]="10">October</option></select></label></div>
               </section>
@@ -85,15 +138,15 @@ interface TenantDocument { key: string; label: string; original_name: string; mi
                       <table>
                         <tbody>
                           @for (line of sampleLines; track line.name) {
-                            <tr><td>{{ line.name }}@if (receipt.show_sku) { <small>{{ line.sku }} · ×{{ line.qty }}</small> } @else { <small>×{{ line.qty }}</small> }</td><td>{{ line.qty * line.price | currency:form.currency || 'USD' }}</td></tr>
+                            <tr><td>{{ line.name }}@if (receipt.show_sku) { <small>{{ line.sku }} · ×{{ line.qty }}</small> } @else { <small>×{{ line.qty }}</small> }</td><td>{{ line.qty * line.price | money:form.currency || 'USD' }}</td></tr>
                           }
                         </tbody>
                       </table>
                       <dl class="sums">
-                        <div><dt>Subtotal</dt><dd>{{ sampleSubtotal | currency:form.currency }}</dd></div>
-                        @if (receipt.show_discounts) { <div><dt>Discount</dt><dd>−{{ sampleDiscount | currency:form.currency }}</dd></div> }
-                        @if (receipt.show_tax_breakdown) { <div><dt>{{ receipt.tax_label || 'Tax' }} · {{ form.tax_rate || 0 }}%</dt><dd>{{ sampleTax | currency:form.currency }}</dd></div> }
-                        <div class="grand"><dt>Total</dt><dd>{{ sampleTotal | currency:form.currency }}</dd></div>
+                        <div><dt>Subtotal</dt><dd>{{ sampleSubtotal | money:form.currency }}</dd></div>
+                        @if (receipt.show_discounts) { <div><dt>Discount</dt><dd>−{{ sampleDiscount | money:form.currency }}</dd></div> }
+                        @if (receipt.show_tax_breakdown) { <div><dt>{{ receipt.tax_label || 'Tax' }} · {{ form.tax_rate || 0 }}%</dt><dd>{{ sampleTax | money:form.currency }}</dd></div> }
+                        <div class="grand"><dt>Total</dt><dd>{{ sampleTotal | money:form.currency }}</dd></div>
                       </dl>
                       @if (receipt.footer_note) { <footer>{{ receipt.footer_note }}</footer> }
                     </div>
@@ -126,6 +179,20 @@ interface TenantDocument { key: string; label: string; original_name: string; mi
     :host{display:block;max-width:1180px;margin:0 auto;padding-bottom:70px}.page-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:20px}.eyebrow{margin:0 0 6px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.page-head h1{margin:0;font-size:clamp(28px,3vw,38px)}.intro{margin:7px 0 0;color:var(--ink-soft);font-size:14px}.head-actions{display:flex;align-items:center;gap:12px}.status{display:flex;align-items:center;gap:7px;color:var(--ok);font-size:12px;font-weight:700;white-space:nowrap}.status i{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 15%,transparent)}.status.pending{color:#9b6a1d}.status.pending i{background:#d19a31}.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:750;cursor:pointer}.btn.primary{background:var(--accent-2);color:white}.btn.outline{border:1px solid var(--line);background:var(--card);color:var(--ink)}.btn:disabled{opacity:.55;cursor:not-allowed}.notice{padding:11px 14px;border-radius:11px;margin-bottom:16px;font-size:13px}.notice.success{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}.notice.error{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}.layout{display:grid;grid-template-columns:240px 1fr;gap:20px;align-items:start}.tabs{padding:8px;display:flex;flex-direction:column;gap:2px;position:sticky;top:20px}.tabs button{display:grid;grid-template-columns:28px 1fr;column-gap:9px;text-align:left;padding:12px 11px;border:0;border-radius:11px;background:transparent;color:var(--ink);cursor:pointer}.tabs button:hover{background:var(--paper-2)}.tabs button.active{background:var(--ink);color:var(--card)}.tabs button span{grid-row:span 2;font-size:18px}.tabs button b{font-size:13px}.tabs button small{color:var(--ink-soft);font-size:10.5px;margin-top:2px}.tabs button.active small{color:color-mix(in srgb,var(--card) 62%,transparent)}.content{display:grid;gap:16px}.panel{padding:21px 23px}.panel-title{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:17px}.panel-title h2{margin:0;font-size:21px}.panel-title p:not(.eyebrow){margin:4px 0 0;color:var(--ink-soft);font-size:12px}.completion,.secure{padding:6px 9px;border-radius:7px;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);font-size:10px;font-weight:800;white-space:nowrap}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:15px}.field.wide{grid-column:1/-1}.field span{font-size:12px;font-weight:750}.field em{font-style:normal;color:var(--ink-soft);font-size:10px;font-weight:500;float:right}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:var(--card);color:var(--ink)}.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 40%,transparent);border-color:var(--accent)}.field small,.checks small,.doc small{color:var(--ink-soft);font-size:10.5px}.input-unit{position:relative}.input-unit input{padding-right:33px}.input-unit i{position:absolute;right:12px;top:10px;color:var(--ink-soft);font-size:12px;font-style:normal}.checks{display:grid;grid-template-columns:1fr 1fr;gap:10px}.checks label{display:flex;gap:10px;padding:13px;border:1px solid var(--line);border-radius:10px;cursor:pointer}.checks input{accent-color:var(--accent-2);margin-top:2px}.checks span{display:grid;gap:3px}.upload-zone{display:flex;align-items:center;gap:13px;padding:19px;border:1px dashed var(--line);border-radius:12px;background:color-mix(in srgb,var(--paper-2) 38%,transparent)}.upload-zone input{display:none}.upload-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--accent-2);color:white;font-size:21px}.upload-zone>div:nth-child(3){display:grid;gap:3px;flex:1}.upload-zone small{color:var(--ink-soft);font-size:11px}.upload-btn{margin-top:12px}.doc-list{margin-top:25px}.list-heading{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:10px;font-size:12px;font-weight:800}.list-heading span{color:var(--ink-soft)}.doc{display:flex;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid var(--line)}.doc-icon{display:grid;place-items:center;width:35px;height:35px;border-radius:8px;background:#f8e7df;color:var(--accent);font-size:9px;font-weight:800}.doc div{display:grid;gap:3px;flex:1}.verified{color:var(--ok);font-size:10px;font-weight:800}.empty,.loading{padding:28px;text-align:center;color:var(--ink-soft);font-size:13px}.loading{min-height:220px}@media(max-width:800px){.page-head{align-items:flex-start;flex-direction:column}.layout{grid-template-columns:1fr}.tabs{position:static;display:grid;grid-template-columns:1fr 1fr}.checks{grid-template-columns:1fr}.head-actions{width:100%;justify-content:space-between}}@media(max-width:500px){.form-grid{grid-template-columns:1fr}.field.wide{grid-column:auto}.tabs{grid-template-columns:1fr}.upload-zone{align-items:flex-start;flex-wrap:wrap}.upload-zone .btn{margin-left:51px}}
   `,
   `
+  .currency-panel .rate-chip{padding:6px 10px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);font-size:11px;font-weight:800;white-space:nowrap}
+  .currency-panel .checks{grid-template-columns:1fr}
+  .conv-preview{margin-top:16px;padding:14px 16px;border:1px dashed var(--line);border-radius:12px;background:color-mix(in srgb,var(--paper-2) 45%,transparent)}
+  .conv-preview .preview-head{margin:0 0 10px;font-size:13px;display:flex;gap:10px;align-items:baseline}
+  .conv-table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .conv-table th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);padding-bottom:6px}
+  .conv-table td{padding:6px 0;border-top:1px solid var(--line)}
+  .conv-table td:not(:first-child){text-align:right}
+  .conv-preview .records{margin:10px 0 0;font-size:11.5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .conv-preview .tag{padding:3px 8px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-weight:700}
+  .conv-preview .hint{margin:9px 0 0;font-size:11.5px}
+  .conv-done{margin-top:14px}
+  `,
+  `
   .receipt-grid{display:grid;grid-template-columns:1fr 330px;gap:26px;align-items:start}
   .receipt-col{position:sticky;top:20px}
   .preview-label{margin:0 0 10px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
@@ -153,18 +220,145 @@ interface TenantDocument { key: string; label: string; original_name: string; mi
   `],
 })
 export class SellerSettingsComponent {
-  private api = inject(ApiService); form: any = null; tab = signal('profile'); saved = signal(false); err = signal(''); saving = signal(false); uploading = signal(false); selectedFile = signal<File | null>(null); documents = signal<TenantDocument[]>([]);
+  private api = inject(ApiService);
+  private currencySvc = inject(CurrencyService);
+  form: any = null; tab = signal('profile'); saved = signal(false); err = signal(''); saving = signal(false); uploading = signal(false); selectedFile = signal<File | null>(null); documents = signal<TenantDocument[]>([]);
   sections = [{key:'profile',label:'Business profile',description:'Identity & contacts',icon:'◉'},{key:'commerce',label:'Commerce defaults',description:'Pricing & alerts',icon:'◇'},{key:'receipts',label:'Receipt builder',description:'Invoices & till slips',icon:'▧'},{key:'documents',label:'Documents',description:'Compliance records',icon:'▤'}];
   receipt: TenantReceipt = { ...DEFAULT_RECEIPT };
+
+  /* ---------------------------------------------------------- currency */
+  /** Catalog of currencies offered in the picker (falls back to the client table). */
+  currencies = signal<CurrencyOption[]>(this.currencySvc.currencies());
+  /** The currency currently persisted for this workspace. */
+  savedCurrency = signal<string>(this.currencySvc.display());
+  /** Re-price stored amounts when the currency changes (the safe default). */
+  convertPrices = true;
+  preview = signal<CurrencyConversionPreview | null>(null);
+  previewLoading = signal(false);
+  conversion = signal<CurrencyConversionResult | null>(null);
+  baseCurrency = computed(() => this.currencySvc.base());
+
+  currencyDirty(): boolean {
+    return !!this.form?.currency && this.form.currency !== this.savedCurrency();
+  }
+
+  rateFor(code?: string): number {
+    return this.currencySvc.rate(code);
+  }
+
+  symbolFor(code?: string): string {
+    return this.currencySvc.meta(code).symbol;
+  }
+
+  currencyLabel(): string {
+    const code = this.form?.currency || this.savedCurrency();
+    const meta = this.currencySvc.meta(code);
+    return `${meta.code} — ${meta.name} (${meta.symbol})`;
+  }
+
+  /** Multiplier from the saved currency into the one being picked. */
+  conversionFactor(): number {
+    return this.currencySvc.factor(this.savedCurrency(), this.form?.currency);
+  }
+
+  /** Ask the API what a switch would touch, so the preview is not a guess. */
+  onCurrencyChange(): void {
+    this.conversion.set(null);
+    this.preview.set(null);
+    if (!this.currencyDirty()) return;
+    this.previewLoading.set(true);
+    this.api.previewCurrencyChange(this.form.currency).subscribe({
+      next: (res) => { this.preview.set(res.data); this.previewLoading.set(false); },
+      error: () => { this.previewLoading.set(false); },
+    });
+  }
+
+  /** "products" → "48 products" chips under the preview. */
+  recordCounts(pv: CurrencyConversionPreview): { label: string; count: number }[] {
+    const labels: Record<string, string> = {
+      products: 'products',
+      accounting_invoices: 'invoices',
+      accounting_expenses: 'expenses',
+      sales_quotes: 'quotes',
+      sales_opportunities: 'opportunities',
+      ad_campaigns: 'ad campaigns',
+    };
+    return Object.entries(pv.records ?? {}).map(([table, count]) => ({ label: labels[table] ?? table, count }));
+  }
+
   today = new Date();
   sampleLines = [{name:'Market pendant',sku:'PND-001',qty:2,price:49},{name:'Hand-woven basket',sku:'BSK-014',qty:1,price:32},{name:'Gift wrap',sku:'WRAP-01',qty:1,price:5}];
   get sampleSubtotal():number{return this.sampleLines.reduce((sum,line)=>sum+line.qty*line.price,0)}
   get sampleDiscount():number{return this.receipt.show_discounts?Math.round(this.sampleSubtotal*0.08):0}
   get sampleTax():number{return this.receipt.show_tax_breakdown?Math.round((this.sampleSubtotal-this.sampleDiscount)*(+(this.form?.tax_rate||0))/100*100)/100:0}
   get sampleTotal():number{return this.sampleSubtotal-this.sampleDiscount+this.sampleTax}
-  constructor(){this.api.tenantSettings().subscribe({next:res=>{const d=res.data;this.form={name:d.tenant.name,business_name:d.tenant.business_name,country:d.tenant.country||'GH',business_details:d.tenant.business_details,...d.settings,status:d.tenant.status,default_markup_percent:d.settings.default_markup_percent??30,default_discount_percent:d.settings.default_discount_percent??0,tax_rate:d.settings.tax_rate??0};this.receipt={...DEFAULT_RECEIPT,...(d.settings.receipt||{})};this.documents.set(d.documents||[]);},error:()=>this.err.set('Could not load your settings.')});}
+  constructor() {
+    this.api.tenantSettings().subscribe({
+      next: (res) => {
+        const d = res.data;
+        this.form = {
+          name: d.tenant.name,
+          business_name: d.tenant.business_name,
+          country: d.tenant.country || 'GH',
+          business_details: d.tenant.business_details,
+          ...d.settings,
+          status: d.tenant.status,
+          default_markup_percent: d.settings.default_markup_percent ?? 30,
+          default_discount_percent: d.settings.default_discount_percent ?? 0,
+          tax_rate: d.settings.tax_rate ?? 0,
+        };
+        this.receipt = { ...DEFAULT_RECEIPT, ...(d.settings.receipt || {}) };
+        this.documents.set(d.documents || []);
+
+        // Currency: remember what is persisted and keep the app-wide
+        // formatter pointed at it.
+        if (d.currencies) {
+          this.currencySvc.applyCatalog(d.currencies);
+          this.currencies.set(this.currencySvc.currencies());
+        }
+        const code = d.settings.currency || this.currencySvc.base();
+        this.savedCurrency.set(code);
+        this.convertPrices = d.settings.auto_convert_prices ?? true;
+        this.currencySvc.setDisplay(code);
+      },
+      error: () => this.err.set('Could not load your settings.'),
+    });
+  }
   profileCompletion(){if(!this.form)return 0;const fields=['name','business_name','country','tax_id','support_email','support_phone'];return Math.round(fields.filter(k=>!!this.form[k]).length/fields.length*100)}
-  save(){if(!this.form)return;this.saved.set(false);this.err.set('');this.saving.set(true);const {status,...rest}=this.form;const payload={...rest,receipt:this.receipt};this.api.updateTenantSettings(payload).subscribe({next:res=>{this.saving.set(false);this.saved.set(true);if(res.data){const d=res.data;this.form={...this.form,...d.settings};this.receipt={...DEFAULT_RECEIPT,...(d.settings?.receipt||this.receipt)};}},error:e=>{this.saving.set(false);this.err.set(e.error?.error?.message||'Could not save changes.')}})}
+  save() {
+    if (!this.form) return;
+    this.saved.set(false);
+    this.err.set('');
+    this.saving.set(true);
+    const { status, ...rest } = this.form;
+    const switching = this.currencyDirty();
+    const payload: any = { ...rest, receipt: this.receipt };
+    if (switching) payload.convert_existing_prices = this.convertPrices;
+    payload.auto_convert_prices = this.convertPrices;
+
+    this.api.updateTenantSettings(payload).subscribe({
+      next: (res) => {
+        this.saving.set(false);
+        this.saved.set(true);
+        const d = res.data;
+        if (d) {
+          this.form = { ...this.form, ...d.settings };
+          this.receipt = { ...DEFAULT_RECEIPT, ...(d.settings?.receipt || this.receipt) };
+          const code = d.settings?.currency || this.savedCurrency();
+          this.savedCurrency.set(code);
+          // Repoint every price on screen — the console re-renders in the new
+          // currency without a reload.
+          this.currencySvc.setDisplay(code);
+          this.preview.set(null);
+          this.conversion.set(d.conversion ?? null);
+        }
+      },
+      error: (e) => {
+        this.saving.set(false);
+        this.err.set(e.error?.error?.message || 'Could not save changes.');
+      },
+    });
+  }
   selectFile(e:Event){const file=(e.target as HTMLInputElement).files?.[0]||null;if(file&&file.size>5*1024*1024){this.err.set('Documents must be smaller than 5 MB.');return}this.selectedFile.set(file);this.err.set('')}
   upload(){const file=this.selectedFile();if(!file)return;this.uploading.set(true);this.api.uploadTenantDocument(file).subscribe({next:res=>{this.documents.set(res.data.documents||[]);this.selectedFile.set(null);this.uploading.set(false)},error:e=>{this.uploading.set(false);this.err.set(e.error?.error?.message||'Could not upload document.')}})}
   formatSize(size?:number){return size?`${Math.max(1,Math.round(size/1024))} KB`:'—'} formatDate(date?:string){return date?new Date(date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'Recently'}

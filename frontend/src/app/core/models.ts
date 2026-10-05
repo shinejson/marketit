@@ -372,6 +372,8 @@ export interface ProductCard {
   name: string;
   slug: string;
   price: string;
+  /** Currency the stored price is denominated in (the store's currency). */
+  currency?: string;
   compare_at_price?: string | null;
   on_sale?: boolean;
   discount_percent?: number | null;
@@ -384,7 +386,7 @@ export interface ProductCard {
   status: string;
   image?: string | null;
   images: { id: number; url: string; is_primary: boolean }[];
-  store: { id: number; name: string; slug: string; delivery_fee?: string } | null;
+  store: { id: number; name: string; slug: string; currency?: string; delivery_fee?: string } | null;
   category: { id: number; name: string; slug: string } | null;
   variants: {
     id: number;
@@ -1845,4 +1847,107 @@ export interface TenantAnalyticsReport {
   ads: { impressions: number; clicks: number; spend: number; ctr: number; avg_cpc: number; roas: number | null };
   highlights: { tone: 'positive' | 'negative' | 'neutral'; title: string; detail: string }[];
   lifetime?: { gmv: string; commission: string; orders: number; take_rate: string };
+}
+
+// ---------------------------------------------------------------------------
+// My account (/tenant/profile) — profile, security and personal activity
+// ---------------------------------------------------------------------------
+
+export interface ProfileUser {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  avatar_url?: string | null;
+  job_title?: string | null;
+  bio?: string | null;
+  timezone?: string | null;
+  locale?: string | null;
+  preferred_currency?: string | null;
+  status?: string | null;
+  role: string;
+  email_verified_at?: string | null;
+  last_login_at?: string | null;
+  last_seen_at?: string | null;
+  created_at?: string | null;
+}
+
+export interface ProfileTenantRef {
+  id: number;
+  name: string;
+  slug: string;
+  status: string;
+  currency?: string | null;
+  joined_at?: string | null;
+  is_owner: boolean;
+}
+
+export interface ProfileStats {
+  activity_total: number;
+  activity_last_7_days: number;
+  active_sessions: number;
+  member_since?: string | null;
+  products_in_workspace?: number;
+  stores_in_workspace?: number;
+  orders_placed?: number;
+}
+
+export interface ProfilePayload {
+  user: ProfileUser;
+  tenant: ProfileTenantRef | null;
+  roles: { role: string; tenant_id: number | null; store_id: number | null; department: string | null }[];
+  permissions: string[];
+  social_accounts: { provider: string; linked_at?: string | null }[];
+  stats: ProfileStats;
+}
+
+export interface ProfileActivityEntry {
+  id: number;
+  action: string;
+  subject_type: string | null;
+  subject_label: string;
+  subject_id: number | null;
+  tenant_id: number | null;
+  ip: string | null;
+  diff?: { before?: unknown; after?: unknown } | null;
+  created_at: string;
+}
+
+export interface ProfileActivityStats {
+  total: number;
+  today: number;
+  last_7_days: number;
+  last_30_days: number;
+  first_event_at?: string | null;
+  last_event_at?: string | null;
+  by_action: { action: string; count: number }[];
+  trend: { day: string; count: number }[];
+}
+
+export interface ProfileSession {
+  id: number;
+  name: string;
+  current: boolean;
+  created_at?: string | null;
+  last_used_at?: string | null;
+  expires_at?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Currency
+// ---------------------------------------------------------------------------
+
+export interface CurrencyConversionPreview {
+  from: string;
+  to: string;
+  factor: number;
+  from_symbol: string;
+  to_symbol: string;
+  records?: Record<string, number>;
+  sample?: { id: number; name: string; before: number; after: number }[];
+}
+
+export interface CurrencyConversionResult extends CurrencyConversionPreview {
+  tables: Record<string, number>;
+  rows: number;
 }

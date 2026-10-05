@@ -1,17 +1,18 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { CurrencyPipe, TitleCasePipe } from '@angular/common';
+import { TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { ProductCard } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type Variant = ProductCard['variants'][number];
 
 @Component({
   selector: 'app-product',
-  imports: [RouterLink, CurrencyPipe, TitleCasePipe, FormsModule],
+  imports: [RouterLink, MoneyPipe, TitleCasePipe, FormsModule],
   template: `
     <div class="wrap page">
       @if (error()) { <p class="err">{{ error() }}</p> }
@@ -42,14 +43,14 @@ type Variant = ProductCard['variants'][number];
             @if (p.short_description) { <p class="lede">{{ p.short_description }}</p> }
 
             <div class="price-row">
-              <p class="price">{{ +selectedPrice(p) | currency }}</p>
+              <p class="price">{{ +selectedPrice(p) | money:priceCurrency(p) }}</p>
               @if (p.on_sale) {
-                <p class="was">{{ +p.compare_at_price! | currency }}</p>
+                <p class="was">{{ +p.compare_at_price! | money:priceCurrency(p) }}</p>
                 <span class="save badge">Save {{ p.discount_percent }}%</span>
               }
             </div>
             @if (taxNote(p); as note) { <p class="tax muted">{{ note }}</p> }
-            @if (unitPrice(p); as up) { <p class="unit muted">{{ up | currency }} per {{ p.unit }}</p> }
+            @if (unitPrice(p); as up) { <p class="unit muted">{{ up | money:priceCurrency(p) }} per {{ p.unit }}</p> }
 
             @if (p.variants.length > 1) {
               <div class="vars">
@@ -57,7 +58,7 @@ type Variant = ProductCard['variants'][number];
                 <div class="chips">
                   @for (v of p.variants; track v.id) {
                     <button type="button" class="chip" [class.on]="variant()?.id === v.id" [disabled]="v.status !== 'active'" (click)="variant.set(v)">
-                      {{ variantLabel(v) }}<small>{{ +v.price | currency }}</small>
+                      {{ variantLabel(v) }}<small>{{ +v.price | money:priceCurrency(p) }}</small>
                     </button>
                   }
                 </div>
@@ -87,7 +88,7 @@ type Variant = ProductCard['variants'][number];
               @if (p.brand) { <div><dt>Brand</dt><dd>{{ p.brand }}</dd></div> }
               @if (p.condition) { <div><dt>Condition</dt><dd>{{ p.condition | titlecase }}</dd></div> }
               @if (p.warranty_months) { <div><dt>Warranty</dt><dd>{{ p.warranty_months }} months</dd></div> }
-              @if (p.store && p.store.delivery_fee !== undefined) { <div><dt>Delivery</dt><dd>{{ +(p.store.delivery_fee || 0) | currency }} · calculated at checkout</dd></div> }
+              @if (p.store && p.store.delivery_fee !== undefined) { <div><dt>Delivery</dt><dd>{{ +(p.store.delivery_fee || 0) | money:priceCurrency(p) }} · calculated at checkout</dd></div> }
             </dl>
           </section>
         </div>
@@ -178,6 +179,12 @@ export class ProductComponent {
   private route = inject(ActivatedRoute);
 
   product = signal<ProductCard | null>(null);
+
+  /** The currency this product's stored prices are denominated in. */
+  priceCurrency(p: ProductCard): string | null {
+    return p.currency || p.store?.currency || null;
+  }
+
   variant = signal<Variant | null>(null);
   activeImage = signal<string | null>(null);
   qty = 1;

@@ -179,6 +179,70 @@ are hidden in production and run in demo mode locally.
 See [docs/tenant-users-and-access.md](docs/tenant-users-and-access.md) for the
 permission catalog, API surface, safety rails and provider configuration.
 
+## Currency & conversion
+
+Money is stored per workspace in that workspace's own currency, and every rate
+is quoted against the platform base currency (`MARKETPLACE_CURRENCY`, `USD` by
+default) in the `currency_rates` table.
+
+When a tenant changes **Settings → Commerce defaults → Currency & conversion**,
+the API does not just relabel the number: `TenantCurrencyConverter` multiplies
+every stored money column for that tenant — products and variants, invoices and
+their line items, expenses, payments, purchase orders, journals, bank accounts,
+leads, opportunities, quotes, ad budgets and the money-shaped department goals —
+by the USD→GHS factor inside one transaction, stamps the new code on every
+per-row `currency` column, and records a `currency.changed` audit event. Prices
+of `$120` become `GH₵1,494`, not `GH₵120`. The settings screen previews the
+factor, the sample products and the record counts before you save, and a
+checkbox lets you skip conversion when prices are already quoted in the target
+currency.
+
+On the client, `CurrencyService` holds the active display currency and the rate
+table, and the `money` pipe replaces Angular's `currency` pipe everywhere:
+
+```html
+{{ amount | money }}               <!-- active display currency -->
+{{ invoice.total | money:invoice.currency }}  <!-- converted from its own currency -->
+```
+
+The tenant console points the display currency at the workspace setting (the
+header shows a chip with the active code), while the storefront offers a
+currency picker and converts each store's prices from the store currency.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/currency` | Public catalog: base currency, symbols, rates |
+| `GET /api/currency/convert?amount=&from=&to=` | Ad-hoc conversion |
+| `GET /api/tenant/currency` | Workspace currency + catalog |
+| `POST /api/tenant/currency/preview` | Dry run of a switch (factor, samples, record counts) |
+| `PATCH /api/tenant/settings` | `currency` + optional `convert_existing_prices` |
+| `PUT /api/admin/currency/rates` | Platform admin: edit the rate table |
+
+Seeded rates are indicative mid-market values (`CurrencySeeder`); point
+`CurrencyService::updateRates()` at a live feed in production.
+
+## My profile & activity tracking
+
+Everyone who signs in has an account page at `/tenant/profile` (also reachable
+from the avatar menu):
+
+- **Profile details** — name, email, phone, job title, bio, timezone, avatar
+  upload and a personal display-currency preference.
+- **Activity** — their own slice of the audit trail: a 14-day sparkline, action
+  breakdown, filters and a readable timeline ("Created a product", "Signed in",
+  "Changed the workspace currency") with the raw before/after diff on demand.
+- **Security & sessions** — password change (which signs out every other
+  device) and the list of active bearer sessions with revoke controls.
+
+Model writes were already audited through the `Auditable` trait; `ActivityLogger`
+now adds the non-model events — `auth.login`, `auth.logout`, `auth.registered`,
+`profile.updated`, `profile.password_changed`, `profile.avatar_updated` and
+`currency.changed` — to the same `audit_logs` stream, and the
+`TrackUserActivity` middleware keeps `users.last_seen_at` fresh. Endpoints:
+`GET/PATCH /api/profile`, `POST /api/profile/password`,
+`POST /api/profile/avatar`, `GET /api/profile/activity`,
+`GET /api/profile/sessions`.
+
 ## Phase 1 coverage
 
 - Tenant registration, stores, categories, products, variants, images, inventory
@@ -192,3 +256,5 @@ permission catalog, API surface, safety rails and provider configuration.
 - Staff users, tenant settings, and JSON backups
 - Tenant access control: roles with checkbox permissions, per-user overrides, customer directory and customer social login (Google, Facebook, Apple, GitHub)
 - Service desk: support tickets with SLAs, live chat, service tasks and a tenant-facing help centre
+- Multi-currency: platform rate table, workspace currency switch that re-prices stored data, and a storefront currency picker
+- Per-user profile page with avatar, security settings and a personal activity timeline

@@ -43,6 +43,8 @@ const tenantConsoleChildren: Routes = [
   { path: 'departments/:dept', loadComponent: () => import('./features/seller/department.component').then((m) => m.SellerDepartmentComponent) },
   { path: 'users', loadComponent: () => import('./features/seller/users.component').then((m) => m.SellerUsersComponent) },
   { path: 'settings', loadComponent: () => import('./features/seller/settings.component').then((m) => m.SellerSettingsComponent) },
+  { path: 'profile', loadComponent: () => import('./features/seller/profile.component').then((m) => m.SellerProfileComponent) },
+  { path: 'account', redirectTo: 'profile', pathMatch: 'full' },
   { path: 'activity', loadComponent: () => import('./features/seller/activity.component').then((m) => m.SellerActivityComponent) },
   { path: 'logs', redirectTo: 'activity', pathMatch: 'full' },
   { path: 'backups', loadComponent: () => import('./features/seller/backups.component').then((m) => m.SellerBackupsComponent) },

@@ -1,7 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { CurrencyCatalog } from './currency.service';
 import {
   Address,
+  CurrencyConversionPreview,
+  ProfileActivityEntry,
+  ProfileActivityStats,
+  ProfilePayload,
+  ProfileSession,
+  ProfileUser,
   AccountingAccount,
   AccountingBankAccount,
   AccountingBankTransaction,
@@ -453,6 +460,53 @@ export class ApiService {
 
   removeStaff(id: number) {
     return this.http.delete<{ data: { ok: boolean } }>(`/api/tenant/staff/${id}`);
+  }
+
+  // ----------------------------- currency
+
+  /** Platform-wide rate table (public). */
+  currencyCatalog() {
+    return this.http.get<{ data: CurrencyCatalog }>('/api/currency');
+  }
+
+  /** The workspace's active currency plus the catalog. */
+  tenantCurrency() {
+    return this.http.get<{ data: CurrencyCatalog & { code: string; symbol: string; name: string; decimals: number; rate: number; converted_at: string | null } }>(
+      '/api/tenant/currency',
+    );
+  }
+
+  /** Dry run: what switching the workspace to `to` would re-price. */
+  previewCurrencyChange(to: string) {
+    return this.http.post<{ data: CurrencyConversionPreview }>('/api/tenant/currency/preview', { to });
+  }
+
+  // ----------------------------- my account
+
+  profile() {
+    return this.http.get<{ data: ProfilePayload }>('/api/profile');
+  }
+
+  updateProfile(payload: Partial<ProfileUser>) {
+    return this.http.patch<{ data: ProfilePayload }>('/api/profile', payload);
+  }
+
+  updateProfilePassword(payload: { current_password: string; password: string; password_confirmation: string }) {
+    return this.http.post<{ data: { ok: boolean; sessions_revoked: number } }>('/api/profile/password', payload);
+  }
+
+  uploadProfileAvatar(file: File) {
+    const form = new FormData();
+    form.append('avatar', file);
+    return this.http.post<{ data: { avatar_url: string } }>('/api/profile/avatar', form);
+  }
+
+  profileActivity(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<ProfileActivityEntry[]> & { stats: ProfileActivityStats }>('/api/profile/activity', { params });
+  }
+
+  profileSessions() {
+    return this.http.get<{ data: ProfileSession[] }>('/api/profile/sessions');
   }
 
   tenantSettings() {
