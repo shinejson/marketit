@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -11,13 +11,14 @@ import {
   SalesOpportunity,
   SalesQuote,
 } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type SalesPage = 'overview' | 'leads' | 'pipeline' | 'quotes' | 'customers';
 type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' | 'customer' | null;
 
 @Component({
   selector: 'app-seller-sales',
-  imports: [FormsModule, CurrencyPipe, DatePipe, RouterLink],
+  imports: [FormsModule, MoneyPipe, DatePipe, RouterLink],
   template: `
     <div class="sales-shell">
       <header class="page-head">
@@ -59,8 +60,8 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
               <section class="kpi-grid">
                 <article class="metric-card pipeline">
                   <div class="metric-top"><span class="metric-icon">◈</span><span class="trend">{{ d.kpis.open_opportunities }} open deals</span></div>
-                  <p>Open pipeline</p><h2>{{ d.kpis.pipeline_value | currency:d.currency:'symbol':'1.0-0' }}</h2>
-                  <small>Weighted forecast {{ d.kpis.weighted_forecast | currency:d.currency:'symbol':'1.0-0' }}</small>
+                  <p>Open pipeline</p><h2>{{ d.kpis.pipeline_value | money:d.currency:'symbol':'1.0-0' }}</h2>
+                  <small>Weighted forecast {{ d.kpis.weighted_forecast | money:d.currency:'symbol':'1.0-0' }}</small>
                 </article>
                 <article class="metric-card">
                   <div class="metric-top"><span class="metric-icon blue">◎</span><span class="trend">+{{ d.kpis.new_leads_30d }} in 30d</span></div>
@@ -69,11 +70,11 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
                 </article>
                 <article class="metric-card">
                   <div class="metric-top"><span class="metric-icon amber">↗</span><span class="trend">{{ d.kpis.open_quotes }} awaiting</span></div>
-                  <p>Open quotes</p><h2>{{ d.kpis.open_quotes_value | currency:d.currency:'symbol':'1.0-0' }}</h2>
+                  <p>Open quotes</p><h2>{{ d.kpis.open_quotes_value | money:d.currency:'symbol':'1.0-0' }}</h2>
                   <small>Sent and pending a decision</small>
                 </article>
                 <article class="metric-card">
-                  <div class="metric-top"><span class="metric-icon plum">◍</span><span class="trend" [class.warning]="d.kpis.win_rate < 40">{{ d.kpis.won_revenue_30d | currency:d.currency:'symbol':'1.0-0' }} won 30d</span></div>
+                  <div class="metric-top"><span class="metric-icon plum">◍</span><span class="trend" [class.warning]="d.kpis.win_rate < 40">{{ d.kpis.won_revenue_30d | money:d.currency:'symbol':'1.0-0' }} won 30d</span></div>
                   <p>Win rate</p><h2>{{ d.kpis.win_rate }}%</h2>
                   <small>Won vs lost opportunities, all time</small>
                 </article>
@@ -86,8 +87,8 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
                     @for (point of d.trend; track point.month) {
                       <div class="chart-column">
                         <div class="bars">
-                          <span class="bar opened" [style.height.%]="barHeight(point.opened, d)"><b>{{ point.opened | currency:d.currency:'symbol':'1.0-0' }}</b></span>
-                          <span class="bar booked" [style.height.%]="barHeight(point.won, d)"><b>{{ point.won | currency:d.currency:'symbol':'1.0-0' }}</b></span>
+                          <span class="bar opened" [style.height.%]="barHeight(point.opened, d)"><b>{{ point.opened | money:d.currency:'symbol':'1.0-0' }}</b></span>
+                          <span class="bar booked" [style.height.%]="barHeight(point.won, d)"><b>{{ point.won | money:d.currency:'symbol':'1.0-0' }}</b></span>
                         </div>
                         <small>{{ point.label }}</small>
                       </div>
@@ -99,14 +100,14 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
                   <div class="panel-head"><div><p class="overline">Funnel coverage</p><h3>Pipeline by stage</h3></div><a [routerLink]="salesLink('sales/pipeline')">Open pipeline →</a></div>
                   @for (stage of openStages(d); track stage.stage) {
                     <div class="funnel-row">
-                      <div><span>{{ stage.label }}</span><strong>{{ stage.value | currency:d.currency:'symbol':'1.0-0' }}</strong></div>
+                      <div><span>{{ stage.label }}</span><strong>{{ stage.value | money:d.currency:'symbol':'1.0-0' }}</strong></div>
                       <div class="progress"><span [style.width.%]="stageWidth(stage.value, d)"></span></div>
                       <small>{{ stage.count }} deal{{ stage.count === 1 ? '' : 's' }} · {{ stage.probability }}% weighted</small>
                     </div>
                   }
                   <div class="funnel-foot">
                     <span class="won-chip">✓ {{ stageOf(d, 'won').count }} won</span>
-                    <span>{{ stageOf(d, 'won').value | currency:d.currency:'symbol':'1.0-0' }} closed-won</span>
+                    <span>{{ stageOf(d, 'won').value | money:d.currency:'symbol':'1.0-0' }} closed-won</span>
                   </div>
                 </article>
               </section>
@@ -119,7 +120,7 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
                     <div class="activity-row">
                       <span [class]="'activity-icon ' + item.type">{{ item.type === 'lead' ? '◎' : item.type === 'opportunity' ? '◈' : '↗' }}</span>
                       <div><strong>{{ item.title }}</strong><small>{{ item.type.replace('_', ' ') }} · {{ item.at | date:'MMM d, h:mm a' }}</small></div>
-                      <div class="activity-value"><strong>{{ item.amount | currency:d.currency:'symbol':'1.0-0' }}</strong><span [class]="'status ' + item.status">{{ pretty(item.status) }}</span></div>
+                      <div class="activity-value"><strong>{{ item.amount | money:d.currency:'symbol':'1.0-0' }}</strong><span [class]="'status ' + item.status">{{ pretty(item.status) }}</span></div>
                     </div>
                   }
                 </article>
@@ -148,7 +149,7 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
                       <div class="account-chip">
                         <span class="avatar">{{ initials(account.name) }}</span>
                         <div><strong>{{ account.company || account.name }}</strong><small>{{ account.open_deals_count }} open deal{{ account.open_deals_count === 1 ? '' : 's' }}</small></div>
-                        <b>{{ account.won_total | currency:d.currency:'symbol':'1.0-0' }} <small>won</small></b>
+                        <b>{{ account.won_total | money:d.currency:'symbol':'1.0-0' }} <small>won</small></b>
                       </div>
                     }
                   </div>
@@ -162,7 +163,7 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
               <div><span class="summary-icon new">◎</span><p>New this view</p><strong>{{ countByStatus('new') }}</strong></div>
               <div><span class="summary-icon qualified">◍</span><p>Qualified</p><strong>{{ countByStatus('qualified') }}</strong></div>
               <div><span class="summary-icon conv">✓</span><p>Converted</p><strong>{{ countByStatus('converted') }}</strong></div>
-              <div><span class="summary-icon value">≈</span><p>Leads pipeline</p><strong>{{ leadEstValue() | currency:currency() }}</strong></div>
+              <div><span class="summary-icon value">≈</span><p>Leads pipeline</p><strong>{{ leadEstValue() | money:currency() }}</strong></div>
             </section>
             <section class="process-rail">
               <div><span>1</span><b>New</b><small>Fresh inbound interest</small></div><i>→</i>
@@ -186,7 +187,7 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
                       <td><span class="category-chip">{{ pretty(lead.source) }}</span></td>
                       <td>{{ lead.owner?.name || 'Unassigned' }}</td>
                       <td><span [class]="'status ' + lead.status">{{ pretty(lead.status) }}</span></td>
-                      <td class="right"><strong>{{ lead.estimated_value | currency:lead.currency }}</strong></td>
+                      <td class="right"><strong>{{ lead.estimated_value | money:lead.currency }}</strong></td>
                       <td class="actions">
                         @if (lead.status === 'new') { <button type="button" (click)="advanceLead(lead, 'contacted')">Log contact</button><button type="button" (click)="advanceLead(lead, 'qualified')">Qualify</button> }
                         @if (lead.status === 'contacted') { <button type="button" (click)="advanceLead(lead, 'qualified')">Qualify</button> }
@@ -207,14 +208,14 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
               @for (stage of stages; track stage.key) {
                 <button type="button" [class.active]="statusFilter === stage.key" (click)="filterStage(stage.key)">
                   <span [class]="'stage-dot ' + stage.key"></span>
-                  <div><b>{{ stage.label }}</b><small>{{ stageCount(stage.key) }} deals · {{ stageValue(stage.key) | currency:currency() }}</small></div>
+                  <div><b>{{ stage.label }}</b><small>{{ stageCount(stage.key) }} deals · {{ stageValue(stage.key) | money:currency() }}</small></div>
                 </button>
               }
             </section>
             <section class="summary-strip">
-              <div><span class="summary-icon new">◈</span><p>Open pipeline</p><strong>{{ openPipelineSummary().value | currency:currency() }}</strong></div>
-              <div><span class="summary-icon value">≈</span><p>Weighted forecast</p><strong>{{ openPipelineSummary().weighted | currency:currency() }}</strong></div>
-              <div><span class="summary-icon conv">✓</span><p>Average open deal</p><strong>{{ openPipelineSummary().average | currency:currency() }}</strong></div>
+              <div><span class="summary-icon new">◈</span><p>Open pipeline</p><strong>{{ openPipelineSummary().value | money:currency() }}</strong></div>
+              <div><span class="summary-icon value">≈</span><p>Weighted forecast</p><strong>{{ openPipelineSummary().weighted | money:currency() }}</strong></div>
+              <div><span class="summary-icon conv">✓</span><p>Average open deal</p><strong>{{ openPipelineSummary().average | money:currency() }}</strong></div>
             </section>
             <section class="table-panel panel">
               <div class="table-toolbar">
@@ -232,7 +233,7 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
                       <td>{{ deal.owner?.name || 'Unassigned' }}</td>
                       <td>{{ deal.expected_close_date ? (deal.expected_close_date | date:'MMM d, y') : '—' }}</td>
                       <td><span [class]="'status ' + deal.stage">{{ pretty(deal.stage) }}</span>@if (deal.lost_reason) { <small class="lost-reason">{{ deal.lost_reason }}</small> }</td>
-                      <td class="right"><strong>{{ deal.expected_value | currency:deal.currency }}</strong></td>
+                      <td class="right"><strong>{{ deal.expected_value | money:deal.currency }}</strong></td>
                       <td class="right">{{ deal.probability }}%</td>
                       <td class="actions">
                         @if (nextStage(deal); as next) { <button type="button" (click)="advanceDeal(deal, next.key)">{{ next.label }}</button> }
@@ -251,10 +252,10 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
 
           @case ('quotes') {
             <section class="summary-strip">
-              <div><span class="summary-icon new">◌</span><p>Draft value</p><strong>{{ quoteSum('draft') | currency:currency() }}</strong></div>
-              <div><span class="summary-icon qualified">↗</span><p>Awaiting decision</p><strong>{{ quoteSum('sent') | currency:currency() }}</strong></div>
-              <div><span class="summary-icon conv">✓</span><p>Accepted</p><strong>{{ quoteSum('accepted') | currency:currency() }}</strong></div>
-              <div><span class="summary-icon out">×</span><p>Lost quotes</p><strong>{{ quoteSum('declined') + quoteSum('expired') | currency:currency() }}</strong></div>
+              <div><span class="summary-icon new">◌</span><p>Draft value</p><strong>{{ quoteSum('draft') | money:currency() }}</strong></div>
+              <div><span class="summary-icon qualified">↗</span><p>Awaiting decision</p><strong>{{ quoteSum('sent') | money:currency() }}</strong></div>
+              <div><span class="summary-icon conv">✓</span><p>Accepted</p><strong>{{ quoteSum('accepted') | money:currency() }}</strong></div>
+              <div><span class="summary-icon out">×</span><p>Lost quotes</p><strong>{{ quoteSum('declined') + quoteSum('expired') | money:currency() }}</strong></div>
             </section>
             <section class="table-panel panel">
               <div class="table-toolbar">
@@ -276,7 +277,7 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
                       <td>{{ quote.issue_date | date:'MMM d, y' }}</td><td>{{ quote.expiry_date | date:'MMM d, y' }}</td>
                       <td>@if (quote.opportunity) { <strong>{{ quote.opportunity.number }}</strong><small>{{ quote.opportunity.title }}</small> } @else { <span class="muted-cell">Not linked</span> }</td>
                       <td><span [class]="'status ' + quote.status">{{ quote.status === 'draft' && quote.source === 'customer_request' ? 'Awaiting pricing' : pretty(quote.status) }}</span></td>
-                      <td class="right"><strong>{{ quote.total | currency:quote.currency }}</strong></td>
+                      <td class="right"><strong>{{ quote.total | money:quote.currency }}</strong></td>
                       <td class="actions">
                         @if (quote.status === 'draft') { <button type="button" [class.primary-action]="quote.source === 'customer_request'" (click)="openEditQuote(quote)">{{ quote.source === 'customer_request' ? 'Review & price' : 'Edit' }}</button> }
                         @if (quote.status === 'draft') { <button type="button" (click)="transitionQuote(quote, 'sent')">Send</button> }
@@ -307,7 +308,7 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
                   </dl>
                   <footer>
                     <span>{{ customer.open_deals_count || 0 }} open deals</span>
-                    <span>{{ customer.won_total || 0 | currency:customer.currency }} won</span>
+                    <span>{{ customer.won_total || 0 | money:customer.currency }} won</span>
                   </footer>
                 </article>
               } @empty { <div class="panel empty-state"><b>No customers yet</b><span>Convert a qualified lead or add a customer directly.</span></div> }
@@ -332,7 +333,7 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
           }
 
           @if (drawer() === 'convert') {
-            <div class="payment-context"><span>Converting</span><strong>{{ selectedLead()?.name }}</strong><p>{{ selectedLead()?.company || 'Independent' }}</p><div><small>Estimated value</small><b>{{ selectedLead()?.estimated_value | currency:selectedLead()?.currency }}</b></div></div>
+            <div class="payment-context"><span>Converting</span><strong>{{ selectedLead()?.name }}</strong><p>{{ selectedLead()?.company || 'Independent' }}</p><div><small>Estimated value</small><b>{{ selectedLead()?.estimated_value | money:selectedLead()?.currency }}</b></div></div>
             <form id="sales-form" (ngSubmit)="convertLead()">
               <div class="form-grid two"><label>Customer name<input required [(ngModel)]="convertForm.customer_name" name="c_name" /></label><label>Company<input [(ngModel)]="convertForm.customer_company" name="c_company" /></label></div>
               <div class="form-grid two"><label>Email<input type="email" [(ngModel)]="convertForm.customer_email" name="c_email" /></label><label>Phone<input [(ngModel)]="convertForm.customer_phone" name="c_phone" /></label></div>
@@ -355,7 +356,7 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
           }
 
           @if (drawer() === 'loseOpportunity') {
-            <div class="payment-context lost"><span>Marking lost</span><strong>{{ selectedOpportunity()?.number }}</strong><p>{{ selectedOpportunity()?.title }}</p><div><small>Pipeline value removed</small><b>{{ selectedOpportunity()?.expected_value | currency:selectedOpportunity()?.currency }}</b></div></div>
+            <div class="payment-context lost"><span>Marking lost</span><strong>{{ selectedOpportunity()?.number }}</strong><p>{{ selectedOpportunity()?.title }}</p><div><small>Pipeline value removed</small><b>{{ selectedOpportunity()?.expected_value | money:selectedOpportunity()?.currency }}</b></div></div>
             <form id="sales-form" (ngSubmit)="loseOpportunity()">
               <label>Reason lost<input required [(ngModel)]="loseForm.lost_reason" name="lost_reason" placeholder="e.g. Chosen a competitor on price" /></label>
               <div class="control-note"><span>i</span><p><b>Win/loss hygiene</b>Honest loss reasons power better forecasting and coaching.</p></div>
@@ -380,7 +381,7 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
                   </div>
                 }
               </div>
-              <div class="totals"><div><span>Subtotal</span><b>{{ quoteSubtotal() | currency:quoteForm.currency }}</b></div><div><span>Tax</span><b>{{ quoteTax() | currency:quoteForm.currency }}</b></div><div class="grand"><span>Total</span><b>{{ quoteSubtotal() + quoteTax() | currency:quoteForm.currency }}</b></div></div>
+              <div class="totals"><div><span>Subtotal</span><b>{{ quoteSubtotal() | money:quoteForm.currency }}</b></div><div><span>Tax</span><b>{{ quoteTax() | money:quoteForm.currency }}</b></div><div class="grand"><span>Total</span><b>{{ quoteSubtotal() + quoteTax() | money:quoteForm.currency }}</b></div></div>
               <label class="textarea-label">Notes<textarea [(ngModel)]="quoteForm.notes" name="q_notes" rows="3" placeholder="Validity terms, scope, delivery promise…"></textarea></label>
               <label class="check"><input type="checkbox" [(ngModel)]="quoteForm.send_now" name="q_send" /><span><b>Mark ready to send</b><small>Moves this quote out of draft so it can be accepted</small></span></label>
             </form>

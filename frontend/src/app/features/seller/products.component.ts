@@ -1,4 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -16,6 +15,7 @@ import {
   TenantProduct,
   TenantProductImage,
 } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type ViewMode = 'table' | 'grid';
 type EditorTab = 'overview' | 'pricing' | 'inventory' | 'specs' | 'logistics' | 'media' | 'seo';
@@ -69,7 +69,7 @@ const PRESET_GLYPHS: Record<string, string> = {
 
 @Component({
   selector: 'app-seller-products',
-  imports: [FormsModule, CurrencyPipe, RouterLink],
+  imports: [FormsModule, MoneyPipe, RouterLink],
   template: `
     <div class="catalog-shell">
       <header class="page-head">
@@ -132,8 +132,8 @@ const PRESET_GLYPHS: Record<string, string> = {
         </article>
         <article class="metric-card value">
           <div class="metric-top"><span class="metric-icon gold">◈</span></div>
-          <p>Retail stock value</p><h2>{{ stats()?.retail_value ?? 0 | currency:currency():'symbol':'1.0-0' }}</h2>
-          <small>Cost {{ stats()?.inventory_cost ?? 0 | currency:currency():'symbol':'1.0-0' }}</small>
+          <p>Retail stock value</p><h2>{{ stats()?.retail_value ?? 0 | money:currency():'symbol':'1.0-0' }}</h2>
+          <small>Cost {{ stats()?.inventory_cost ?? 0 | money:currency():'symbol':'1.0-0' }}</small>
         </article>
       </section>
 
@@ -259,9 +259,9 @@ const PRESET_GLYPHS: Record<string, string> = {
                         @if (product.min_order_qty > 1) { <small>Min {{ product.min_order_qty }}</small> }
                       </td>
                       <td class="right financial-cell">
-                        <div><span>Price</span><b>{{ +product.price | currency:currencyOf(product):'symbol':'1.2-2' }}</b></div>
+                        <div><span>Price</span><b>{{ +product.price | money:currencyOf(product):'symbol':'1.2-2' }}</b></div>
                         @if (+(product.compare_at_price || 0) > +product.price) {
-                          <div><span>Was</span><b class="strike">{{ +(product.compare_at_price || 0) | currency:currencyOf(product):'symbol':'1.2-2' }}</b></div>
+                          <div><span>Was</span><b class="strike">{{ +(product.compare_at_price || 0) | money:currencyOf(product):'symbol':'1.2-2' }}</b></div>
                         }
                         @if (product.margin_percent !== null && product.margin_percent !== undefined) {
                           <div class="net"><span>Margin</span><b>{{ product.margin_percent }}%</b></div>
@@ -330,10 +330,10 @@ const PRESET_GLYPHS: Record<string, string> = {
                     <h3>{{ product.name }}</h3>
                     <p class="card-sub">{{ product.short_description || product.category?.name || unitLabel(product.unit) }}</p>
                     <div class="card-price">
-                      <b>{{ +product.price | currency:currencyOf(product):'symbol':'1.2-2' }}</b>
+                      <b>{{ +product.price | money:currencyOf(product):'symbol':'1.2-2' }}</b>
                       <span class="per">/ {{ unitShort(product.unit) }}</span>
                       @if (+(product.compare_at_price || 0) > +product.price) {
-                        <span class="strike">{{ +(product.compare_at_price || 0) | currency:currencyOf(product):'symbol':'1.0-0' }}</span>
+                        <span class="strike">{{ +(product.compare_at_price || 0) | money:currencyOf(product):'symbol':'1.0-0' }}</span>
                       }
                     </div>
                     <div class="card-foot">
@@ -502,9 +502,9 @@ const PRESET_GLYPHS: Record<string, string> = {
                 </div>
 
                 <div class="margin-card">
-                  <div><span>Unit price</span><b>{{ +(draft.price || 0) | currency:currency():'symbol':'1.2-2' }}</b></div>
-                  <div><span>Unit cost</span><b>{{ +(draft.cost_price || 0) | currency:currency():'symbol':'1.2-2' }}</b></div>
-                  <div><span>Profit / unit</span><b>{{ unitProfit() | currency:currency():'symbol':'1.2-2' }}</b></div>
+                  <div><span>Unit price</span><b>{{ +(draft.price || 0) | money:currency():'symbol':'1.2-2' }}</b></div>
+                  <div><span>Unit cost</span><b>{{ +(draft.cost_price || 0) | money:currency():'symbol':'1.2-2' }}</b></div>
+                  <div><span>Profit / unit</span><b>{{ unitProfit() | money:currency():'symbol':'1.2-2' }}</b></div>
                   <div class="grand"><span>Margin</span><b>{{ marginPreview() === null ? '—' : marginPreview() + '%' }}</b></div>
                 </div>
                 @if (discountPreview() > 0) {

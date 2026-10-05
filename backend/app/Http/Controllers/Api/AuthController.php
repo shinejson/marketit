@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserRole;
 use App\Services\Domains\DomainService;
+use App\Support\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -41,8 +42,13 @@ class AuthController extends Controller
         }
 
         $token = $this->issueToken($user, 'marketplace');
-        $user->forceFill(['last_login_at' => now()])->saveQuietly();
+        $user->forceFill(['last_login_at' => now(), 'last_seen_at' => now()])->saveQuietly();
         $user->load('roles', 'socialIdentities');
+        ActivityLogger::record('auth.registered', [
+            'subject_type' => User::class,
+            'subject_id' => $user->id,
+            'after' => ['portal' => 'marketplace', 'user_agent' => $request->userAgent()],
+        ], $user);
 
         return response()->json([
             'data' => [
@@ -77,7 +83,12 @@ class AuthController extends Controller
         $this->assertPortalAccess($request, $domains, $user, $data['portal'] ?? 'marketplace');
 
         $token = $this->issueToken($user, $data['portal'] ?? 'marketplace');
-        $user->forceFill(['last_login_at' => now()])->saveQuietly();
+        $user->forceFill(['last_login_at' => now(), 'last_seen_at' => now()])->saveQuietly();
+        ActivityLogger::record('auth.login', [
+            'subject_type' => User::class,
+            'subject_id' => $user->id,
+            'after' => ['portal' => $data['portal'] ?? 'marketplace', 'user_agent' => $request->userAgent()],
+        ], $user);
 
         return response()->json([
             'data' => [
@@ -96,6 +107,12 @@ class AuthController extends Controller
         } else {
             $user->currentAccessToken()?->delete();
         }
+
+        ActivityLogger::record('auth.logout', [
+            'subject_type' => User::class,
+            'subject_id' => $user->id,
+            'after' => ['all_sessions' => $request->boolean('all_sessions')],
+        ], $user);
 
         return response()->json(['data' => ['ok' => true]]);
     }

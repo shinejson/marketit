@@ -1,10 +1,11 @@
-import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AdCampaignRow, AdCampaignStatus, AdWorkspace, AdWorkspaceMeta, AdWorkspaceSummary } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type StatusFilter = '' | AdCampaignStatus;
 
@@ -37,7 +38,7 @@ interface CampaignForm {
 
 @Component({
   selector: 'app-seller-ads',
-  imports: [FormsModule, CurrencyPipe, DecimalPipe, DatePipe, RouterLink],
+  imports: [FormsModule, MoneyPipe, DecimalPipe, DatePipe, RouterLink],
   template: `
     <div class="ads-shell">
       <header class="page-head">
@@ -74,7 +75,7 @@ interface CampaignForm {
           <div>
             <strong>Your ad wallet is running low</strong>
             <p>
-              {{ summary()?.wallet_balance ?? 0 | currency }} left
+              {{ summary()?.wallet_balance ?? 0 | money }} left
               @if (summary()?.runway_days !== null) { · about {{ summary()?.runway_days }} day(s) at the current daily budget }
             </p>
           </div>
@@ -85,7 +86,7 @@ interface CampaignForm {
       <section class="kpi-grid">
         <article class="metric-card value">
           <div class="metric-top"><span class="metric-icon gold">◈</span></div>
-          <p>Ad wallet</p><h2>{{ summary()?.wallet_balance ?? 0 | currency }}</h2>
+          <p>Ad wallet</p><h2>{{ summary()?.wallet_balance ?? 0 | money }}</h2>
           <small>
             @if (summary()?.runway_days !== null && summary()?.runway_days !== undefined) {
               ≈ {{ summary()?.runway_days }} days of runway
@@ -109,8 +110,8 @@ interface CampaignForm {
         </article>
         <article class="metric-card">
           <div class="metric-top"><span class="metric-icon amber">₵</span></div>
-          <p>Spend</p><h2>{{ summary()?.spend ?? 0 | currency }}</h2>
-          <small>Avg CPC {{ summary()?.avg_cpc ?? 0 | currency:'USD':'symbol':'1.2-4' }}</small>
+          <p>Spend</p><h2>{{ summary()?.spend ?? 0 | money }}</h2>
+          <small>Avg CPC {{ summary()?.avg_cpc ?? 0 | money:'':'symbol':'1.2-4' }}</small>
         </article>
       </section>
 
@@ -140,12 +141,12 @@ interface CampaignForm {
         <section class="panel wallet-panel" id="wallet">
           <div class="panel-head"><div><p class="overline">Billing</p><h3>Wallet</h3></div></div>
           <div class="wallet-body">
-            <p class="balance">{{ summary()?.wallet_balance ?? 0 | currency }}</p>
-            <p class="muted">Committed {{ summary()?.daily_committed ?? 0 | currency }} per day across active campaigns.</p>
+            <p class="balance">{{ summary()?.wallet_balance ?? 0 | money }}</p>
+            <p class="muted">Committed {{ summary()?.daily_committed ?? 0 | money }} per day across active campaigns.</p>
             <form class="fund-form" (ngSubmit)="fund()">
               <div class="presets">
                 @for (amount of fundPresets; track amount) {
-                  <button type="button" [class.on]="fundAmount === amount" (click)="fundAmount = amount">{{ amount | currency:'USD':'symbol':'1.0-0' }}</button>
+                  <button type="button" [class.on]="fundAmount === amount" (click)="fundAmount = amount">{{ amount | money:'':'symbol':'1.0-0' }}</button>
                 }
               </div>
               <div class="fund-row">
@@ -159,7 +160,7 @@ interface CampaignForm {
                 @for (entry of ledger(); track entry.id) {
                   <li>
                     <span>{{ entry.kind }}</span>
-                    <b>{{ entry.amount | currency:'USD':'symbol':'1.2-4' }}</b>
+                    <b>{{ entry.amount | money:'':'symbol':'1.2-4' }}</b>
                     <time>{{ entry.created_at | date:'MMM d' }}</time>
                   </li>
                 }
@@ -236,18 +237,18 @@ interface CampaignForm {
                           <i [class.hot]="c.budget_used_percent >= 85" [style.width.%]="clamp(c.budget_used_percent)"></i>
                         </div>
                         <small>
-                          {{ c.spent_total | currency:'USD':'symbol':'1.0-2' }} of {{ c.total_budget | currency:'USD':'symbol':'1.0-0' }}
-                          · today {{ c.spent_today | currency:'USD':'symbol':'1.0-2' }} / {{ c.daily_budget | currency:'USD':'symbol':'1.0-0' }}
+                          {{ c.spent_total | money:'':'symbol':'1.0-2' }} of {{ c.total_budget | money:'':'symbol':'1.0-0' }}
+                          · today {{ c.spent_today | money:'':'symbol':'1.0-2' }} / {{ c.daily_budget | money:'':'symbol':'1.0-0' }}
                         </small>
                       </div>
                     </td>
-                    <td class="right">{{ c.bid_cpc | currency:'USD':'symbol':'1.2-4' }}</td>
+                    <td class="right">{{ c.bid_cpc | money:'':'symbol':'1.2-4' }}</td>
                     <td class="right">{{ c.metrics.impressions | number }}</td>
                     <td class="right">{{ c.metrics.clicks | number }}</td>
                     <td class="right">{{ c.metrics.ctr | number:'1.0-2' }}%</td>
                     <td class="right">
-                      <strong>{{ c.metrics.spend | currency }}</strong>
-                      <small>CPC {{ c.metrics.avg_cpc | currency:'USD':'symbol':'1.2-4' }}</small>
+                      <strong>{{ c.metrics.spend | money }}</strong>
+                      <small>CPC {{ c.metrics.avg_cpc | money:'':'symbol':'1.2-4' }}</small>
                     </td>
                     <td class="right actions-cell">
                       <button class="row-btn" type="button" (click)="toggleStatus(c)" [disabled]="savingId() === c.id">
@@ -277,7 +278,7 @@ interface CampaignForm {
                     <td class="right">{{ p.impressions | number }}</td>
                     <td class="right">{{ p.clicks | number }}</td>
                     <td class="right">{{ p.impressions ? (p.clicks / p.impressions * 100 | number:'1.0-2') : 0 }}%</td>
-                    <td class="right">{{ p.spend | currency }}</td>
+                    <td class="right">{{ p.spend | money }}</td>
                   </tr>
                 }
               </tbody>
@@ -333,7 +334,7 @@ interface CampaignForm {
                   <label class="pick-row">
                     <input type="checkbox" [checked]="form.product_ids.includes(p.id)" (change)="toggleProduct(p.id)" />
                     <span>{{ p.name }}</span>
-                    <b>{{ p.price | currency }}</b>
+                    <b>{{ p.price | money }}</b>
                   </label>
                 }
               </div>
@@ -341,7 +342,7 @@ interface CampaignForm {
 
             <p class="preview">
               Estimated reach: <strong>{{ estimatedClicks() }}</strong> clicks per day
-              <span class="muted">at {{ form.bid_cpc | currency:'USD':'symbol':'1.2-4' }} CPC on a {{ form.daily_budget | currency:'USD':'symbol':'1.0-0' }} daily budget.</span>
+              <span class="muted">at {{ form.bid_cpc | money:'':'symbol':'1.2-4' }} CPC on a {{ form.daily_budget | money:'':'symbol':'1.0-0' }} daily budget.</span>
             </p>
 
             <div class="drawer-actions">

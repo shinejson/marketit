@@ -1,15 +1,16 @@
 import { Component, inject, signal } from '@angular/core';
-import { CurrencyPipe, DatePipe, DecimalPipe, TitleCasePipe } from '@angular/common';
+import { DatePipe, DecimalPipe, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 import { Invoice, Plan, Subscription, SubscriptionStats, TenantApplication } from '../../core/models';
 import { BarChartComponent, DonutChartComponent, LineChartComponent } from '../../shared/charts.component';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type Tab = 'subscriptions' | 'plans' | 'invoices';
 
 @Component({
   selector: 'app-admin-subscriptions',
-  imports: [FormsModule, CurrencyPipe, DatePipe, DecimalPipe, TitleCasePipe, LineChartComponent, BarChartComponent, DonutChartComponent],
+  imports: [FormsModule, MoneyPipe, DatePipe, DecimalPipe, TitleCasePipe, LineChartComponent, BarChartComponent, DonutChartComponent],
   template: `
     <header class="head">
       <div>
@@ -27,14 +28,14 @@ type Tab = 'subscriptions' | 'plans' | 'invoices';
 
     @if (stats(); as s) {
       <div class="grid kpis">
-        <div class="card kpi"><p class="muted label">MRR</p><strong>{{ s.mrr | currency: 'USD' }}</strong></div>
-        <div class="card kpi"><p class="muted label">ARR</p><strong>{{ s.arr | currency: 'USD' }}</strong></div>
-        <div class="card kpi"><p class="muted label">ARPA</p><strong>{{ s.arpa | currency: 'USD' }}</strong></div>
+        <div class="card kpi"><p class="muted label">MRR</p><strong>{{ s.mrr | money:'' }}</strong></div>
+        <div class="card kpi"><p class="muted label">ARR</p><strong>{{ s.arr | money:'' }}</strong></div>
+        <div class="card kpi"><p class="muted label">ARPA</p><strong>{{ s.arpa | money:'' }}</strong></div>
         <div class="card kpi"><p class="muted label">Active</p><strong>{{ s.active | number }}</strong></div>
         <div class="card kpi"><p class="muted label">Trialing</p><strong>{{ s.trialing | number }}</strong></div>
         <div class="card kpi"><p class="muted label">Churn</p><strong>{{ s.churn_rate | number: '1.0-1' }}%</strong></div>
-        <div class="card kpi"><p class="muted label">Outstanding</p><strong>{{ s.outstanding | currency: 'USD' }}</strong></div>
-        <div class="card kpi"><p class="muted label">Collected</p><strong>{{ s.collected | currency: 'USD' }}</strong></div>
+        <div class="card kpi"><p class="muted label">Outstanding</p><strong>{{ s.outstanding | money:'' }}</strong></div>
+        <div class="card kpi"><p class="muted label">Collected</p><strong>{{ s.collected | money:'' }}</strong></div>
       </div>
 
       <div class="grid two">
@@ -73,7 +74,7 @@ type Tab = 'subscriptions' | 'plans' | 'invoices';
               <label>Plan</label>
               <select [(ngModel)]="assignPlan" name="plan">
                 <option [ngValue]="null">Select…</option>
-                @for (p of plans(); track p.id) { <option [ngValue]="p.id">{{ p.name }} — {{ +p.price | currency: 'USD' }}/{{ p.interval }}</option> }
+                @for (p of plans(); track p.id) { <option [ngValue]="p.id">{{ p.name }} — {{ +p.price | money:'' }}/{{ p.interval }}</option> }
               </select>
             </div>
             <div class="field">
@@ -96,7 +97,7 @@ type Tab = 'subscriptions' | 'plans' | 'invoices';
               <tr>
                 <td><strong>{{ s.tenant?.business_name || s.tenant?.name || 'Tenant #' + s.tenant_id }}</strong></td>
                 <td>{{ s.plan?.name || '—' }}</td>
-                <td>{{ +s.amount | currency: 'USD' }} <span class="muted small">/ {{ s.interval }}</span></td>
+                <td>{{ +s.amount | money:'' }} <span class="muted small">/ {{ s.interval }}</span></td>
                 <td>
                   <select class="inline" [ngModel]="s.status" (ngModelChange)="changeStatus(s, $event)">
                     @for (st of statuses; track st) { <option [value]="st">{{ st | titlecase }}</option> }
@@ -171,8 +172,8 @@ type Tab = 'subscriptions' | 'plans' | 'invoices';
               <div><h3>{{ p.name }}</h3><span class="muted small">{{ p.description || 'A focused toolkit for growing stores.' }}</span></div>
               <span class="pill">{{ p.is_active ? 'active' : 'archived' }}</span>
             </div>
-            <p class="price">{{ displayPrice(p) | currency: p.currency }}<span class="muted small"> / {{ pricingCycle() === 'annual' ? 'year' : 'month' }}</span></p>
-            @if (pricingCycle() === 'annual') { <p class="saving">Annual view · {{ monthlyEquivalent(p) | currency: p.currency }}/mo equivalent</p> }
+            <p class="price">{{ displayPrice(p) | money: p.currency }}<span class="muted small"> / {{ pricingCycle() === 'annual' ? 'year' : 'month' }}</span></p>
+            @if (pricingCycle() === 'annual') { <p class="saving">Annual view · {{ monthlyEquivalent(p) | money: p.currency }}/mo equivalent</p> }
             <div class="plan-rule"></div>
             <ul class="feature-list">
               <li><b>✓</b>{{ p.commission_rate }}% commission</li>
@@ -214,7 +215,7 @@ type Tab = 'subscriptions' | 'plans' | 'invoices';
                 <td><strong>{{ i.number }}</strong></td>
                 <td>{{ i.tenant?.business_name || i.tenant?.name || '—' }}</td>
                 <td>{{ i.subscription?.plan?.name || '—' }}</td>
-                <td>{{ +i.amount | currency: 'USD' }}</td>
+                <td>{{ +i.amount | money:'' }}</td>
                 <td class="muted small">{{ i.issued_at | date: 'MMM d, y' }}</td>
                 <td><span class="pill" [class]="'pill ' + i.status">{{ i.status | titlecase }}</span></td>
                 <td class="actions">

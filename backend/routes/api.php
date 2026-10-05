@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\CurrencyController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DepartmentDashboardController;
 use App\Http\Controllers\Api\SocialAuthController;
@@ -66,6 +68,13 @@ Route::prefix('market')->middleware('throttle:60,1')->group(function () {
     Route::post('/ads/click/{impression}', [MarketController::class, 'click']);
 });
 
+// Currency catalog + ad-hoc conversion. Public: the storefront formats prices
+// with it before anyone signs in.
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/currency', [CurrencyController::class, 'index']);
+    Route::get('/currency/convert', [CurrencyController::class, 'convert']);
+});
+
 Route::post('/payments/webhook/{gateway}', [PaymentController::class, 'webhook'])->middleware('throttle:120,1');
 Route::get('/payments/methods', [PaymentController::class, 'methods'])->middleware('throttle:60,1');
 Route::get('/payments/mock/pay', [PaymentController::class, 'mockPay']);
@@ -78,6 +87,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::get('/auth/social/identities', [SocialAuthController::class, 'identities']);
     Route::delete('/auth/social/identities/{identity}', [SocialAuthController::class, 'unlink']);
+
+    // My account: profile, security and personal activity trail.
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::patch('/profile', [ProfileController::class, 'update']);
+    Route::post('/profile/password', [ProfileController::class, 'updatePassword']);
+    Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
+    Route::get('/profile/activity', [ProfileController::class, 'activity']);
+    Route::get('/profile/sessions', [ProfileController::class, 'sessions']);
 
     Route::post('/tenants/register', [TenantController::class, 'register']);
     Route::get('/tenants/mine', [TenantController::class, 'mine']);
@@ -119,6 +136,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/stores/{store}', [TenantController::class, 'showStore']);
         Route::patch('/stores/{store}', [TenantController::class, 'updateStore']);
         Route::delete('/stores/{store}', [TenantController::class, 'destroyStore']);
+
+        // Workspace currency: active code, catalog, and a dry-run of what a
+        // switch would do to stored prices.
+        Route::get('/currency', [CurrencyController::class, 'active']);
+        Route::post('/currency/preview', [CurrencyController::class, 'preview']);
 
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::post('/categories', [CategoryController::class, 'store']);
@@ -335,6 +357,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/invoices', [AdminSubscriptionController::class, 'invoices']);
         Route::patch('/invoices/{invoice}', [AdminSubscriptionController::class, 'updateInvoice']);
+
+        Route::get('/currency', [CurrencyController::class, 'index']);
+        Route::put('/currency/rates', [CurrencyController::class, 'updateRates']);
 
         Route::get('/settings', [AdminSettingController::class, 'index']);
         Route::get('/settings/payment-status', [AdminSettingController::class, 'paymentStatus']);

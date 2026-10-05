@@ -1,21 +1,22 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { CurrencyPipe } from '@angular/common';
+
 import { ApiService } from '../../core/api.service';
 import { Address, CartPayload, PaymentMethodsPayload } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 @Component({
   selector: 'app-checkout',
-  imports: [FormsModule, CurrencyPipe],
+  imports: [FormsModule, MoneyPipe],
   template: `
     <div class="wrap page">
       <h1>Checkout</h1>
       @if (quote(); as q) {
         <p class="muted">
-          {{ q.groups.length }} store(s) · items {{ +q.totals.subtotal | currency }} · delivery {{ +q.totals.delivery_total | currency }}
-          @if (+q.totals.tax_total > 0) { · tax {{ +q.totals.tax_total | currency }} }
-          · <b>total {{ +q.totals.grand_total | currency }}</b>
+          {{ q.groups.length }} store(s) · items {{ +q.totals.subtotal | money }} · delivery {{ +q.totals.delivery_total | money }}
+          @if (+q.totals.tax_total > 0) { · tax {{ +q.totals.tax_total | money }} }
+          · <b>total {{ +q.totals.grand_total | money }}</b>
         </p>
       }
       <section class="card pad">

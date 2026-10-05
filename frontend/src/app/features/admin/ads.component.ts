@@ -1,8 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 import { MarketingCampaign, SocialAccount, SocialPlatform, SocialPost } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 interface PlatformMeta {
   key: SocialPlatform;
@@ -65,7 +66,7 @@ const DEMO_SPONSORED = [
 
 @Component({
   selector: 'app-admin-ads',
-  imports: [FormsModule, CurrencyPipe, DatePipe, DecimalPipe],
+  imports: [FormsModule, MoneyPipe, DatePipe, DecimalPipe],
   template: `
     <!-- ============================================================ head -->
     <div class="page-head">
@@ -93,7 +94,7 @@ const DEMO_SPONSORED = [
     <div class="kpis">
       <div class="card kpi">
         <p class="label">Ad spend</p>
-        <strong>{{ totalSpend() | currency }}</strong>
+        <strong>{{ totalSpend() | money }}</strong>
         <small class="muted">across {{ campaigns().length }} campaigns</small>
       </div>
       <div class="card kpi">
@@ -202,8 +203,8 @@ const DEMO_SPONSORED = [
                   <td><span class="pill st" [class]="'pill st ' + c.status">{{ c.status }}</span></td>
                   <td class="pace-cell">
                     <div class="pace-line">
-                      <span>{{ +c.spend | currency }}</span>
-                      <span class="muted">of {{ +(c.total_budget || 0) | currency }}</span>
+                      <span>{{ +c.spend | money }}</span>
+                      <span class="muted">of {{ +(c.total_budget || 0) | money }}</span>
                     </div>
                     <div class="pace"><i [style.width.%]="pacing(c)"></i></div>
                   </td>
@@ -343,7 +344,7 @@ const DEMO_SPONSORED = [
             <p class="muted small-txt">Tenant #{{ c.tenant_id }}</p>
             <div class="sp-foot">
               <span class="pill st" [class]="'pill st ' + c.status">{{ c.status }}</span>
-              <span class="price">{{ +c.spent_total | currency }}</span>
+              <span class="price">{{ +c.spent_total | money }}</span>
             </div>
           </div>
         } @empty {

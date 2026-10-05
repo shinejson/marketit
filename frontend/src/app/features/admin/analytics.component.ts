@@ -1,17 +1,18 @@
-import { CurrencyPipe, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AdminAnalytics, AdminInsight, AdminOverview, Kpi, SeriesPoint } from '../../core/models';
 import { LineChartComponent } from '../../shared/charts.component';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type TrendMetric = 'revenue' | 'orders';
 type FunnelKey = keyof AdminAnalytics['funnel'];
 
 @Component({
   selector: 'app-admin-analytics',
-  imports: [CurrencyPipe, DatePipe, DecimalPipe, PercentPipe, RouterLink, LineChartComponent],
+  imports: [MoneyPipe, DatePipe, DecimalPipe, PercentPipe, RouterLink, LineChartComponent],
   template: `
     <header class="page-head">
       <div>
@@ -79,7 +80,7 @@ type FunnelKey = keyof AdminAnalytics['funnel'];
               </div>
               <p class="metric-label">{{ card.label }}</p>
               @if (card.kpi.format === 'currency') {
-                <h2>{{ card.kpi.value | currency: 'USD': 'symbol': '1.0-0' }}</h2>
+                <h2>{{ card.kpi.value | money:'': 'symbol': '1.0-0' }}</h2>
               } @else {
                 <h2>{{ card.kpi.value | number }}</h2>
               }
@@ -115,9 +116,9 @@ type FunnelKey = keyof AdminAnalytics['funnel'];
               [color]="trendMetric() === 'revenue' ? '#c45c26' : '#1f4b3a'"
             />
             <div class="trend-facts">
-              <div><span>Daily average</span><strong>{{ trendMetric() === 'revenue' ? (trendAverage() | currency: 'USD': 'symbol': '1.0-0') : (trendAverage() | number: '1.0-1') }}</strong></div>
+              <div><span>Daily average</span><strong>{{ trendMetric() === 'revenue' ? (trendAverage() | money:'': 'symbol': '1.0-0') : (trendAverage() | number: '1.0-1') }}</strong></div>
               <div><span>Best day</span><strong>{{ trendBest()?.date | date: 'MMM d' }}</strong></div>
-              <div><span>Peak value</span><strong>{{ trendMetric() === 'revenue' ? (trendBest()?.value | currency: 'USD': 'symbol': '1.0-0') : (trendBest()?.value | number) }}</strong></div>
+              <div><span>Peak value</span><strong>{{ trendMetric() === 'revenue' ? (trendBest()?.value | money:'': 'symbol': '1.0-0') : (trendBest()?.value | number) }}</strong></div>
             </div>
           </article>
 
@@ -130,11 +131,11 @@ type FunnelKey = keyof AdminAnalytics['funnel'];
             <dl>
               <div>
                 <dt>Average order value</dt>
-                <dd>{{ averageOrderValue() | currency: 'USD': 'symbol': '1.0-2' }}</dd>
+                <dd>{{ averageOrderValue() | money:'': 'symbol': '1.0-2' }}</dd>
               </div>
               <div>
                 <dt>Commission earned</dt>
-                <dd>{{ kpiValue('commission') | currency: 'USD': 'symbol': '1.0-0' }}</dd>
+                <dd>{{ kpiValue('commission') | money:'': 'symbol': '1.0-0' }}</dd>
               </div>
               <div>
                 <dt>Platform take rate</dt>
@@ -215,10 +216,10 @@ type FunnelKey = keyof AdminAnalytics['funnel'];
                         <td><strong>{{ tenant.name }}</strong><small>Tenant #{{ tenant.tenant_id }}</small></td>
                         <td>{{ tenant.orders | number }}</td>
                         <td>
-                          <div class="revenue-cell"><strong>{{ tenant.revenue | currency: 'USD': 'symbol': '1.0-0' }}</strong><span>{{ tenantShare(tenant.revenue) | percent: '1.0-1' }}</span></div>
+                          <div class="revenue-cell"><strong>{{ tenant.revenue | money:'': 'symbol': '1.0-0' }}</strong><span>{{ tenantShare(tenant.revenue) | percent: '1.0-1' }}</span></div>
                           <div class="revenue-track"><i [style.width.%]="tenantBar(tenant.revenue)"></i></div>
                         </td>
-                        <td>{{ tenant.commission | currency: 'USD': 'symbol': '1.0-0' }}</td>
+                        <td>{{ tenant.commission | money:'': 'symbol': '1.0-0' }}</td>
                       </tr>
                     }
                   </tbody>
@@ -241,9 +242,9 @@ type FunnelKey = keyof AdminAnalytics['funnel'];
               <p><strong>{{ a.ads.clicks | number }}</strong> clicks from <strong>{{ a.ads.impressions | number }}</strong> impressions</p>
             </div>
             <div class="ad-stats">
-              <div><span>Ad spend</span><strong>{{ +a.ads.spend | currency: 'USD': 'symbol': '1.0-2' }}</strong></div>
-              <div><span>Cost per click</span><strong>{{ costPerClick() | currency: 'USD': 'symbol': '1.0-2' }}</strong></div>
-              <div><span>Cost per 1k views</span><strong>{{ costPerMille() | currency: 'USD': 'symbol': '1.0-2' }}</strong></div>
+              <div><span>Ad spend</span><strong>{{ +a.ads.spend | money:'': 'symbol': '1.0-2' }}</strong></div>
+              <div><span>Cost per click</span><strong>{{ costPerClick() | money:'': 'symbol': '1.0-2' }}</strong></div>
+              <div><span>Cost per 1k views</span><strong>{{ costPerMille() | money:'': 'symbol': '1.0-2' }}</strong></div>
             </div>
             <p class="ad-note"><span>i</span> Efficiency metrics use recorded campaign clicks and impressions for this period.</p>
           </aside>

@@ -3,6 +3,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../core/auth.service';
+import { CurrencyService } from '../core/currency.service';
 
 interface NavItem {
   path: string;
@@ -37,6 +38,14 @@ interface ActionLink {
 
         <!-- Desktop auth actions -->
         <div class="actions desktop-actions">
+          <!-- Shoppers browse in whichever currency they think in; prices are
+               converted from each store's own currency at the platform rate. -->
+          <label class="currency-picker" title="Show prices in">
+            <span>{{ currency.displayMeta().symbol }}</span>
+            <select [value]="currency.display()" (change)="onCurrencyChange($event)" aria-label="Display currency">
+              @for (c of currency.currencies(); track c.code) { <option [value]="c.code">{{ c.code }}</option> }
+            </select>
+          </label>
           @for (a of actionLinks(); track a.path) {
             <a [routerLink]="a.path" class="btn" [class.ghost]="a.ghost" (click)="closeMenu()">{{ a.label }}</a>
           }
@@ -126,6 +135,8 @@ interface ActionLink {
     .top { position: sticky; top: 0; z-index: 20; background: rgba(244,239,230,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
     .bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 20px; min-height: 72px; }
     .brand { font-size: 26px; justify-self: start; }
+    .currency-picker { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; font-size: 12px; font-weight: 700; }
+    .currency-picker select { border: 0; background: transparent; color: var(--ink); font-weight: 700; font-size: 12px; cursor: pointer; }
     .desktop-nav { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
     .desktop-nav a {
       display: inline-flex; align-items: center; gap: 7px;
@@ -189,8 +200,14 @@ interface ActionLink {
 })
 export class ShellComponent {
   auth = inject(AuthService);
+  currency = inject(CurrencyService);
   private router = inject(Router);
   menuOpen = signal(false);
+
+  /** Switch the storefront's display currency (persisted per browser). */
+  onCurrencyChange(event: Event): void {
+    this.currency.setDisplay((event.target as HTMLSelectElement).value);
+  }
 
   private readonly baseNav: NavItem[] = [
     { path: '/', label: 'Home', icon: 'home', exact: true },

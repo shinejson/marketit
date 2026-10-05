@@ -1,9 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { SalesQuote } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 /**
  * "My quotes" — the customer side of the request-for-quote channel.
@@ -12,7 +13,7 @@ import { SalesQuote } from '../../core/models';
  */
 @Component({
   selector: 'app-customer-quotes',
-  imports: [CurrencyPipe, DatePipe, RouterLink],
+  imports: [MoneyPipe, DatePipe, RouterLink],
   template: `
     <div class="wrap page">
       <header class="head">
@@ -42,7 +43,7 @@ import { SalesQuote } from '../../core/models';
                 <span class="num">{{ q.number }}</span>
                 <span class="who">{{ q.tenant?.name || 'Merchant' }}</span>
                 <span class="items">{{ q.items.length }} item{{ q.items.length === 1 ? '' : 's' }}</span>
-                <span class="total">{{ +q.total | currency:q.currency }}</span>
+                <span class="total">{{ +q.total | money:q.currency }}</span>
                 <span class="status" [attr.data-s]="q.status">{{ label(q) }}</span>
                 <span class="date muted">{{ q.issue_date | date:'mediumDate' }}</span>
               </button>
@@ -57,18 +58,18 @@ import { SalesQuote } from '../../core/models';
                         <tr>
                           <td>{{ it.description }}</td>
                           <td>{{ +it.quantity }}</td>
-                          <td>{{ +it.unit_price | currency:q.currency }}</td>
+                          <td>{{ +it.unit_price | money:q.currency }}</td>
                           <td>{{ it.tax_rate ? +it.tax_rate : 0 }}%</td>
-                          <td class="r">{{ +(it.line_total || 0) | currency:q.currency }}</td>
+                          <td class="r">{{ +(it.line_total || 0) | money:q.currency }}</td>
                         </tr>
                       }
                     </tbody>
                   </table>
                   <div class="totals">
-                    <span>Subtotal <b>{{ +q.subtotal | currency:q.currency }}</b></span>
-                    <span>Tax <b>{{ +q.tax_total | currency:q.currency }}</b></span>
-                    @if (+q.discount_total > 0) { <span>Discount <b>−{{ +q.discount_total | currency:q.currency }}</b></span> }
-                    <span class="grand">Total <b>{{ +q.total | currency:q.currency }}</b></span>
+                    <span>Subtotal <b>{{ +q.subtotal | money:q.currency }}</b></span>
+                    <span>Tax <b>{{ +q.tax_total | money:q.currency }}</b></span>
+                    @if (+q.discount_total > 0) { <span>Discount <b>−{{ +q.discount_total | money:q.currency }}</b></span> }
+                    <span class="grand">Total <b>{{ +q.total | money:q.currency }}</b></span>
                   </div>
                   @if (q.notes && q.status !== 'draft') { <p class="msg"><b>Merchant note:</b> {{ q.notes }}</p> }
                   <p class="muted valid">Offer valid until {{ q.expiry_date | date:'mediumDate' }}</p>

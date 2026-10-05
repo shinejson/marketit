@@ -1,16 +1,17 @@
-import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { DeptDashboard, DeptKpi } from '../../core/models';
 import { MhChartComponent } from '../../shared/mh-chart.component';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type OperationsPage = 'overview' | 'fulfillment' | 'inventory' | 'catalog';
 
 @Component({
   selector: 'app-seller-operations',
-  imports: [CurrencyPipe, DatePipe, NgTemplateOutlet, FormsModule, RouterLink, MhChartComponent],
+  imports: [MoneyPipe, DatePipe, NgTemplateOutlet, FormsModule, RouterLink, MhChartComponent],
   template: `
     <div class="workspace ops-workspace">
       <header class="workspace-head">
@@ -69,7 +70,7 @@ type OperationsPage = 'overview' | 'fulfillment' | 'inventory' | 'catalog';
                 <article class="order-row">
                   <div class="order-id"><span>#{{ order.id }}</span><small>{{ order.created_at ? (order.created_at | date:'MMM d, h:mm a') : 'Ready for review' }}</small></div>
                   <div class="order-items"><b>{{ order.items?.[0]?.product_name || 'Order items' }}</b><small>{{ order.items?.length || 0 }} line item{{ order.items?.length === 1 ? '' : 's' }}</small></div>
-                  <div><b>{{ +order.subtotal | currency }}</b><span [class]="'status-chip ' + statusTone(order.status)">{{ pretty(order.status) }}</span></div>
+                  <div><b>{{ +order.subtotal | money }}</b><span [class]="'status-chip ' + statusTone(order.status)">{{ pretty(order.status) }}</span></div>
                   <div class="row-actions">
                     @if (order.status === 'awaiting_fulfillment') { <button class="btn small primary" (click)="move(order, 'processing')">Start picking</button> }
                     @if (order.status === 'processing') { <button class="btn small primary" (click)="move(order, 'shipped')">Mark shipped</button> }
@@ -97,7 +98,7 @@ type OperationsPage = 'overview' | 'fulfillment' | 'inventory' | 'catalog';
           @case ('catalog') {
             <section class="summary-strip catalogue-summary"><button class="active"><span>All products</span><b>{{ products().length }}</b></button><button><span>Active</span><b>{{ productCount('active') }}</b></button><button><span>Draft</span><b>{{ productCount('draft') }}</b></button><button><span>Archived</span><b>{{ productCount('archived') }}</b></button></section>
             <section class="panel list-panel"><div class="panel-title"><div><p class="overline">Merchandising</p><h3>Catalogue health</h3></div><label class="search-box">⌕ <input [(ngModel)]="query" placeholder="Search catalogue" /></label></div>
-              @for (product of filteredProducts(); track product.id) { <article class="product-row"><span class="product-avatar">{{ initials(product.name) }}</span><div><b>{{ product.name }}</b><small>{{ product.store?.name || 'No store' }} · {{ product.variants?.[0]?.sku || 'No SKU' }}</small></div><b>{{ +product.price | currency }}</b><span [class]="'status-chip ' + statusTone(product.status)">{{ pretty(product.status) }}</span><button class="btn small ghost" (click)="toggleProduct(product)">{{ product.status === 'active' ? 'Archive' : 'Activate' }}</button></article> } @empty { <div class="empty-state"><b>No products found</b><p>Adjust your search or add your first product.</p></div> }
+              @for (product of filteredProducts(); track product.id) { <article class="product-row"><span class="product-avatar">{{ initials(product.name) }}</span><div><b>{{ product.name }}</b><small>{{ product.store?.name || 'No store' }} · {{ product.variants?.[0]?.sku || 'No SKU' }}</small></div><b>{{ +product.price | money }}</b><span [class]="'status-chip ' + statusTone(product.status)">{{ pretty(product.status) }}</span><button class="btn small ghost" (click)="toggleProduct(product)">{{ product.status === 'active' ? 'Archive' : 'Activate' }}</button></article> } @empty { <div class="empty-state"><b>No products found</b><p>Adjust your search or add your first product.</p></div> }
             </section>
           }
         }

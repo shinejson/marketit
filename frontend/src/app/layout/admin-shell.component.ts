@@ -2,6 +2,7 @@ import { Component, HostListener, computed, effect, inject, signal } from '@angu
 import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth.service';
+import { CurrencyService } from '../core/currency.service';
 import { ThemeService } from '../core/theme.service';
 
 type IconName =
@@ -594,6 +595,7 @@ const MOBILE_BREAKPOINT = 900;
 export class AdminShellComponent {
   auth = inject(AuthService);
   theme = inject(ThemeService);
+  private currency = inject(CurrencyService);
   private router = inject(Router);
 
   readonly overviewItems: NavEntry[] = [
@@ -674,6 +676,10 @@ export class AdminShellComponent {
   });
 
   constructor() {
+    // Platform figures are reported in the base currency, whatever a tenant
+    // workspace or storefront on this browser is displaying.
+    this.currency.setDisplay(this.currency.base(), false);
+
     effect(() => {
       if (typeof window === 'undefined' || this.isMobile()) return;
       try {

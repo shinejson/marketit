@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { SellerOrder, SellerOrderItem, SellerOrderStats, SellerOrderStatus } from '../../core/models';
+import { MoneyPipe } from '../../shared/money.pipe';
 
 type StatusFilter = SellerOrderStatus | '';
 type DateQuickRange = 'all' | 'today' | '7d' | '30d';
@@ -44,7 +45,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 @Component({
   selector: 'app-seller-orders',
-  imports: [FormsModule, CurrencyPipe, DatePipe, RouterLink],
+  imports: [FormsModule, MoneyPipe, DatePipe, RouterLink],
   template: `
     <div class="orders-shell">
       <header class="page-head">
@@ -88,7 +89,7 @@ const STATUS_LABELS: Record<string, string> = {
         </article>
         <article class="metric-card settlement">
           <div class="metric-top"><span class="metric-icon gold">₵</span></div>
-          <p>Net settlements</p><h2>{{ stats()?.total_net_payout ?? 0 | currency:'USD':'symbol':'1.0-2' }}</h2>
+          <p>Net settlements</p><h2>{{ stats()?.total_net_payout ?? 0 | money:'':'symbol':'1.0-2' }}</h2>
           <small>Payout owed across active orders</small>
         </article>
       </section>
@@ -174,10 +175,10 @@ const STATUS_LABELS: Record<string, string> = {
                       </div>
                     </td>
                     <td class="right financial-cell">
-                      <div><span>Subtotal</span><b>{{ +order.subtotal | currency:currencyOf(order):'symbol':'1.2-2' }}</b></div>
-                      <div><span>Delivery</span><b>{{ +order.delivery_fee | currency:currencyOf(order):'symbol':'1.2-2' }}</b></div>
-                      <div><span>Commission</span><b>-{{ +order.commission | currency:currencyOf(order):'symbol':'1.2-2' }}</b></div>
-                      <div class="net"><span>Net payout</span><b>{{ +order.net_settlement | currency:currencyOf(order):'symbol':'1.2-2' }}</b></div>
+                      <div><span>Subtotal</span><b>{{ +order.subtotal | money:currencyOf(order):'symbol':'1.2-2' }}</b></div>
+                      <div><span>Delivery</span><b>{{ +order.delivery_fee | money:currencyOf(order):'symbol':'1.2-2' }}</b></div>
+                      <div><span>Commission</span><b>-{{ +order.commission | money:currencyOf(order):'symbol':'1.2-2' }}</b></div>
+                      <div class="net"><span>Net payout</span><b>{{ +order.net_settlement | money:currencyOf(order):'symbol':'1.2-2' }}</b></div>
                     </td>
                     <td><span [class]="'status ' + order.status">{{ statusLabel(order.status) }}</span></td>
                     <td class="actions" (click)="$event.stopPropagation()">
@@ -270,8 +271,8 @@ const STATUS_LABELS: Record<string, string> = {
                       <td class="mono">{{ item.sku || '—' }}</td>
                       <td>{{ optionsSummary(item) }}</td>
                       <td class="right">{{ item.qty }}</td>
-                      <td class="right">{{ +item.unit_price | currency:currencyOf(order):'symbol':'1.2-2' }}</td>
-                      <td class="right">{{ (+item.unit_price * item.qty) | currency:currencyOf(order):'symbol':'1.2-2' }}</td>
+                      <td class="right">{{ +item.unit_price | money:currencyOf(order):'symbol':'1.2-2' }}</td>
+                      <td class="right">{{ (+item.unit_price * item.qty) | money:currencyOf(order):'symbol':'1.2-2' }}</td>
                     </tr>
                   }
                 </tbody>
@@ -281,10 +282,10 @@ const STATUS_LABELS: Record<string, string> = {
 
           <section class="financial-card">
             <h3>Financial breakdown</h3>
-            <div><span>Subtotal</span><b>{{ +order.subtotal | currency:currencyOf(order):'symbol':'1.2-2' }}</b></div>
-            <div><span>Delivery fee</span><b>{{ +order.delivery_fee | currency:currencyOf(order):'symbol':'1.2-2' }}</b></div>
-            <div><span>Platform commission</span><b>-{{ +order.commission | currency:currencyOf(order):'symbol':'1.2-2' }}</b></div>
-            <div class="grand"><span>Net payout</span><b>{{ +order.net_settlement | currency:currencyOf(order):'symbol':'1.2-2' }}</b></div>
+            <div><span>Subtotal</span><b>{{ +order.subtotal | money:currencyOf(order):'symbol':'1.2-2' }}</b></div>
+            <div><span>Delivery fee</span><b>{{ +order.delivery_fee | money:currencyOf(order):'symbol':'1.2-2' }}</b></div>
+            <div><span>Platform commission</span><b>-{{ +order.commission | money:currencyOf(order):'symbol':'1.2-2' }}</b></div>
+            <div class="grand"><span>Net payout</span><b>{{ +order.net_settlement | money:currencyOf(order):'symbol':'1.2-2' }}</b></div>
           </section>
 
           <section class="packing-slip">
