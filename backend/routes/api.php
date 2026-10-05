@@ -37,9 +37,11 @@ use App\Http\Controllers\Api\MarketController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\QuoteRequestController;
 use App\Http\Controllers\Api\SalesController;
 use App\Http\Controllers\Api\SellerOrderController;
 use App\Http\Controllers\Api\SellerPublicApiController;
+use App\Http\Controllers\Api\TenantAuditController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -99,6 +101,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
 
+    // Customer quote requests (RFQ): raise from a product page, track the
+    // merchant's answer and accept or decline it.
+    Route::get('/quotes', [QuoteRequestController::class, 'index']);
+    Route::post('/quotes', [QuoteRequestController::class, 'store'])->middleware('throttle:12,1');
+    Route::get('/quotes/{quote}', [QuoteRequestController::class, 'show'])->whereNumber('quote');
+    Route::post('/quotes/{quote}/respond', [QuoteRequestController::class, 'respond'])->whereNumber('quote');
+
     Route::post('/payments/intent/{orderId}', [PaymentController::class, 'intent']);
 
     Route::middleware(['tenant', 'role:tenant'])->prefix('tenant')->group(function () {
@@ -156,7 +165,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/dashboard', [AccountingController::class, 'dashboard']);
             Route::get('/invoices', [AccountingController::class, 'invoices']);
             Route::post('/invoices', [AccountingController::class, 'storeInvoice']);
+            Route::get('/invoices/{invoice}', [AccountingController::class, 'showInvoice']);
             Route::patch('/invoices/{invoice}', [AccountingController::class, 'updateInvoice']);
+            Route::delete('/invoices/{invoice}', [AccountingController::class, 'destroyInvoice']);
             Route::post('/invoices/{invoice}/payments', [AccountingController::class, 'recordInvoicePayment']);
             Route::get('/payments', [AccountingController::class, 'payments']);
             Route::get('/expenses', [AccountingController::class, 'expenses']);
@@ -224,6 +235,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/settings', [TenantSettingsController::class, 'show']);
         Route::patch('/settings', [TenantSettingsController::class, 'update']);
         Route::post('/settings/documents', [TenantSettingsController::class, 'uploadDocument']);
+
+        // Workspace activity trail: the tenant's own slice of the audit log.
+        Route::get('/audit-logs', [TenantAuditController::class, 'index']);
+        Route::get('/audit-logs/facets', [TenantAuditController::class, 'facets']);
 
         Route::get('/backups', [TenantBackupController::class, 'index']);
         Route::post('/backups', [TenantBackupController::class, 'store']);

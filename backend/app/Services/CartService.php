@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\TenantSetting;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
@@ -119,6 +121,8 @@ class CartService
         $groups = [];
         $subtotal = '0.00';
         $delivery = '0.00';
+        $tax = '0.00';
+        $taxRates = []; // tenant_id => default rate cache
 
         foreach ($cart->items as $item) {
             $storeId = $item->store_id;
@@ -138,6 +142,20 @@ class CartService
 
             $line = bcmul((string) $item->unit_price, (string) $item->qty, 2);
             $groups[$storeId]['subtotal'] = bcadd($groups[$storeId]['subtotal'], $line, 2);
+
+            // Tax: per-product rate beats the tenant default; zero-rated /
+            // exempt classes are always 0%. Rates are cached per tenant.
+            $product = $item->variant->product;
+            $tenantId = (int) ($product->tenant_id ?? $item->variant->tenant_id);
+            if (! array_key_exists($tenantId, $taxRates)) {
+                $taxRates[$tenantId] = (float) (TenantSetting::withoutGlobalScopes()
+                    ->where('tenant_id', $tenantId)
+                    ->value('tax_rate') ?? 0);
+            }
+            $rate = $this->lineTaxRate($product, $taxRates[$tenantId]);
+            $lineTax = bcmul($line, (string) ($rate / 100), 2);
+            $tax = bcadd($tax, $lineTax, 2);
+            $groups[$storeId]['tax'] = bcadd($groups[$storeId]['tax'] ?? '0.00', $lineTax, 2);
             $groups[$storeId]['items'][] = [
                 'id' => $item->id,
                 'variant_id' => $item->variant_id,
@@ -147,13 +165,14 @@ class CartService
                 'qty' => $item->qty,
                 'unit_price' => $item->unit_price,
                 'line_total' => $line,
+                'tax_rate' => $rate,
+                'line_tax' => $lineTax,
                 'image' => $item->variant->product->primaryImage()?->url,
                 'available' => $item->variant->availableQty(),
             ];
             $subtotal = bcadd($subtotal, $line, 2);
         }
 
-        $tax = '0.00';
         $grand = bcadd(bcadd($subtotal, $delivery, 2), $tax, 2);
 
         return [
@@ -167,5 +186,20 @@ class CartService
                 'currency' => config('markethub.currency'),
             ],
         ];
+    }
+
+    /**
+     * Effective tax rate (percent) for one cart line: the product's own
+     * rate wins, the tenant default is the fallback, and zero-rated or
+     * exempt classes always pay 0%.
+     */
+    protected function lineTaxRate(Product $product, float $tenantDefault): float
+    {
+        $class = strtolower((string) $product->tax_class);
+        if (in_array($class, ['zero-rated', 'zero_rated', 'zero', 'exempt', 'out_of_scope'], true)) {
+            return 0.0;
+        }
+
+        return $product->tax_rate !== null ? (float) $product->tax_rate : $tenantDefault;
     }
 }

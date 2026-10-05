@@ -1,12 +1,14 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CurrencyPipe, DatePipe, UpperCasePipe } from '@angular/common';
 import { ApiService } from '../../core/api.service';
+import { DEFAULT_RECEIPT, TenantReceipt } from '../../core/models';
 
 interface TenantDocument { key: string; label: string; original_name: string; mime?: string; size?: number; uploaded_at?: string; }
 
 @Component({
   selector: 'app-seller-settings',
-  imports: [FormsModule],
+  imports: [FormsModule, CurrencyPipe, DatePipe, UpperCasePipe],
   template: `
     <div class="settings-page">
       <header class="page-head">
@@ -56,6 +58,58 @@ interface TenantDocument { key: string; label: string; original_name: string; mi
               <section class="card panel"><div class="panel-title"><div><p class="eyebrow">Notifications</p><h2>Stay informed</h2><p>Control the operational alerts your team receives.</p></div></div><div class="checks"><label><input type="checkbox" [(ngModel)]="form.notify_orders" name="orders" /><span><b>Order updates</b><small>New orders, cancellations and fulfilment changes</small></span></label><label><input type="checkbox" [(ngModel)]="form.notify_low_stock" name="stock" /><span><b>Low stock alerts</b><small>Notify your team when inventory falls below threshold</small></span></label><label><input type="checkbox" [(ngModel)]="form.notify_payouts" name="payouts" /><span><b>Payout notices</b><small>Settlement and payment status updates</small></span></label></div></section>
             }
 
+            @if (tab() === 'receipts') {
+              <section class="card panel"><div class="panel-title"><div><p class="eyebrow">Receipt builder</p><h2>Receipt content</h2><p>Design the receipts and invoice footers customers receive — the preview updates as you type.</p></div></div>
+                <div class="receipt-grid">
+                  <div class="form-grid">
+                    <label class="field wide"><span>Header line</span><input [(ngModel)]="receipt.header_line" name="rcpt_header" placeholder="e.g. Accra Food Hub — Official receipt" /><small>Printed directly under your business name. Leave empty to hide.</small></label>
+                    <label class="field wide"><span>Address line</span><input [(ngModel)]="receipt.address_line" name="rcpt_addr" placeholder="e.g. 12 Market Street, Accra" /></label>
+                    <label class="field"><span>Tax label</span><input [(ngModel)]="receipt.tax_label" name="rcpt_taxlabel" placeholder="Tax / VAT / GST" /></label>
+                    <label class="field"><span>Brand colour</span><input type="color" [(ngModel)]="receipt.accent_color" name="rcpt_color" /></label>
+                    <label class="field"><span>Paper size</span><select [(ngModel)]="receipt.paper_size" name="rcpt_paper"><option value="a4">A4 invoice</option><option value="a5">A5 slip</option><option value="80mm">80&nbsp;mm till receipt</option></select></label>
+                    <label class="field wide"><span>Footer note</span><textarea rows="2" [(ngModel)]="receipt.footer_note" name="rcpt_footer" placeholder="Thank-you line, return policy or payment details…"></textarea></label>
+                  </div>
+                  <aside class="receipt-col">
+                    <p class="preview-label">Preview · {{ receipt.paper_size === '80mm' ? '80 mm till roll' : receipt.paper_size | uppercase }}</p>
+                    <div class="receipt-paper" [class.narrow]="receipt.paper_size === '80mm'" [style.--rcpt-accent]="receipt.accent_color || '#1f4b3a'">
+                      <header>
+                        @if (receipt.show_logo) { <span class="logo">{{ (form.business_name || form.name || '?')[0] }}</span> }
+                        <b>{{ form.business_name || form.name }}</b>
+                        @if (receipt.header_line) { <small>{{ receipt.header_line }}</small> }
+                        @if (receipt.address_line) { <small>{{ receipt.address_line }}</small> }
+                        @if (form.support_phone) { <small>Tel {{ form.support_phone }}</small> }
+                        @if (form.tax_id) { <small>Tax ID {{ form.tax_id }}</small> }
+                      </header>
+                      <span class="rule">RECEIPT · INV-2026-0042</span>
+                      <p class="party">Customer · Ama Serwaa<br /><span>{{ today | date:'medium' }}</span></p>
+                      <table>
+                        <tbody>
+                          @for (line of sampleLines; track line.name) {
+                            <tr><td>{{ line.name }}@if (receipt.show_sku) { <small>{{ line.sku }} · ×{{ line.qty }}</small> } @else { <small>×{{ line.qty }}</small> }</td><td>{{ line.qty * line.price | currency:form.currency || 'USD' }}</td></tr>
+                          }
+                        </tbody>
+                      </table>
+                      <dl class="sums">
+                        <div><dt>Subtotal</dt><dd>{{ sampleSubtotal | currency:form.currency }}</dd></div>
+                        @if (receipt.show_discounts) { <div><dt>Discount</dt><dd>−{{ sampleDiscount | currency:form.currency }}</dd></div> }
+                        @if (receipt.show_tax_breakdown) { <div><dt>{{ receipt.tax_label || 'Tax' }} · {{ form.tax_rate || 0 }}%</dt><dd>{{ sampleTax | currency:form.currency }}</dd></div> }
+                        <div class="grand"><dt>Total</dt><dd>{{ sampleTotal | currency:form.currency }}</dd></div>
+                      </dl>
+                      @if (receipt.footer_note) { <footer>{{ receipt.footer_note }}</footer> }
+                    </div>
+                  </aside>
+                </div>
+              </section>
+              <section class="card panel"><div class="panel-title"><div><p class="eyebrow">Line items</p><h2>What receipts show</h2><p>Toggle the extra detail printed on every receipt and invoice.</p></div></div>
+                <div class="checks">
+                  <label><input type="checkbox" [(ngModel)]="receipt.show_tax_breakdown" name="rcpt_tax" /><span><b>Tax breakdown</b><small>Itemised {{ receipt.tax_label || 'tax' }} lines with the current {{ form.tax_rate || 0 }}% rate</small></span></label>
+                  <label><input type="checkbox" [(ngModel)]="receipt.show_discounts" name="rcpt_disc" /><span><b>Discount line</b><small>Show savings from compare-at prices and coupons</small></span></label>
+                  <label><input type="checkbox" [(ngModel)]="receipt.show_sku" name="rcpt_sku" /><span><b>SKUs</b><small>Product codes beside every line item</small></span></label>
+                  <label><input type="checkbox" [(ngModel)]="receipt.show_logo" name="rcpt_logo" /><span><b>Logo mark</b><small>A business initial stamped at the top</small></span></label>
+                </div>
+              </section>
+            }
+
             @if (tab() === 'documents') {
               <section class="card panel"><div class="panel-title"><div><p class="eyebrow">Compliance centre</p><h2>Business documents</h2><p>Upload clear, current records to keep verification and payouts moving.</p></div><span class="secure">⌁ Secure storage</span></div>
                 <div class="upload-zone" [class.has-file]="selectedFile()"><input #fileInput type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="selectFile($event)" /><div class="upload-icon">↑</div><div><b>{{ selectedFile() ? selectedFile()?.name : 'Drop a document here or browse' }}</b><small>PDF, JPG or PNG · maximum 5 MB</small></div><button class="btn outline" type="button" (click)="fileInput.click()">Choose file</button></div>
@@ -70,14 +124,47 @@ interface TenantDocument { key: string; label: string; original_name: string; mi
   `,
   styles: [`
     :host{display:block;max-width:1180px;margin:0 auto;padding-bottom:70px}.page-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:20px}.eyebrow{margin:0 0 6px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.page-head h1{margin:0;font-size:clamp(28px,3vw,38px)}.intro{margin:7px 0 0;color:var(--ink-soft);font-size:14px}.head-actions{display:flex;align-items:center;gap:12px}.status{display:flex;align-items:center;gap:7px;color:var(--ok);font-size:12px;font-weight:700;white-space:nowrap}.status i{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 15%,transparent)}.status.pending{color:#9b6a1d}.status.pending i{background:#d19a31}.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:750;cursor:pointer}.btn.primary{background:var(--accent-2);color:white}.btn.outline{border:1px solid var(--line);background:var(--card);color:var(--ink)}.btn:disabled{opacity:.55;cursor:not-allowed}.notice{padding:11px 14px;border-radius:11px;margin-bottom:16px;font-size:13px}.notice.success{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}.notice.error{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}.layout{display:grid;grid-template-columns:240px 1fr;gap:20px;align-items:start}.tabs{padding:8px;display:flex;flex-direction:column;gap:2px;position:sticky;top:20px}.tabs button{display:grid;grid-template-columns:28px 1fr;column-gap:9px;text-align:left;padding:12px 11px;border:0;border-radius:11px;background:transparent;color:var(--ink);cursor:pointer}.tabs button:hover{background:var(--paper-2)}.tabs button.active{background:var(--ink);color:var(--card)}.tabs button span{grid-row:span 2;font-size:18px}.tabs button b{font-size:13px}.tabs button small{color:var(--ink-soft);font-size:10.5px;margin-top:2px}.tabs button.active small{color:color-mix(in srgb,var(--card) 62%,transparent)}.content{display:grid;gap:16px}.panel{padding:21px 23px}.panel-title{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:17px}.panel-title h2{margin:0;font-size:21px}.panel-title p:not(.eyebrow){margin:4px 0 0;color:var(--ink-soft);font-size:12px}.completion,.secure{padding:6px 9px;border-radius:7px;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);font-size:10px;font-weight:800;white-space:nowrap}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:15px}.field.wide{grid-column:1/-1}.field span{font-size:12px;font-weight:750}.field em{font-style:normal;color:var(--ink-soft);font-size:10px;font-weight:500;float:right}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:var(--card);color:var(--ink)}.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 40%,transparent);border-color:var(--accent)}.field small,.checks small,.doc small{color:var(--ink-soft);font-size:10.5px}.input-unit{position:relative}.input-unit input{padding-right:33px}.input-unit i{position:absolute;right:12px;top:10px;color:var(--ink-soft);font-size:12px;font-style:normal}.checks{display:grid;grid-template-columns:1fr 1fr;gap:10px}.checks label{display:flex;gap:10px;padding:13px;border:1px solid var(--line);border-radius:10px;cursor:pointer}.checks input{accent-color:var(--accent-2);margin-top:2px}.checks span{display:grid;gap:3px}.upload-zone{display:flex;align-items:center;gap:13px;padding:19px;border:1px dashed var(--line);border-radius:12px;background:color-mix(in srgb,var(--paper-2) 38%,transparent)}.upload-zone input{display:none}.upload-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--accent-2);color:white;font-size:21px}.upload-zone>div:nth-child(3){display:grid;gap:3px;flex:1}.upload-zone small{color:var(--ink-soft);font-size:11px}.upload-btn{margin-top:12px}.doc-list{margin-top:25px}.list-heading{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:10px;font-size:12px;font-weight:800}.list-heading span{color:var(--ink-soft)}.doc{display:flex;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid var(--line)}.doc-icon{display:grid;place-items:center;width:35px;height:35px;border-radius:8px;background:#f8e7df;color:var(--accent);font-size:9px;font-weight:800}.doc div{display:grid;gap:3px;flex:1}.verified{color:var(--ok);font-size:10px;font-weight:800}.empty,.loading{padding:28px;text-align:center;color:var(--ink-soft);font-size:13px}.loading{min-height:220px}@media(max-width:800px){.page-head{align-items:flex-start;flex-direction:column}.layout{grid-template-columns:1fr}.tabs{position:static;display:grid;grid-template-columns:1fr 1fr}.checks{grid-template-columns:1fr}.head-actions{width:100%;justify-content:space-between}}@media(max-width:500px){.form-grid{grid-template-columns:1fr}.field.wide{grid-column:auto}.tabs{grid-template-columns:1fr}.upload-zone{align-items:flex-start;flex-wrap:wrap}.upload-zone .btn{margin-left:51px}}
+  `,
+  `
+  .receipt-grid{display:grid;grid-template-columns:1fr 330px;gap:26px;align-items:start}
+  .receipt-col{position:sticky;top:20px}
+  .preview-label{margin:0 0 10px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+  .receipt-paper{--rcpt-accent:#1f4b3a;background:#fff;color:#191512;border:1px solid var(--line);border-radius:6px;padding:22px 20px;font-size:12px;box-shadow:0 14px 34px rgba(28,25,20,.10);display:grid;gap:11px}
+  .receipt-paper.narrow{font-family:'Courier New',monospace;max-width:250px;margin:0 auto;border-radius:0;padding:16px 14px}
+  .receipt-paper header{display:grid;gap:2px;text-align:center;justify-items:center;padding-bottom:9px;border-bottom:2px solid var(--rcpt-accent)}
+  .receipt-paper header b{font-size:15px}
+  .receipt-paper header small{color:#5c554b;font-size:10.5px}
+  .receipt-paper .logo{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--rcpt-accent);color:#fff;font-weight:800;font-size:15px;margin-bottom:3px}
+  .receipt-paper .rule{text-align:center;font-weight:800;letter-spacing:.1em;font-size:11px;color:var(--rcpt-accent)}
+  .receipt-paper .party{margin:0;font-size:11.5px;line-height:1.5}
+  .receipt-paper .party span{color:#5c554b;font-size:10.5px}
+  .receipt-paper table{width:100%;border-collapse:collapse}
+  .receipt-paper td{padding:5px 0;border-bottom:1px dashed #d9d0c0;vertical-align:top}
+  .receipt-paper td small{display:block;color:#5c554b;font-size:10px}
+  .receipt-paper td:last-child{text-align:right;font-weight:650}
+  .receipt-paper .sums{display:grid;gap:4px;margin:0}
+  .receipt-paper .sums div{display:flex;justify-content:space-between}
+  .receipt-paper .sums dt{margin:0;color:#5c554b}
+  .receipt-paper .sums dd{margin:0;font-weight:650}
+  .receipt-paper .sums .grand{border-top:2px solid var(--rcpt-accent);padding-top:6px;margin-top:3px;font-size:14px}
+  .receipt-paper .sums .grand dt{color:#191512;font-weight:800}
+  .receipt-paper footer{text-align:center;color:#5c554b;font-size:10.5px;border-top:1px dashed #d9d0c0;padding-top:9px}
+  @media(max-width:1000px){.receipt-grid{grid-template-columns:1fr}.receipt-col{position:static}}
   `],
 })
 export class SellerSettingsComponent {
   private api = inject(ApiService); form: any = null; tab = signal('profile'); saved = signal(false); err = signal(''); saving = signal(false); uploading = signal(false); selectedFile = signal<File | null>(null); documents = signal<TenantDocument[]>([]);
-  sections = [{key:'profile',label:'Business profile',description:'Identity & contacts',icon:'◉'},{key:'commerce',label:'Commerce defaults',description:'Pricing & alerts',icon:'◇'},{key:'documents',label:'Documents',description:'Compliance records',icon:'▤'}];
-  constructor(){this.api.tenantSettings().subscribe({next:res=>{const d=res.data;this.form={name:d.tenant.name,business_name:d.tenant.business_name,country:d.tenant.country||'GH',business_details:d.tenant.business_details,...d.settings,status:d.tenant.status,default_markup_percent:d.settings.default_markup_percent??30,default_discount_percent:d.settings.default_discount_percent??0,tax_rate:d.settings.tax_rate??0};this.documents.set(d.documents||[]);},error:()=>this.err.set('Could not load your settings.')});}
+  sections = [{key:'profile',label:'Business profile',description:'Identity & contacts',icon:'◉'},{key:'commerce',label:'Commerce defaults',description:'Pricing & alerts',icon:'◇'},{key:'receipts',label:'Receipt builder',description:'Invoices & till slips',icon:'▧'},{key:'documents',label:'Documents',description:'Compliance records',icon:'▤'}];
+  receipt: TenantReceipt = { ...DEFAULT_RECEIPT };
+  today = new Date();
+  sampleLines = [{name:'Market pendant',sku:'PND-001',qty:2,price:49},{name:'Hand-woven basket',sku:'BSK-014',qty:1,price:32},{name:'Gift wrap',sku:'WRAP-01',qty:1,price:5}];
+  get sampleSubtotal():number{return this.sampleLines.reduce((sum,line)=>sum+line.qty*line.price,0)}
+  get sampleDiscount():number{return this.receipt.show_discounts?Math.round(this.sampleSubtotal*0.08):0}
+  get sampleTax():number{return this.receipt.show_tax_breakdown?Math.round((this.sampleSubtotal-this.sampleDiscount)*(+(this.form?.tax_rate||0))/100*100)/100:0}
+  get sampleTotal():number{return this.sampleSubtotal-this.sampleDiscount+this.sampleTax}
+  constructor(){this.api.tenantSettings().subscribe({next:res=>{const d=res.data;this.form={name:d.tenant.name,business_name:d.tenant.business_name,country:d.tenant.country||'GH',business_details:d.tenant.business_details,...d.settings,status:d.tenant.status,default_markup_percent:d.settings.default_markup_percent??30,default_discount_percent:d.settings.default_discount_percent??0,tax_rate:d.settings.tax_rate??0};this.receipt={...DEFAULT_RECEIPT,...(d.settings.receipt||{})};this.documents.set(d.documents||[]);},error:()=>this.err.set('Could not load your settings.')});}
   profileCompletion(){if(!this.form)return 0;const fields=['name','business_name','country','tax_id','support_email','support_phone'];return Math.round(fields.filter(k=>!!this.form[k]).length/fields.length*100)}
-  save(){if(!this.form)return;this.saved.set(false);this.err.set('');this.saving.set(true);const {status,...payload}=this.form;this.api.updateTenantSettings(payload).subscribe({next:res=>{this.saving.set(false);this.saved.set(true);if(res.data){const d=res.data;this.form={...this.form,...d.settings};}},error:e=>{this.saving.set(false);this.err.set(e.error?.error?.message||'Could not save changes.')}})}
+  save(){if(!this.form)return;this.saved.set(false);this.err.set('');this.saving.set(true);const {status,...rest}=this.form;const payload={...rest,receipt:this.receipt};this.api.updateTenantSettings(payload).subscribe({next:res=>{this.saving.set(false);this.saved.set(true);if(res.data){const d=res.data;this.form={...this.form,...d.settings};this.receipt={...DEFAULT_RECEIPT,...(d.settings?.receipt||this.receipt)};}},error:e=>{this.saving.set(false);this.err.set(e.error?.error?.message||'Could not save changes.')}})}
   selectFile(e:Event){const file=(e.target as HTMLInputElement).files?.[0]||null;if(file&&file.size>5*1024*1024){this.err.set('Documents must be smaller than 5 MB.');return}this.selectedFile.set(file);this.err.set('')}
   upload(){const file=this.selectedFile();if(!file)return;this.uploading.set(true);this.api.uploadTenantDocument(file).subscribe({next:res=>{this.documents.set(res.data.documents||[]);this.selectedFile.set(null);this.uploading.set(false)},error:e=>{this.uploading.set(false);this.err.set(e.error?.error?.message||'Could not upload document.')}})}
   formatSize(size?:number){return size?`${Math.max(1,Math.round(size/1024))} KB`:'—'} formatDate(date?:string){return date?new Date(date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'Recently'}

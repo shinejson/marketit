@@ -260,20 +260,25 @@ type Drawer = 'lead' | 'convert' | 'opportunity' | 'loseOpportunity' | 'quote' |
               <div class="table-toolbar">
                 <div class="search-box"><span>⌕</span><input placeholder="Search number, customer or email" [(ngModel)]="search" (keyup.enter)="loadCurrent()" /></div>
                 <select [(ngModel)]="statusFilter" (change)="loadCurrent()"><option value="">All statuses</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="accepted">Accepted</option><option value="declined">Declined</option><option value="expired">Expired</option><option value="void">Void</option></select>
+                <select [(ngModel)]="sourceFilter" (change)="loadCurrent()"><option value="">Every origin</option><option value="customer_request">Customer requests</option><option value="staff">Staff created</option></select>
                 <button class="filter-go" type="button" (click)="loadCurrent()">Filter</button>
               </div>
               <div class="table-wrap"><table>
                 <thead><tr><th>Quote</th><th>Customer</th><th>Issued</th><th>Expires</th><th>Linked deal</th><th>Status</th><th class="right">Total</th><th></th></tr></thead>
                 <tbody>
                   @for (quote of quotes(); track quote.id) {
-                    <tr>
-                      <td><strong class="mono">{{ quote.number }}</strong></td>
+                    <tr [class.request-row]="quote.source === 'customer_request'">
+                      <td>
+                        <strong class="mono">{{ quote.number }}</strong>
+                        @if (quote.source === 'customer_request') { <small><span class="rfq-badge" [attr.title]="quote.request_message || 'Requested from the storefront'">⇄ Customer request</span></small> }
+                      </td>
                       <td><strong>{{ quote.customer_name }}</strong><small>{{ quote.customer_email || 'No email' }}</small></td>
                       <td>{{ quote.issue_date | date:'MMM d, y' }}</td><td>{{ quote.expiry_date | date:'MMM d, y' }}</td>
                       <td>@if (quote.opportunity) { <strong>{{ quote.opportunity.number }}</strong><small>{{ quote.opportunity.title }}</small> } @else { <span class="muted-cell">Not linked</span> }</td>
-                      <td><span [class]="'status ' + quote.status">{{ pretty(quote.status) }}</span></td>
+                      <td><span [class]="'status ' + quote.status">{{ quote.status === 'draft' && quote.source === 'customer_request' ? 'Awaiting pricing' : pretty(quote.status) }}</span></td>
                       <td class="right"><strong>{{ quote.total | currency:quote.currency }}</strong></td>
                       <td class="actions">
+                        @if (quote.status === 'draft') { <button type="button" [class.primary-action]="quote.source === 'customer_request'" (click)="openEditQuote(quote)">{{ quote.source === 'customer_request' ? 'Review & price' : 'Edit' }}</button> }
                         @if (quote.status === 'draft') { <button type="button" (click)="transitionQuote(quote, 'sent')">Send</button> }
                         @if (quote.status === 'sent') { <button type="button" class="primary-action" (click)="transitionQuote(quote, 'accepted')">Accept</button><button type="button" (click)="transitionQuote(quote, 'declined')">Decline</button> }
                         @if (quote.status === 'expired') { <button type="button" (click)="transitionQuote(quote, 'sent')">Resend</button> }
@@ -432,12 +437,14 @@ export class SellerSalesComponent {
   selectedOpportunity = signal<SalesOpportunity | null>(null);
   search = '';
   statusFilter = '';
+  sourceFilter = '';
   currency = signal('USD');
 
   leadForm = this.freshLead();
   convertForm = this.freshConvert();
   opportunityForm = this.freshOpportunity();
   quoteForm = this.freshQuote();
+  editingQuoteId = signal<number | null>(null);
   customerForm = this.freshCustomer();
   loseForm = { lost_reason: '' };
 
@@ -472,6 +479,7 @@ export class SellerSalesComponent {
     const params: Record<string, string | number> = { per_page: 100 };
     if (this.search.trim()) params['search'] = this.search.trim();
     if (this.statusFilter) params['status'] = this.statusFilter;
+    if (this.sourceFilter) params['source'] = this.sourceFilter;
     const current = this.page();
     if (current === 'overview') {
       this.api.salesDashboard().pipe(finalize(() => this.loading.set(false))).subscribe({ next: (res) => { this.dashboard.set(res.data); this.currency.set(res.data.currency); }, error: (err) => this.fail(err) });
@@ -488,6 +496,7 @@ export class SellerSalesComponent {
   }
 
   open(kind: Exclude<Drawer, null>): void {
+    this.editingQuoteId.set(null);
     if (kind === 'lead') this.leadForm = this.freshLead();
     if (kind === 'opportunity') { this.opportunityForm = this.freshOpportunity(); this.loadCustomers(); }
     if (kind === 'quote') { this.quoteForm = this.freshQuote(); this.loadCustomers(); this.loadOpenOpportunities(); }
@@ -495,14 +504,54 @@ export class SellerSalesComponent {
     this.error.set(''); this.drawer.set(kind);
   }
 
-  closeDrawer(): void { if (!this.saving()) this.drawer.set(null); }
-  drawerTitle(): string { return ({ lead: 'Capture lead', convert: 'Convert lead', opportunity: 'New opportunity', loseOpportunity: 'Mark opportunity lost', quote: 'Create quote', customer: 'Add customer' } as Record<string, string>)[this.drawer() || ''] || ''; }
-  drawerEyebrow(): string { return this.drawer() === 'convert' ? 'Lead qualification' : this.drawer() === 'loseOpportunity' ? 'Pipeline review' : 'Sales entry'; }
-  drawerSubmitLabel(): string { return ({ lead: 'Save lead', convert: 'Convert to customer & deal', opportunity: 'Create opportunity', loseOpportunity: 'Mark as lost', quote: 'Create quote', customer: 'Add customer' } as Record<string, string>)[this.drawer() || ''] || 'Save'; }
+  /** Reopen a draft quote (incl. customer requests) for a pricing review. */
+  openEditQuote(quote: SalesQuote): void {
+    this.editingQuoteId.set(quote.id);
+    this.quoteForm = {
+      customer_id: quote.customer_id ?? '',
+      customer_name: quote.customer_name,
+      customer_email: quote.customer_email || '',
+      opportunity_id: quote.opportunity_id ?? '',
+      issue_date: quote.issue_date,
+      expiry_date: quote.expiry_date,
+      currency: quote.currency,
+      discount_total: +quote.discount_total || 0,
+      notes: quote.notes || '',
+      send_now: false,
+      items: (quote.items || []).map((line) => ({
+        description: line.description,
+        quantity: +line.quantity,
+        unit_price: +line.unit_price,
+        tax_rate: +line.tax_rate || 0,
+      })),
+    };
+    if (!this.quoteForm.items.length) this.quoteForm.items.push({ description: '', quantity: 1, unit_price: 0, tax_rate: 0 });
+    this.loadCustomers(); this.loadOpenOpportunities();
+    this.error.set(''); this.drawer.set('quote');
+  }
+
+  closeDrawer(): void { if (!this.saving()) { this.drawer.set(null); this.editingQuoteId.set(null); } }
+  drawerTitle(): string {
+    if (this.drawer() === 'quote' && this.editingQuoteId()) return 'Review & price quote';
+    return ({ lead: 'Capture lead', convert: 'Convert lead', opportunity: 'New opportunity', loseOpportunity: 'Mark opportunity lost', quote: 'Create quote', customer: 'Add customer' } as Record<string, string>)[this.drawer() || ''] || '';
+  }
+  drawerEyebrow(): string { return this.drawer() === 'convert' ? 'Lead qualification' : this.drawer() === 'loseOpportunity' ? 'Pipeline review' : this.drawer() === 'quote' && this.editingQuoteId() ? 'Customer request' : 'Sales entry'; }
+  drawerSubmitLabel(): string {
+    if (this.drawer() === 'quote' && this.editingQuoteId()) return this.quoteForm.send_now ? 'Save & send quote' : 'Save changes';
+    return ({ lead: 'Save lead', convert: 'Convert to customer & deal', opportunity: 'Create opportunity', loseOpportunity: 'Mark as lost', quote: 'Create quote', customer: 'Add customer' } as Record<string, string>)[this.drawer() || ''] || 'Save';
+  }
 
   createLead(): void { this.save(this.api.createSalesLead(this.leadForm), 'Lead captured', () => { this.leadForm = this.freshLead(); }); }
   createOpportunity(): void { this.save(this.api.createSalesOpportunity(this.opportunityForm), 'Opportunity created', () => { this.opportunityForm = this.freshOpportunity(); }); }
-  createQuote(): void { this.save(this.api.createSalesQuote(this.quoteForm), 'Quote created', () => { this.quoteForm = this.freshQuote(); }); }
+  createQuote(): void {
+    const editingId = this.editingQuoteId();
+    if (editingId) {
+      const { send_now, ...payload } = this.quoteForm;
+      this.save(this.api.updateSalesQuoteFull(editingId, send_now ? { ...payload, status: 'sent' } : payload), send_now ? 'Quote sent to the customer' : 'Quote updated', () => { this.quoteForm = this.freshQuote(); });
+      return;
+    }
+    this.save(this.api.createSalesQuote(this.quoteForm), 'Quote created', () => { this.quoteForm = this.freshQuote(); });
+  }
   createCustomer(): void { this.save(this.api.createSalesCustomer(this.customerForm), 'Customer added', () => { this.customerForm = this.freshCustomer(); this.loadCustomers(); }); }
 
   advanceLead(lead: SalesLead, status: string): void {

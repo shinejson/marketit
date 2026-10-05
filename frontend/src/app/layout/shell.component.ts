@@ -7,7 +7,7 @@ import { AuthService } from '../core/auth.service';
 interface NavItem {
   path: string;
   label: string;
-  icon: 'home' | 'bag' | 'store' | 'cart' | 'orders';
+  icon: 'home' | 'bag' | 'store' | 'cart' | 'orders' | 'quote';
   exact: boolean;
 }
 
@@ -115,6 +115,9 @@ interface ActionLink {
           @case ('orders') {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
           }
+          @case ('quote') {
+            <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 1 1 16.1-3.8z" /><path d="M8.5 10.5h7M8.5 13.5h4" />
+          }
         }
       </svg>
     </ng-template>
@@ -195,6 +198,7 @@ export class ShellComponent {
     { path: '/stores', label: 'Stores', icon: 'store', exact: false },
     { path: '/cart', label: 'Cart', icon: 'cart', exact: false },
     { path: '/orders', label: 'Orders', icon: 'orders', exact: false },
+    { path: '/quotes', label: 'Quotes', icon: 'quote', exact: false },
   ];
 
   /** Cart and Orders only make sense for a signed-in customer. */

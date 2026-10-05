@@ -112,7 +112,7 @@ class CheckoutService
                         'sku' => $line['sku'],
                         'unit_price' => $line['unit_price'],
                         'qty' => $line['qty'],
-                        'line_tax' => '0.00',
+                        'line_tax' => (string) ($line['line_tax'] ?? '0.00'),
                         'options' => $line['options'],
                     ]);
                 }

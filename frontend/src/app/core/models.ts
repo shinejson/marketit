@@ -213,14 +213,45 @@ export interface SalesQuoteLineItem {
 
 export interface SalesQuote {
   id: number; number: string; customer_id?: number | null; opportunity_id?: number | null;
+  customer_user_id?: number | null; source?: 'staff' | 'customer_request' | string;
+  request_message?: string | null;
   customer_name: string; customer_email?: string | null; issue_date: string; expiry_date: string;
   status: 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'void';
   subtotal: string | number; tax_total: string | number; discount_total: string | number;
   total: string | number; currency: string; notes?: string | null;
   customer?: { id: number; name: string; company?: string | null } | null;
+  customer_user?: { id: number; name: string; email?: string | null } | null;
   opportunity?: { id: number; number: string; title: string } | null;
+  tenant?: { id: number; name: string; slug: string } | null;
   items: SalesQuoteLineItem[];
 }
+
+/** Receipt template edited by the settings "Receipt builder" tab. */
+export interface TenantReceipt {
+  header_line: string;
+  address_line: string;
+  footer_note: string;
+  tax_label: string;
+  show_tax_breakdown: boolean;
+  show_discounts: boolean;
+  show_sku: boolean;
+  show_logo: boolean;
+  paper_size: 'a4' | 'a5' | '80mm';
+  accent_color: string;
+}
+
+export const DEFAULT_RECEIPT: TenantReceipt = {
+  header_line: '',
+  address_line: '',
+  footer_note: 'Thank you for your business!',
+  tax_label: 'Tax',
+  show_tax_breakdown: true,
+  show_discounts: true,
+  show_sku: true,
+  show_logo: false,
+  paper_size: 'a4',
+  accent_color: '#1f4b3a',
+};
 
 export interface SalesCustomer {
   id: number; name: string; company?: string | null; email?: string | null; phone?: string | null;
@@ -341,11 +372,19 @@ export interface ProductCard {
   name: string;
   slug: string;
   price: string;
+  compare_at_price?: string | null;
+  on_sale?: boolean;
+  discount_percent?: number | null;
+  tax_class?: string | null;
+  tax_rate?: string | null;
+  unit?: string | null;
+  unit_amount?: string | null;
+  min_order_qty?: number;
   brand?: string | null;
   status: string;
   image?: string | null;
   images: { id: number; url: string; is_primary: boolean }[];
-  store: { id: number; name: string; slug: string } | null;
+  store: { id: number; name: string; slug: string; delivery_fee?: string } | null;
   category: { id: number; name: string; slug: string } | null;
   variants: {
     id: number;
@@ -356,6 +395,10 @@ export interface ProductCard {
     status: string;
   }[];
   description?: string;
+  short_description?: string | null;
+  tags?: string[];
+  condition?: string | null;
+  warranty_months?: number | null;
   sponsored?: boolean;
   impression_id?: number;
 }
@@ -390,10 +433,13 @@ export interface CartPayload {
       qty: number;
       unit_price: string;
       line_total: string;
+      tax_rate?: number;
+      line_tax?: string;
       image?: string | null;
       available: number;
     }[];
     subtotal: string;
+    tax?: string;
   }[];
   totals: {
     subtotal: string;
@@ -1505,6 +1551,7 @@ export interface TenantProduct {
   compare_at_price?: string | number | null;
   cost_price?: string | number | null;
   tax_class?: string | null;
+  tax_rate?: string | number | null;
   brand?: string | null;
 
   unit: string;

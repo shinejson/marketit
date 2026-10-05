@@ -466,6 +466,7 @@ class ProductController extends Controller
             'compare_at_price' => ['nullable', 'numeric', 'min:0'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],
             'tax_class' => ['nullable', 'string', 'max:32'],
+            'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'brand' => ['nullable', 'string', 'max:255'],
 
             'unit' => ['nullable', Rule::in(ProductCatalog::unitValues())],
@@ -542,7 +543,7 @@ class ProductController extends Controller
 
         $columns = [
             'store_id', 'category_id', 'name', 'description', 'short_description', 'status',
-            'product_type', 'catalog_preset', 'price', 'compare_at_price', 'cost_price', 'tax_class', 'brand',
+            'product_type', 'catalog_preset', 'price', 'compare_at_price', 'cost_price', 'tax_class', 'tax_rate', 'brand',
             'unit', 'unit_amount', 'min_order_qty', 'max_order_qty',
             'track_inventory', 'allow_backorder', 'low_stock_threshold',
             'requires_shipping', 'weight', 'weight_unit', 'length', 'width', 'height', 'dimension_unit',

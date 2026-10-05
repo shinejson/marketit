@@ -24,7 +24,8 @@ class SalesQuote extends Model
     ];
 
     protected $fillable = [
-        'tenant_id', 'customer_id', 'opportunity_id', 'created_by', 'number',
+        'tenant_id', 'customer_id', 'customer_user_id', 'source', 'request_message',
+        'opportunity_id', 'created_by', 'number',
         'customer_name', 'customer_email', 'issue_date', 'expiry_date', 'status',
         'subtotal', 'tax_total', 'discount_total', 'total', 'currency', 'notes',
         'sent_at', 'accepted_at',
@@ -47,6 +48,12 @@ class SalesQuote extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(SalesCustomer::class, 'customer_id');
+    }
+
+    /** Marketplace account that raised this quote as a customer request. */
+    public function customerUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'customer_user_id');
     }
 
     public function opportunity(): BelongsTo

@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, UpperCasePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -15,7 +15,9 @@ import {
   AccountingJournalEntry,
   AccountingPayment,
   AccountingReport,
+  DEFAULT_RECEIPT,
   PurchaseOrder,
+  TenantReceipt,
 } from '../../core/models';
 
 type AccountingPage = 'overview' | 'invoices' | 'payments' | 'expenses' | 'procurement' | 'vendors' | 'accounts' | 'journals' | 'reports' | 'reconciliation';
@@ -23,7 +25,7 @@ type Drawer = 'invoice' | 'payment' | 'expense' | 'payExpense' | 'purchaseOrder'
 
 @Component({
   selector: 'app-seller-accounting',
-  imports: [FormsModule, CurrencyPipe, DatePipe, RouterLink],
+  imports: [FormsModule, CurrencyPipe, DatePipe, UpperCasePipe, RouterLink],
   template: `
     <div class="accounting-shell">
       <header class="page-head">
@@ -162,7 +164,9 @@ type Drawer = 'invoice' | 'payment' | 'expense' | 'payExpense' | 'purchaseOrder'
                       <td><span [class]="'status ' + invoice.status">{{ invoice.status === 'partial' ? 'Part paid' : pretty(invoice.status) }}</span></td>
                       <td class="right"><strong>{{ invoice.total | currency:invoice.currency }}</strong></td><td class="right">{{ invoice.balance_due | currency:invoice.currency }}</td>
                       <td class="actions">
+                        <button type="button" (click)="openViewInvoice(invoice)">View</button>
                         @if (invoice.status === 'draft') { <button type="button" (click)="sendInvoice(invoice)">Send</button> }
+                        @if (invoice.status === 'draft') { <button type="button" class="danger-action" (click)="deleteInvoice(invoice)">Delete</button> }
                         @if (!['draft','paid','void'].includes(invoice.status)) { <button type="button" (click)="openPayment(invoice)">Record payment</button> }
                         @if (invoice.status === 'paid') { <span class="paid-check">✓</span> }
                       </td>
@@ -339,6 +343,57 @@ type Drawer = 'invoice' | 'payment' | 'expense' | 'payExpense' | 'purchaseOrder'
         <footer><button type="button" class="btn ghost" (click)="closeDrawer()">Cancel</button><button type="submit" form="accounting-form" class="btn primary" [disabled]="saving()">{{ saving() ? 'Saving…' : drawerSubmitLabel() }}</button></footer>
       </aside>
     }
+
+    <!-- printable invoice view (separate from the form drawer) -->
+    @if (viewInvoice(); as inv) {
+      <div class="drawer-backdrop" (click)="closeViewInvoice()"></div>
+      <aside class="drawer print-drawer" role="dialog" aria-modal="true" [class.narrow]="receipt().paper_size === '80mm'">
+        <header><div><p class="eyebrow">Invoice · {{ receipt().paper_size === '80mm' ? 'till slip' : 'printable' }}</p><h2>{{ inv.number }}</h2></div><button type="button" (click)="closeViewInvoice()" aria-label="Close">×</button></header>
+        <div class="drawer-body">
+          <div class="invoice-print" [style.--rcpt-accent]="receipt().accent_color || '#1f4b3a'">
+            <div class="doc-head">
+              @if (receipt().show_logo) { <span class="logo">{{ (business().business_name || business().name || '?')[0] }}</span> }
+              <div>
+                <h2>{{ business().business_name || business().name }}</h2>
+                @if (receipt().header_line) { <p>{{ receipt().header_line }}</p> }
+                @if (receipt().address_line) { <p>{{ receipt().address_line }}</p> }
+                @if (business().support_phone) { <p>Tel {{ business().support_phone }}</p> }
+                @if (business().tax_id) { <p>Tax ID {{ business().tax_id }}</p> }
+              </div>
+              <div class="doc-meta">
+                <span class="doc-status" [attr.data-s]="inv.status">{{ inv.status | uppercase }}</span>
+                <p>Issued {{ inv.issue_date | date:'mediumDate' }}<br />Due {{ inv.due_date | date:'mediumDate' }}</p>
+              </div>
+            </div>
+            <div class="bill-to"><span>Bill to</span><b>{{ inv.customer_name }}</b>@if (inv.customer_email) { <small>{{ inv.customer_email }}</small> }</div>
+            <table class="doc-lines">
+              <thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Rate</th>@if (receipt().show_tax_breakdown) { <th class="r">{{ receipt().tax_label || 'Tax' }} %</th> }<th class="r">Amount</th></tr></thead>
+              <tbody>
+                @for (line of inv.items; track $index) {
+                  <tr>
+                    <td>{{ line.description }}</td>
+                    <td class="r">{{ +line.quantity }}</td>
+                    <td class="r">{{ +(line.unit_price || 0) | currency:inv.currency }}</td>
+                    @if (receipt().show_tax_breakdown) { <td class="r">{{ +line.tax_rate || 0 }}%</td> }
+                    <td class="r">{{ +(line.line_subtotal ?? (+line.quantity * +(line.unit_price || 0))) | currency:inv.currency }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <dl class="doc-sums">
+              <div><dt>Subtotal</dt><dd>{{ +inv.subtotal | currency:inv.currency }}</dd></div>
+              @if (receipt().show_discounts && +inv.discount_total > 0) { <div><dt>Discount</dt><dd>−{{ +inv.discount_total | currency:inv.currency }}</dd></div> }
+              @if (receipt().show_tax_breakdown) { <div><dt>{{ receipt().tax_label || 'Tax' }}</dt><dd>{{ +inv.tax_total | currency:inv.currency }}</dd></div> }
+              <div class="grand"><dt>Total</dt><dd>{{ +inv.total | currency:inv.currency }}</dd></div>
+              @if (+inv.amount_paid > 0) { <div><dt>Paid</dt><dd>{{ +inv.amount_paid | currency:inv.currency }}</dd></div><div class="balance"><dt>Balance due</dt><dd>{{ +inv.balance_due | currency:inv.currency }}</dd></div> }
+            </dl>
+            @if (inv.notes) { <p class="doc-notes">{{ inv.notes }}</p> }
+            @if (receipt().footer_note) { <p class="doc-footer">{{ receipt().footer_note }}</p> }
+          </div>
+        </div>
+        <footer><button type="button" class="btn ghost" (click)="closeViewInvoice()">Close</button><button type="button" class="btn primary" (click)="printInvoice()">Print / save PDF</button></footer>
+      </aside>
+    }
   `,
 
 })
@@ -385,6 +440,10 @@ export class SellerAccountingComponent {
   bankAccounts = signal<AccountingBankAccount[]>([]);
   bankTransactions = signal<AccountingBankTransaction[]>([]);
   selectedInvoice = signal<AccountingInvoice | null>(null);
+  viewInvoice = signal<AccountingInvoice | null>(null);
+  receipt = signal<TenantReceipt>({ ...DEFAULT_RECEIPT });
+  business = signal<{ name: string; business_name?: string | null; support_phone?: string | null; tax_id?: string | null }>({ name: 'Your business' });
+  private receiptLoaded = false;
   selectedExpense = signal<AccountingExpense | null>(null);
   selectedBankTransaction = signal<AccountingBankTransaction | null>(null);
   search = '';
@@ -494,6 +553,32 @@ export class SellerAccountingComponent {
   sendInvoice(invoice: AccountingInvoice): void { this.saving.set(true); this.api.updateAccountingInvoice(invoice.id, 'sent').pipe(finalize(() => this.saving.set(false))).subscribe({ next: () => { this.showToast('Invoice marked as sent'); this.loadCurrent(); }, error: (err) => this.fail(err) }); }
   openPayment(invoice: AccountingInvoice): void { this.selectedInvoice.set(invoice); this.paymentForm = { ...this.freshPayment(), amount: +invoice.balance_due }; this.drawer.set('payment'); }
   recordPayment(): void { const invoice = this.selectedInvoice(); if (!invoice) return; this.save(this.api.recordAccountingPayment(invoice.id, this.paymentForm), 'Payment recorded'); }
+
+  openViewInvoice(invoice: AccountingInvoice): void {
+    this.viewInvoice.set(invoice);
+    // Refresh the copy (items + payments) and the receipt template once.
+    this.api.accountingInvoice(invoice.id).subscribe({ next: (res) => this.viewInvoice.set(res.data) });
+    if (!this.receiptLoaded) {
+      this.receiptLoaded = true;
+      this.api.tenantSettings().subscribe({
+        next: (res) => {
+          const d = res.data;
+          this.business.set({ name: d.tenant?.name || 'Your business', business_name: d.tenant?.business_name, support_phone: d.settings?.support_phone, tax_id: d.settings?.tax_id });
+          this.receipt.set({ ...DEFAULT_RECEIPT, ...(d.settings?.receipt || {}) });
+        },
+      });
+    }
+  }
+  closeViewInvoice(): void { this.viewInvoice.set(null); }
+  printInvoice(): void { window.print(); }
+  deleteInvoice(invoice: AccountingInvoice): void {
+    if (!window.confirm(`Delete draft invoice ${invoice.number}? This cannot be undone.`)) return;
+    this.saving.set(true); this.error.set('');
+    this.api.deleteAccountingInvoice(invoice.id).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => { this.showToast(`Invoice ${invoice.number} deleted`); this.loadCurrent(); },
+      error: (err) => this.fail(err),
+    });
+  }
 
   createExpense(): void { this.save(this.api.createAccountingExpense(this.expenseForm), 'Expense saved', () => { this.expenseForm = this.freshExpense(); }); }
   openExpensePayment(expense: AccountingExpense): void { this.selectedExpense.set(expense); this.paymentForm = this.freshPayment(); this.drawer.set('payExpense'); }

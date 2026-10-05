@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class TenantSettingsController extends Controller
 {
@@ -51,6 +52,17 @@ class TenantSettingsController extends Controller
             'goals.operations' => ['sometimes', 'array'],
             'goals.marketing' => ['sometimes', 'array'],
             'goals.*.*' => ['numeric', 'min:0'],
+            'receipt' => ['sometimes', 'array'],
+            'receipt.header_line' => ['nullable', 'string', 'max:120'],
+            'receipt.address_line' => ['nullable', 'string', 'max:160'],
+            'receipt.footer_note' => ['nullable', 'string', 'max:240'],
+            'receipt.tax_label' => ['nullable', 'string', 'max:40'],
+            'receipt.show_tax_breakdown' => ['sometimes', 'boolean'],
+            'receipt.show_discounts' => ['sometimes', 'boolean'],
+            'receipt.show_sku' => ['sometimes', 'boolean'],
+            'receipt.show_logo' => ['sometimes', 'boolean'],
+            'receipt.paper_size' => ['nullable', Rule::in(['a4', 'a5', '80mm'])],
+            'receipt.accent_color' => ['nullable', 'string', 'regex:/^#(?:[0-9a-fA-F]{3}){1,2}$/'],
         ]);
 
         $tenantFields = collect($data)->only(['name', 'business_name', 'country', 'business_details'])->all();
@@ -66,6 +78,13 @@ class TenantSettingsController extends Controller
                     TenantSetting::DEFAULT_GOALS,
                     $settings->goals ?? [],
                     $settingFields['goals']
+                );
+            }
+            if (isset($settingFields['receipt'])) {
+                $settingFields['receipt'] = array_merge(
+                    TenantSetting::DEFAULT_RECEIPT,
+                    $settings->receipt ?? [],
+                    $settingFields['receipt']
                 );
             }
             $settings->update($settingFields);
@@ -142,6 +161,7 @@ class TenantSettingsController extends Controller
                 'default_discount_percent' => $settings->default_discount_percent,
                 'tax_rate' => $settings->tax_rate,
                 'goals' => array_replace_recursive(TenantSetting::DEFAULT_GOALS, $settings->goals ?? []),
+                'receipt' => $settings->receiptTemplate(),
             ],
             'departments' => TenantSetting::DEPARTMENTS,
             'documents' => collect($tenant->documents ?? [])->map(fn (array $doc) => collect($doc)->except('path')->all())->values()->all(),
