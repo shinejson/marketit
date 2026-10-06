@@ -2,6 +2,7 @@ import { Component, HostListener, computed, effect, inject, signal } from '@angu
 import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ApiService } from '../core/api.service';
+import { AppNotification } from '../core/models';
 import { AuthService } from '../core/auth.service';
 import { CurrencyService } from '../core/currency.service';
 import { ThemeService } from '../core/theme.service';
@@ -9,7 +10,8 @@ import { ThemeService } from '../core/theme.service';
 type IconName =
   | 'home' | 'finance' | 'sales' | 'operations' | 'marketing' | 'store' | 'orders' | 'products'
   | 'inventory' | 'ads' | 'analytics' | 'users' | 'settings' | 'backups' | 'domains' | 'apikeys'
-  | 'webhooks' | 'ai' | 'search' | 'bell' | 'sun' | 'moon' | 'chevron' | 'menu' | 'lifebuoy' | 'activity';
+  | 'webhooks' | 'ai' | 'search' | 'bell' | 'sun' | 'moon' | 'chevron' | 'menu' | 'lifebuoy' | 'activity'
+  | 'star' | 'tag' | 'truck' | 'payout' | 'gavel';
 
 interface NavEntry {
   key: string;
@@ -23,14 +25,6 @@ interface SearchEntry {
   path: string;
   icon: IconName;
   section: string;
-}
-
-interface NotificationItem {
-  id: number;
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
 }
 
 const SIDEBAR_KEY = 'mh_tenant_sidebar_collapsed';
@@ -256,12 +250,12 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
                   @if (notifications().length) {
                     <ul>
                       @for (n of notifications(); track n.id) {
-                        <li [class.unread]="!n.read" (click)="markRead(n.id)">
+                        <li [class.unread]="!n.read" (click)="openNotification(n)">
                           <span class="dot" [class.hide]="n.read"></span>
                           <div class="n-body">
                             <p class="n-title">{{ n.title }}</p>
-                            <p class="n-msg muted">{{ n.message }}</p>
-                            <p class="n-time muted">{{ n.time }}</p>
+                            <p class="n-msg muted">{{ n.body }}</p>
+                            <p class="n-time muted">{{ ago(n.created_at) }}</p>
                           </div>
                         </li>
                       }
@@ -269,6 +263,7 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
                   } @else {
                     <p class="empty-note muted">You're all caught up.</p>
                   }
+                  <a class="notif-footer" [routerLink]="tenantLink('notifications')" (click)="closeMenus()">Open notification centre <span>→</span></a>
                 </div>
               }
             </div>
@@ -359,6 +354,21 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
           }
           @case ('ads') {
             <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" />
+          }
+          @case ('star') {
+            <path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.8-5.2-2.75L6.8 19.6l1-5.8-4.2-4.1 5.8-.85z" />
+          }
+          @case ('tag') {
+            <path d="M3 12.5V4.5a1.5 1.5 0 0 1 1.5-1.5h8L21 11.5a1.6 1.6 0 0 1 0 2.2l-7.3 7.3a1.6 1.6 0 0 1-2.2 0z" /><circle cx="7.75" cy="7.75" r="1.4" />
+          }
+          @case ('truck') {
+            <path d="M2.5 6.5h10.5v10H2.5z" /><path d="M13 9.5h4l3.5 3.5v3.5H13z" /><circle cx="6.75" cy="18" r="1.8" /><circle cx="16.75" cy="18" r="1.8" />
+          }
+          @case ('payout') {
+            <rect x="2.5" y="6" width="19" height="12.5" rx="2" /><circle cx="12" cy="12.25" r="2.75" /><path d="M6 12.25h.01M18 12.25h.01" />
+          }
+          @case ('gavel') {
+            <path d="M14.5 3.5l6 6M17.5 6.5l-7 7M11.5 2.5l4 4" /><path d="M3 21h9" /><path d="M9.5 8.5l6 6-4 4-6-6z" />
           }
           @case ('analytics') {
             <line x1="4" y1="20" x2="20" y2="20" /><rect x="6" y="11" width="3" height="7" /><rect x="13" y="7" width="3" height="11" /><rect x="17.5" y="13" width="3" height="5" />
@@ -936,6 +946,11 @@ export class SellerShellComponent {
     { key: 'orders', label: 'Orders', icon: 'orders' },
     { key: 'products', label: 'Products', icon: 'products' },
     { key: 'inventory', label: 'Inventory', icon: 'inventory' },
+    { key: 'delivery', label: 'Delivery & tracking', icon: 'truck' },
+    { key: 'coupons', label: 'Coupons', icon: 'tag' },
+    { key: 'reviews', label: 'Reviews', icon: 'star' },
+    { key: 'returns', label: 'Refunds & disputes', icon: 'gavel' },
+    { key: 'payouts', label: 'Payouts', icon: 'payout' },
     { key: 'ads', label: 'Ads', icon: 'ads' },
     { key: 'analytics', label: 'Analytics', icon: 'analytics' },
   ];
@@ -975,6 +990,7 @@ export class SellerShellComponent {
     const items: SearchEntry[] = [
       { label: 'Dashboard', path: this.tenantLink(), icon: 'home', section: 'Overview' },
       { label: 'My profile & activity', path: this.tenantLink('profile'), icon: 'users', section: 'Account' },
+      { label: 'Notifications', path: this.tenantLink('notifications'), icon: 'bell', section: 'Account' },
     ];
     if (this.canViewAccounting()) {
       for (const a of this.accountingItems) {
@@ -1009,14 +1025,9 @@ export class SellerShellComponent {
     return this.searchIndex().filter((i) => i.label.toLowerCase().includes(term));
   });
 
-  // ---- Notifications (demo data; wire to a real feed when the API exists) ----
-  notifications = signal<NotificationItem[]>([
-    { id: 1, title: 'New order received', message: 'Order #10456 was just placed for $128.40.', time: '5m ago', read: false },
-    { id: 2, title: 'Low stock alert', message: '“Ceramic Mug — Sand” has 3 units left.', time: '1h ago', read: false },
-    { id: 3, title: 'Payout sent', message: 'Your weekly payout of $2,340.00 was sent.', time: 'Yesterday', read: false },
-    { id: 4, title: 'Staff invite accepted', message: 'A new teammate joined your store.', time: '2 days ago', read: true },
-  ]);
-  unreadCount = computed(() => this.notifications().filter((n) => !n.read).length);
+  // ---- Notifications (live seller alerts, §20) ----
+  notifications = signal<AppNotification[]>([]);
+  unreadCount = signal(0);
   notifOpen = signal(false);
   profileOpen = signal(false);
 
@@ -1035,6 +1046,12 @@ export class SellerShellComponent {
   });
 
   constructor() {
+    // Unread seller alerts should be visible before the bell is opened.
+    this.api.notificationSummary('tenant').subscribe({
+      next: (res) => this.unreadCount.set(res.data?.unread ?? 0),
+      error: () => undefined,
+    });
+
     // Every price inside the console renders in the workspace currency, so the
     // shell resolves it once on entry and hands it to the CurrencyService.
     this.api.tenantCurrency().subscribe({
@@ -1150,17 +1167,46 @@ export class SellerShellComponent {
   }
 
   toggleNotifications() {
+    if (!this.notifOpen()) this.loadNotifications();
     this.notifOpen.update((v) => !v);
     this.profileOpen.set(false);
     this.searchFocused.set(false);
   }
 
-  markRead(id: number) {
-    this.notifications.update((list) => list.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  loadNotifications() {
+    this.api.notifications({ audience: 'tenant', per_page: '8' }).subscribe({
+      next: (res) => {
+        this.notifications.set(res.data || []);
+        this.unreadCount.set(res.summary?.unread ?? 0);
+      },
+      error: () => undefined,
+    });
+  }
+
+  openNotification(notification: AppNotification) {
+    if (!notification.read) {
+      this.api.markNotificationRead(notification.id).subscribe({ next: () => undefined, error: () => undefined });
+      this.notifications.update((list) => list.map((n) => (n.id === notification.id ? { ...n, read: true } : n)));
+      this.unreadCount.update((count) => Math.max(0, count - 1));
+    }
+    this.closeMenus();
+    if (notification.action_url) this.router.navigateByUrl(notification.action_url);
   }
 
   markAllRead() {
+    this.api.markAllNotificationsRead('tenant').subscribe({ next: () => this.loadNotifications(), error: () => undefined });
     this.notifications.update((list) => list.map((n) => ({ ...n, read: true })));
+    this.unreadCount.set(0);
+  }
+
+  /** Relative timestamp for the notification dropdown. */
+  ago(value?: string | null): string {
+    if (!value) return '';
+    const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
   }
 
   toggleProfile() {

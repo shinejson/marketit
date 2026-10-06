@@ -1,6 +1,8 @@
 import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ApiService } from '../core/api.service';
+import { AppNotification } from '../core/models';
 import { AuthService } from '../core/auth.service';
 import { CurrencyService } from '../core/currency.service';
 import { ThemeService } from '../core/theme.service';
@@ -9,7 +11,8 @@ type IconName =
   | 'dashboard' | 'analytics' | 'tenants' | 'users' | 'subscriptions' | 'orders'
   | 'domains' | 'ads' | 'audit' | 'settings' | 'shield' | 'logout' | 'search' | 'bell'
   | 'sun' | 'moon' | 'chevron' | 'menu'
-  | 'lifebuoy' | 'ticket' | 'chat' | 'tasks' | 'guides';
+  | 'lifebuoy' | 'ticket' | 'chat' | 'tasks' | 'guides'
+  | 'star' | 'percent' | 'payout' | 'gavel' | 'catalog' | 'tag';
 
 interface NavEntry {
   key: string;
@@ -23,14 +26,6 @@ interface SearchEntry {
   path: string;
   icon: IconName;
   section: string;
-}
-
-interface NotificationItem {
-  id: number;
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
 }
 
 const SIDEBAR_KEY = 'mh_admin_sidebar_collapsed';
@@ -73,6 +68,14 @@ const MOBILE_BREAKPOINT = 900;
             <a [routerLink]="adminLink(m.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? m.label : ''">
               <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: m.icon }" />
               <span class="label-text">{{ m.label }}</span>
+            </a>
+          }
+
+          <p class="section-label label-text">Commerce</p>
+          @for (c of commerceItems; track c.key) {
+            <a [routerLink]="adminLink(c.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? c.label : ''">
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: c.icon }" />
+              <span class="label-text">{{ c.label }}</span>
             </a>
           }
 
@@ -154,20 +157,20 @@ const MOBILE_BREAKPOINT = 900;
                   @if (notifications().length) {
                     <ul>
                       @for (n of notifications(); track n.id) {
-                        <li [class.unread]="!n.read" (click)="markRead(n.id)">
+                        <li [class.unread]="!n.read" (click)="openNotification(n)">
                           <span class="dot" [class.hide]="n.read"></span>
                           <div class="n-body">
                             <p class="n-title">{{ n.title }}</p>
-                            <p class="n-msg muted">{{ n.message }}</p>
-                            <p class="n-time muted">{{ n.time }}</p>
+                            <p class="n-msg muted">{{ n.body }}</p>
+                            <p class="n-time muted">{{ ago(n.created_at) }}</p>
                           </div>
                         </li>
                       }
                     </ul>
                   } @else {
-                    <p class="empty-note muted">No unread notifications.</p>
+                    <p class="empty-note muted">No notifications yet.</p>
                   }
-                  <a class="notif-footer" routerLink="/admin/orders" (click)="closeMenus()">Open notification center <span>→</span></a>
+                  <a class="notif-footer" routerLink="/admin/notifications" (click)="closeMenus()">Open notification center <span>→</span></a>
                 </div>
               }
             </div>
@@ -233,6 +236,24 @@ const MOBILE_BREAKPOINT = 900;
           }
           @case ('orders') {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+          }
+          @case ('star') {
+            <path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.8-5.2-2.75L6.8 19.6l1-5.8-4.2-4.1 5.8-.85z" />
+          }
+          @case ('percent') {
+            <line x1="19" y1="5" x2="5" y2="19" /><circle cx="7.5" cy="7.5" r="2.5" /><circle cx="16.5" cy="16.5" r="2.5" />
+          }
+          @case ('payout') {
+            <rect x="2.5" y="6" width="19" height="12.5" rx="2" /><circle cx="12" cy="12.25" r="2.75" /><path d="M6 12.25h.01M18 12.25h.01" />
+          }
+          @case ('gavel') {
+            <path d="M14.5 3.5l6 6M17.5 6.5l-7 7M11.5 2.5l4 4" /><path d="M3 21h9" /><path d="M9.5 8.5l6 6-4 4-6-6z" />
+          }
+          @case ('catalog') {
+            <path d="M4 4.5h6.5a2 2 0 0 1 2 2V20a1.8 1.8 0 0 0-1.8-1.5H4z" /><path d="M20 4.5h-6.5a2 2 0 0 0-2 2V20a1.8 1.8 0 0 1 1.8-1.5H20z" />
+          }
+          @case ('tag') {
+            <path d="M3 12.5V4.5a1.5 1.5 0 0 1 1.5-1.5h8L21 11.5a1.6 1.6 0 0 1 0 2.2l-7.3 7.3a1.6 1.6 0 0 1-2.2 0z" /><circle cx="7.75" cy="7.75" r="1.4" />
           }
           @case ('domains') {
             <circle cx="12" cy="12" r="9" /><line x1="3" y1="12" x2="21" y2="12" /><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z" />
@@ -595,6 +616,7 @@ const MOBILE_BREAKPOINT = 900;
 export class AdminShellComponent {
   auth = inject(AuthService);
   theme = inject(ThemeService);
+  private api = inject(ApiService);
   private currency = inject(CurrencyService);
   private router = inject(Router);
 
@@ -605,9 +627,18 @@ export class AdminShellComponent {
 
   readonly manageItems: NavEntry[] = [
     { key: 'tenants', label: 'Tenants', icon: 'tenants' },
-    { key: 'users', label: 'Users', icon: 'users' },
-    { key: 'subscriptions', label: 'Subscriptions', icon: 'subscriptions' },
+    { key: 'users', label: 'Customers & users', icon: 'users' },
+    { key: 'catalog', label: 'Catalogue', icon: 'catalog' },
     { key: 'orders', label: 'Orders', icon: 'orders' },
+    { key: 'subscriptions', label: 'Plans & billing', icon: 'subscriptions' },
+  ];
+
+  readonly commerceItems: NavEntry[] = [
+    { key: 'commissions', label: 'Commissions', icon: 'percent' },
+    { key: 'payouts', label: 'Payouts', icon: 'payout' },
+    { key: 'coupons', label: 'Coupons', icon: 'tag' },
+    { key: 'reviews', label: 'Reviews', icon: 'star' },
+    { key: 'disputes', label: 'Disputes & refunds', icon: 'gavel' },
   ];
 
   readonly supportItems: NavEntry[] = [
@@ -643,6 +674,9 @@ export class AdminShellComponent {
     for (const m of this.manageItems) {
       items.push({ label: m.label, path: this.adminLink(m.key), icon: m.icon, section: 'Manage' });
     }
+    for (const c of this.commerceItems) {
+      items.push({ label: c.label, path: this.adminLink(c.key), icon: c.icon, section: 'Commerce' });
+    }
     for (const s of this.supportItems) {
       items.push({ label: s.label, path: this.adminLink(s.key), icon: s.icon, section: 'Service desk' });
     }
@@ -658,14 +692,9 @@ export class AdminShellComponent {
     return this.searchIndex().filter((i) => i.label.toLowerCase().includes(term));
   });
 
-  // ---- Notifications (Super admin platform alerts) ----
-  notifications = signal<NotificationItem[]>([
-    { id: 1, title: 'New tenant application', message: 'Accra Food Hub submitted a seller application.', time: '12m ago', read: false },
-    { id: 2, title: 'High-value order', message: 'Order #10492 ($1,420.00) completed across 3 stores.', time: '1h ago', read: false },
-    { id: 3, title: 'Subscription renewed', message: 'Northstar Electronics renewed Growth plan.', time: '3h ago', read: false },
-    { id: 4, title: 'Security audit alert', message: 'Super admin policy updated by platform administrator.', time: '1d ago', read: true },
-  ]);
-  unreadCount = computed(() => this.notifications().filter((n) => !n.read).length);
+  // ---- Notifications (live platform alerts, §20) ----
+  notifications = signal<AppNotification[]>([]);
+  unreadCount = signal(0);
   notifOpen = signal(false);
   profileOpen = signal(false);
 
@@ -679,6 +708,12 @@ export class AdminShellComponent {
     // Platform figures are reported in the base currency, whatever a tenant
     // workspace or storefront on this browser is displaying.
     this.currency.setDisplay(this.currency.base(), false);
+
+    // Seed the bell badge so unread platform alerts are visible without opening it.
+    this.api.notificationSummary('admin').subscribe({
+      next: (res) => this.unreadCount.set(res.data?.unread ?? 0),
+      error: () => undefined,
+    });
 
     effect(() => {
       if (typeof window === 'undefined' || this.isMobile()) return;
@@ -727,17 +762,49 @@ export class AdminShellComponent {
   }
 
   toggleNotifications() {
+    if (!this.notifOpen()) this.loadNotifications();
     this.notifOpen.update((v) => !v);
     this.profileOpen.set(false);
     this.searchFocused.set(false);
   }
 
-  markRead(id: number) {
-    this.notifications.update((list) => list.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  loadNotifications() {
+    this.api.notifications({ audience: 'admin', per_page: '8' }).subscribe({
+      next: (res) => {
+        this.notifications.set(res.data || []);
+        this.unreadCount.set(res.summary?.unread ?? 0);
+      },
+      error: () => undefined,
+    });
+  }
+
+  openNotification(notification: AppNotification) {
+    if (!notification.read) {
+      this.api.markNotificationRead(notification.id).subscribe({ next: () => undefined, error: () => undefined });
+      this.notifications.update((list) => list.map((n) => (n.id === notification.id ? { ...n, read: true } : n)));
+      this.unreadCount.update((count) => Math.max(0, count - 1));
+    }
+    this.closeMenus();
+    if (notification.action_url) this.router.navigateByUrl(notification.action_url);
   }
 
   markAllRead() {
+    this.api.markAllNotificationsRead('admin').subscribe({
+      next: () => this.loadNotifications(),
+      error: () => undefined,
+    });
     this.notifications.update((list) => list.map((n) => ({ ...n, read: true })));
+    this.unreadCount.set(0);
+  }
+
+  /** Relative timestamp for the notification dropdown. */
+  ago(value?: string | null): string {
+    if (!value) return '';
+    const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
   }
 
   toggleProfile() {

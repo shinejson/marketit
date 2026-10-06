@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
-import { Address, CartPayload, PaymentMethodsPayload } from '../../core/models';
+import { Address, CartGroup, CartPayload, DeliveryOption, PaymentMethodsPayload } from '../../core/models';
 import { MoneyPipe } from '../../shared/money.pipe';
 
 @Component({
@@ -14,7 +14,9 @@ import { MoneyPipe } from '../../shared/money.pipe';
       <h1>Checkout</h1>
       @if (quote(); as q) {
         <p class="muted">
-          {{ q.groups.length }} store(s) · items {{ +q.totals.subtotal | money }} · delivery {{ +q.totals.delivery_total | money }}
+          {{ q.groups.length }} store(s) · items {{ +q.totals.subtotal | money }}
+          @if (+(q.totals.discount_total || 0) > 0) { · <span class="save">discount −{{ +(q.totals.discount_total || 0) | money }}</span> }
+          · delivery {{ +q.totals.delivery_total | money }}
           @if (+q.totals.tax_total > 0) { · tax {{ +q.totals.tax_total | money }} }
           · <b>total {{ +q.totals.grand_total | money }}</b>
         </p>
@@ -22,7 +24,7 @@ import { MoneyPipe } from '../../shared/money.pipe';
       <section class="card pad">
         <h3>Shipping address</h3>
         @for (a of addresses(); track a.id) {
-          <label class="addr"><input type="radio" name="addr" [value]="a.id" [(ngModel)]="addressId" /> {{ a.full_name }} — {{ a.line1 }}, {{ a.city }}</label>
+          <label class="addr"><input type="radio" name="addr" [value]="a.id" [(ngModel)]="addressId" (ngModelChange)="reprice()" /> {{ a.full_name }} — {{ a.line1 }}, {{ a.city }}</label>
         }
         <details>
           <summary>New address</summary>
@@ -33,6 +35,42 @@ import { MoneyPipe } from '../../shared/money.pipe';
           <button type="button" class="btn ghost" (click)="saveAddress()">Save address</button>
         </details>
       </section>
+      @if (hasDeliveryChoices()) {
+        <section class="card pad">
+          <h3>Delivery</h3>
+          <p class="muted small">Options are priced against the address you selected above.</p>
+          @for (g of quote()?.groups || []; track g.store.id) {
+            @if (g.delivery_options?.length) {
+              <div class="delivery-block">
+                <p class="delivery-store">{{ g.store.name }}</p>
+                <div class="payment-options" role="radiogroup" [attr.aria-label]="'Delivery for ' + g.store.name">
+                  @for (option of g.delivery_options || []; track option.method_id) {
+                    <label class="payment-option" [class.selected]="isChosen(g, option)">
+                      <input
+                        type="radio"
+                        [name]="'delivery-' + g.store.id"
+                        [checked]="isChosen(g, option)"
+                        (change)="chooseDelivery(g, option)"
+                      />
+                      <span>
+                        <strong>{{ option.name }}</strong>
+                        <small>
+                          {{ +option.fee > 0 ? (+option.fee | money) : 'Free' }}
+                          @if (option.min_days !== null && option.min_days !== undefined) {
+                            · {{ option.min_days }}–{{ option.max_days }} days
+                          }
+                        </small>
+                        @if (option.pickup_address) { <small>{{ option.pickup_address }}</small> }
+                      </span>
+                    </label>
+                  }
+                </div>
+              </div>
+            }
+          }
+        </section>
+      }
+
       <section class="card pad">
         <div class="section-head">
           <div><h3>Payment method</h3><p class="muted small">Payments are processed securely by the configured provider.</p></div>
@@ -68,6 +106,9 @@ import { MoneyPipe } from '../../shared/money.pipe';
     .payment-option input { margin-top:3px; accent-color:var(--accent); }
     .payment-option strong, .payment-option small { display:block; }
     .payment-option small { color:var(--ink-soft); margin-top:3px; }
+    .delivery-block { margin-top:14px; }
+    .delivery-store { margin:0; font-size:11px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); }
+    .save { color:var(--ok); font-weight:650; }
   `],
 })
 export class CheckoutComponent {
@@ -82,12 +123,10 @@ export class CheckoutComponent {
   busy = signal(false);
   error = signal('');
   newAddr = { full_name: '', line1: '', city: '', country: 'GH' };
+  deliveryChoices: Record<string, number> = {};
 
   constructor() {
-    this.api.checkoutQuote().subscribe({
-      next: (res) => this.quote.set(res.data),
-      error: (e) => this.error.set(e.error?.error?.message || 'Cart issue'),
-    });
+    this.reprice();
     this.api.paymentMethods().subscribe({
       next: (res) => {
         this.payment.set(res.data);
@@ -102,7 +141,32 @@ export class CheckoutComponent {
       this.addresses.set(res.data);
       const def = res.data.find((a) => a.is_default) || res.data[0];
       this.addressId = def?.id ?? null;
+      if (this.addressId) this.reprice();
     });
+  }
+
+  /** Re-quote the basket against the chosen address and delivery options. */
+  reprice() {
+    this.api.checkoutQuote(this.addressId, this.deliveryChoices).subscribe({
+      next: (res) => this.quote.set(res.data),
+      error: (e) => this.error.set(e.error?.error?.message || 'Cart issue'),
+    });
+  }
+
+  hasDeliveryChoices(): boolean {
+    return (this.quote()?.groups ?? []).some((group) => (group.delivery_options?.length ?? 0) > 1);
+  }
+
+  isChosen(group: CartGroup, option: DeliveryOption): boolean {
+    const chosen = group.delivery;
+    if (!chosen) return !!option.is_default;
+    return (chosen.method_id ?? null) === (option.method_id ?? null);
+  }
+
+  chooseDelivery(group: CartGroup, option: DeliveryOption) {
+    if (option.method_id) this.deliveryChoices[String(group.store.id)] = option.method_id;
+    else delete this.deliveryChoices[String(group.store.id)];
+    this.reprice();
   }
 
   isOffline(): boolean {
@@ -113,6 +177,7 @@ export class CheckoutComponent {
     this.api.createAddress({ ...this.newAddr, is_default: !this.addresses().length }).subscribe((res) => {
       this.addresses.set([...this.addresses(), res.data]);
       this.addressId = res.data.id;
+      this.reprice();
     });
   }
 
@@ -120,7 +185,7 @@ export class CheckoutComponent {
     if (!this.addressId) return;
     this.busy.set(true);
     const key = crypto.randomUUID();
-    this.api.checkout(this.addressId, key, this.paymentMethod).subscribe({
+    this.api.checkout(this.addressId, key, this.paymentMethod, this.deliveryChoices).subscribe({
       next: (res) => {
         const url = res.payment?.url as string;
         if (url?.startsWith('/api/payments/mock')) {
