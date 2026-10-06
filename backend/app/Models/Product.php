@@ -17,6 +17,24 @@ class Product extends Model
     public const STATUS_ACTIVE = 'active';
     public const STATUS_ARCHIVED = 'archived';
 
+    public const MODERATION_PENDING = 'pending';
+    public const MODERATION_APPROVED = 'approved';
+    public const MODERATION_FLAGGED = 'flagged';
+    public const MODERATION_REJECTED = 'rejected';
+
+    public const MODERATION_STATUSES = [
+        self::MODERATION_PENDING,
+        self::MODERATION_APPROVED,
+        self::MODERATION_FLAGGED,
+        self::MODERATION_REJECTED,
+    ];
+
+    /** Moderation states a shopper is allowed to see. */
+    public const PUBLIC_MODERATION_STATUSES = [
+        self::MODERATION_APPROVED,
+        self::MODERATION_FLAGGED,
+    ];
+
     public const TYPE_PHYSICAL = 'physical';
     public const TYPE_DIGITAL = 'digital';
     public const TYPE_SERVICE = 'service';
@@ -25,6 +43,7 @@ class Product extends Model
         'tenant_id',
         'store_id',
         'category_id',
+        'platform_category_id',
         'name',
         'slug',
         'description',
@@ -40,6 +59,10 @@ class Product extends Model
         'brand',
         'has_variants',
         'is_featured',
+        'moderation_status',
+        'moderation_note',
+        'moderated_by_user_id',
+        'moderated_at',
         'unit',
         'unit_amount',
         'min_order_qty',
@@ -85,6 +108,10 @@ class Product extends Model
             'height' => 'decimal:2',
             'has_variants' => 'boolean',
             'is_featured' => 'boolean',
+            'rating_avg' => 'decimal:2',
+            'rating_count' => 'integer',
+            'report_count' => 'integer',
+            'moderated_at' => 'datetime',
             'track_inventory' => 'boolean',
             'allow_backorder' => 'boolean',
             'requires_shipping' => 'boolean',
@@ -109,6 +136,21 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function platformCategory(): BelongsTo
+    {
+        return $this->belongsTo(PlatformCategory::class, 'platform_category_id');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(ProductReport::class);
     }
 
     public function images(): HasMany
@@ -174,6 +216,13 @@ class Product extends Model
         return $image?->url;
     }
 
+    /** Visible in the marketplace? Rejected and unreviewed listings are not. */
+    public function isPubliclyVisible(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE
+            && in_array($this->moderation_status, self::PUBLIC_MODERATION_STATUSES, true);
+    }
+
     /** Gross margin on the base price, null when no cost is recorded. */
     public function getMarginPercentAttribute(): ?float
     {
@@ -184,5 +233,10 @@ class Product extends Model
         }
 
         return round((($price - $cost) / $price) * 100, 1);
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
     }
 }

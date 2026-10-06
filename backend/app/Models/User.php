@@ -72,6 +72,31 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
+    public function wishlistItems(): HasMany
+    {
+        return $this->hasMany(WishlistItem::class);
+    }
+
+    public function savedStores(): HasMany
+    {
+        return $this->hasMany(WishlistStore::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(AppNotification::class)->latest();
+    }
+
+    public function notificationPreference(): HasOne
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
     public function isSuspended(): bool
     {
         return $this->status === 'suspended';

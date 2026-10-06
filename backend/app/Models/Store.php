@@ -51,12 +51,29 @@ class Store extends Model
             'theme_config' => 'array',
             'page_sections' => 'array',
             'delivery_fee' => 'decimal:2',
+            'rating_avg' => 'decimal:2',
+            'rating_count' => 'integer',
         ];
     }
 
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function deliveryZones(): HasMany
+    {
+        return $this->hasMany(DeliveryZone::class);
+    }
+
+    public function deliveryMethods(): HasMany
+    {
+        return $this->hasMany(DeliveryMethod::class);
     }
 
     public function isActive(): bool

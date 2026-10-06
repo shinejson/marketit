@@ -19,6 +19,9 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'subtotal',
+        'discount_total',
+        'coupon_id',
+        'coupon_code',
         'delivery_total',
         'tax_total',
         'grand_total',
@@ -33,6 +36,7 @@ class Order extends Model
     {
         return [
             'subtotal' => 'decimal:2',
+            'discount_total' => 'decimal:2',
             'delivery_total' => 'decimal:2',
             'tax_total' => 'decimal:2',
             'grand_total' => 'decimal:2',
@@ -58,6 +62,29 @@ class Order extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(PaymentTransaction::class);
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
+    }
+
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class);
+    }
+
+    public function disputes(): HasMany
+    {
+        return $this->hasMany(Dispute::class);
+    }
+
+    /** Total already refunded to the shopper across every seller order. */
+    public function refundedTotal(): string
+    {
+        return (string) $this->refunds()
+            ->where('status', Refund::STATUS_COMPLETED)
+            ->sum('amount');
     }
 
     public function canCancel(): bool
