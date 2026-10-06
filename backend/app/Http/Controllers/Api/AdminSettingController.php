@@ -105,6 +105,9 @@ class AdminSettingController extends Controller
         'min_payout_amount' => ['commerce', 'number', 'Minimum payout', 'Settlements below this roll over.', 50],
         'tax_rate' => ['commerce', 'number', 'Default tax rate (%)', 'Fallback when a store has no tax profile.', 0, ['unit' => '%']],
         'auto_approve_tenants' => ['commerce', 'bool', 'Auto-approve sellers', 'Skip manual review of new applications.', false],
+        'moderate_reviews' => ['commerce', 'bool', 'Moderate reviews before publishing', 'Hold new product and store reviews in the moderation queue instead of publishing them straight away.', false],
+        'verified_reviews_only' => ['commerce', 'bool', 'Verified buyers only', 'Only shoppers who bought the item can leave a review.', false],
+        'moderate_new_products' => ['commerce', 'bool', 'Moderate new listings', 'New seller listings stay off the storefront until an admin approves them.', false],
 
         // ------------------------------------------------------------ billing
         'trial_days' => ['billing', 'number', 'Default trial length (days)', 'Used when a plan has no trial of its own.', 14, ['unit' => 'days']],

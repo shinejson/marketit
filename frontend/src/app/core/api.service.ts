@@ -3,6 +3,48 @@ import { Injectable } from '@angular/core';
 import { CurrencyCatalog } from './currency.service';
 import {
   Address,
+  AdminPayoutOverview,
+  AdminReviewSummary,
+  AppNotification,
+  CatalogCategoriesPayload,
+  CatalogProductSummary,
+  CommissionEarnings,
+  CommissionMeta,
+  CommissionQuotePreview,
+  CommissionRule,
+  Coupon,
+  CouponMeta,
+  CouponRedemption,
+  CouponSummary,
+  DeliverySettings,
+  DeliveryMethod,
+  DeliveryZone,
+  Dispute,
+  DisputeSummary,
+  ModeratedProduct,
+  NotificationSummary,
+  PageMeta,
+  PayoutAccount,
+  PayoutAdjustment,
+  PayoutBatch,
+  PayoutOverview,
+  PendingReview,
+  PlatformCategory,
+  ProductReportRow,
+  Refund,
+  RefundSummary,
+  RefundableOrder,
+  Review,
+  ReviewFeed,
+  ReviewReport,
+  ReviewSummary,
+  SettlementRow,
+  Shipment,
+  ShipmentSummary,
+  TenantCategoryRow,
+  TenantReviewSummary,
+  WishlistItem,
+  WishlistPayload,
   CurrencyConversionPreview,
   ProfileActivityEntry,
   ProfileActivityStats,
@@ -176,14 +218,28 @@ export class ApiService {
     return this.http.post<{ data: Address }>('/api/addresses', payload);
   }
 
-  checkoutQuote() {
-    return this.http.post<{ data: CartPayload }>('/api/checkout/quote', {});
+  checkoutQuote(addressId?: number | null, deliveryChoices: Record<string, number> = {}) {
+    return this.http.post<{ data: CartPayload }>('/api/checkout/quote', {
+      address_id: addressId ?? null,
+      delivery_choices: deliveryChoices,
+    });
   }
 
-  checkout(shippingAddressId: number, idempotencyKey: string, paymentMethod = 'card') {
-    return this.http.post<any>('/api/checkout', { shipping_address_id: shippingAddressId, payment_method: paymentMethod }, {
-      headers: { 'Idempotency-Key': idempotencyKey },
-    });
+  checkout(
+    shippingAddressId: number,
+    idempotencyKey: string,
+    paymentMethod = 'card',
+    deliveryChoices: Record<string, number> = {},
+  ) {
+    return this.http.post<any>(
+      '/api/checkout',
+      {
+        shipping_address_id: shippingAddressId,
+        payment_method: paymentMethod,
+        delivery_choices: deliveryChoices,
+      },
+      { headers: { 'Idempotency-Key': idempotencyKey } },
+    );
   }
 
   mockPay(url: string) {
@@ -1212,6 +1268,731 @@ export class ApiService {
 
   rateTenantGuide(id: number, helpful: boolean) {
     return this.http.post<{ data: HelpArticle }>(`/api/tenant/support/guides/${id}/feedback`, { helpful });
+  }
+
+  // ----------- §9 / §17 reviews, ratings & trust
+
+  productReviews(slug: string, params: Record<string, string> = {}) {
+    return this.http.get<ReviewFeed>(`/api/market/products/${slug}/reviews`, { params });
+  }
+
+  storeReviews(slug: string, params: Record<string, string> = {}) {
+    return this.http.get<ReviewFeed>(`/api/market/stores/${slug}/reviews`, { params });
+  }
+
+  myReviews(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Review[]; meta: PageMeta }>('/api/reviews/mine', { params });
+  }
+
+  reviewableProducts() {
+    return this.http.get<{ data: PendingReview[] }>('/api/reviews/pending');
+  }
+
+  submitReview(payload: {
+    store_id: number;
+    product_id?: number | null;
+    rating: number;
+    title?: string | null;
+    body?: string | null;
+  }) {
+    return this.http.post<{ data: Review }>('/api/reviews', payload);
+  }
+
+  updateReview(id: number, payload: { rating: number; title?: string | null; body?: string | null }) {
+    return this.http.patch<{ data: Review }>(`/api/reviews/${id}`, payload);
+  }
+
+  deleteReview(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/reviews/${id}`);
+  }
+
+  voteReview(id: number, helpful = true) {
+    return this.http.post<{ data: { id: number; helpful_count: number } }>(`/api/reviews/${id}/vote`, { helpful });
+  }
+
+  reportReview(id: number, reason: string, note?: string) {
+    return this.http.post<{ data: { reported: boolean } }>(`/api/reviews/${id}/report`, { reason, note: note ?? null });
+  }
+
+  // ----------- §9 / §20 wishlist
+
+  wishlist() {
+    return this.http.get<{ data: WishlistPayload }>('/api/wishlist');
+  }
+
+  wishlistIds() {
+    return this.http.get<{ data: { product_ids: number[]; store_ids: number[] } }>('/api/wishlist/ids');
+  }
+
+  addToWishlist(payload: { product_id: number; variant_id?: number | null; note?: string | null }) {
+    return this.http.post<{ data: WishlistItem }>('/api/wishlist', payload);
+  }
+
+  removeWishlistItem(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/wishlist/${id}`);
+  }
+
+  removeWishlistProduct(productId: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/wishlist/product/${productId}`);
+  }
+
+  wishlistToCart(id: number, qty = 1) {
+    return this.http.post<{ data: CartPayload }>(`/api/wishlist/${id}/move-to-cart`, { qty });
+  }
+
+  toggleFavouriteStore(storeId: number) {
+    return this.http.post<{ data: { saved: boolean } }>('/api/wishlist/stores', { store_id: storeId });
+  }
+
+  // ----------- §18 cart coupons & §16 delivery picks
+
+  applyCartCoupon(code: string) {
+    return this.http.post<{ data: CartPayload }>('/api/cart/coupon', { code });
+  }
+
+  removeCartCoupon() {
+    return this.http.delete<{ data: CartPayload }>('/api/cart/coupon');
+  }
+
+  priceCart(addressId?: number | null, deliveryChoices: Record<string, number> = {}) {
+    return this.http.post<{ data: CartPayload }>('/api/cart/delivery', {
+      address_id: addressId ?? null,
+      delivery_choices: deliveryChoices,
+    });
+  }
+
+  // ----------- §12 customer refunds & disputes
+
+  myRefunds(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Refund[]; meta: PageMeta }>('/api/refunds', { params });
+  }
+
+  requestRefund(payload: {
+    seller_order_id: number;
+    reason: string;
+    type?: string;
+    customer_note?: string | null;
+    amount?: number | null;
+    items?: { order_item_id: number; qty: number }[];
+  }) {
+    return this.http.post<{ data: Refund }>('/api/refunds', payload);
+  }
+
+  cancelRefund(id: number) {
+    return this.http.post<{ data: Refund }>(`/api/refunds/${id}/cancel`, {});
+  }
+
+  myDisputes(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Dispute[]; meta: PageMeta }>('/api/disputes', { params });
+  }
+
+  openDispute(payload: {
+    seller_order_id: number;
+    type: string;
+    subject: string;
+    description: string;
+    amount_claimed?: number | null;
+  }) {
+    return this.http.post<{ data: Dispute }>('/api/disputes', payload);
+  }
+
+  dispute(id: number) {
+    return this.http.get<{ data: Dispute }>(`/api/disputes/${id}`);
+  }
+
+  replyToDispute(id: number, body: string, isInternal = false) {
+    return this.http.post<{ data: Dispute }>(`/api/disputes/${id}/messages`, { body, is_internal: isInternal });
+  }
+
+  escalateDispute(id: number, note?: string) {
+    return this.http.post<{ data: Dispute }>(`/api/disputes/${id}/escalate`, { note: note ?? null });
+  }
+
+  trackShipment(reference: string) {
+    return this.http.get<{ data: Shipment }>(`/api/shipments/${reference}`);
+  }
+
+  // ----------- §20 notification centre
+
+  notifications(params: Record<string, string> = {}) {
+    return this.http.get<{ data: AppNotification[]; summary: NotificationSummary; meta: PageMeta }>(
+      '/api/notifications',
+      { params },
+    );
+  }
+
+  notificationSummary(audience?: string) {
+    const params: Record<string, string> = audience ? { audience } : {};
+    return this.http.get<{ data: NotificationSummary }>('/api/notifications/summary', { params });
+  }
+
+  markNotificationRead(id: number) {
+    return this.http.post<{ data: AppNotification }>(`/api/notifications/${id}/read`, {});
+  }
+
+  markNotificationUnread(id: number) {
+    return this.http.post<{ data: AppNotification }>(`/api/notifications/${id}/unread`, {});
+  }
+
+  markAllNotificationsRead(audience?: string) {
+    return this.http.post<{ data: { updated: number } }>('/api/notifications/read-all', {
+      audience: audience ?? null,
+    });
+  }
+
+  archiveNotification(id: number) {
+    return this.http.delete<{ data: { archived: boolean } }>(`/api/notifications/${id}`);
+  }
+
+  clearReadNotifications() {
+    return this.http.post<{ data: { archived: number } }>('/api/notifications/clear', {});
+  }
+
+  notificationPreferences() {
+    return this.http.get<{ data: Record<string, boolean> }>('/api/notification-preferences');
+  }
+
+  updateNotificationPreferences(payload: Record<string, boolean>) {
+    return this.http.put<{ data: Record<string, boolean> }>('/api/notification-preferences', payload);
+  }
+
+  // ----------- §17 tenant review inbox
+
+  tenantReviews(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Review[]; summary: TenantReviewSummary; meta: PageMeta }>('/api/tenant/reviews', {
+      params,
+    });
+  }
+
+  respondToReview(id: number, body: string) {
+    return this.http.post<{ data: Review }>(`/api/tenant/reviews/${id}/respond`, { body });
+  }
+
+  flagReview(id: number, reason: string, note?: string) {
+    return this.http.post<{ data: { reported: boolean } }>(`/api/tenant/reviews/${id}/report`, {
+      reason,
+      note: note ?? null,
+    });
+  }
+
+  // ----------- §18 tenant coupons
+
+  tenantCoupons(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Coupon[]; summary: CouponSummary; meta: PageMeta }>('/api/tenant/coupons', {
+      params,
+    });
+  }
+
+  tenantCouponMeta() {
+    return this.http.get<{ data: CouponMeta }>('/api/tenant/coupons/meta');
+  }
+
+  tenantCoupon(id: number) {
+    return this.http.get<{ data: Coupon }>(`/api/tenant/coupons/${id}`);
+  }
+
+  createTenantCoupon(payload: Record<string, unknown>) {
+    return this.http.post<{ data: Coupon }>('/api/tenant/coupons', payload);
+  }
+
+  updateTenantCoupon(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: Coupon }>(`/api/tenant/coupons/${id}`, payload);
+  }
+
+  deleteTenantCoupon(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/coupons/${id}`);
+  }
+
+  tenantCouponRedemptions(id: number, params: Record<string, string> = {}) {
+    return this.http.get<{ data: CouponRedemption[]; meta: PageMeta }>(
+      `/api/tenant/coupons/${id}/redemptions`,
+      { params },
+    );
+  }
+
+  // ----------- §16 tenant delivery & shipments
+
+  deliverySettings() {
+    return this.http.get<{ data: DeliverySettings }>('/api/tenant/delivery');
+  }
+
+  createDeliveryZone(payload: Record<string, unknown>) {
+    return this.http.post<{ data: DeliveryZone }>('/api/tenant/delivery/zones', payload);
+  }
+
+  updateDeliveryZone(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: DeliveryZone }>(`/api/tenant/delivery/zones/${id}`, payload);
+  }
+
+  deleteDeliveryZone(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/delivery/zones/${id}`);
+  }
+
+  createDeliveryMethod(payload: Record<string, unknown>) {
+    return this.http.post<{ data: DeliveryMethod }>('/api/tenant/delivery/methods', payload);
+  }
+
+  updateDeliveryMethod(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: DeliveryMethod }>(`/api/tenant/delivery/methods/${id}`, payload);
+  }
+
+  deleteDeliveryMethod(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/delivery/methods/${id}`);
+  }
+
+  tenantShipments(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Shipment[]; summary: ShipmentSummary; meta: PageMeta }>('/api/tenant/shipments', {
+      params,
+    });
+  }
+
+  tenantShipment(id: number) {
+    return this.http.get<{ data: Shipment }>(`/api/tenant/shipments/${id}`);
+  }
+
+  updateShipment(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: Shipment }>(`/api/tenant/shipments/${id}`, payload);
+  }
+
+  addShipmentEvent(id: number, payload: { status: string; description: string; location?: string | null }) {
+    return this.http.post<{ data: Shipment }>(`/api/tenant/shipments/${id}/events`, payload);
+  }
+
+  ensureShipmentForOrder(sellerOrderId: number) {
+    return this.http.post<{ data: Shipment }>(`/api/tenant/orders/${sellerOrderId}/shipment`, {});
+  }
+
+  // ----------- §12 tenant payouts
+
+  tenantPayouts() {
+    return this.http.get<{ data: PayoutOverview }>('/api/tenant/payouts');
+  }
+
+  tenantSettlements(params: Record<string, string> = {}) {
+    return this.http.get<{ data: SettlementRow[]; summary: PayoutOverview['balance']; meta: PageMeta }>(
+      '/api/tenant/payouts/settlements',
+      { params },
+    );
+  }
+
+  tenantPayoutBatches(params: Record<string, string> = {}) {
+    return this.http.get<{ data: PayoutBatch[]; meta: PageMeta }>('/api/tenant/payouts/batches', { params });
+  }
+
+  tenantPayoutBatch(id: number) {
+    return this.http.get<{ data: PayoutBatch }>(`/api/tenant/payouts/batches/${id}`);
+  }
+
+  requestPayout(payload: { payout_account_id?: number | null; notes?: string | null } = {}) {
+    return this.http.post<{ data: PayoutBatch }>('/api/tenant/payouts/request', payload);
+  }
+
+  payoutAccounts() {
+    return this.http.get<{ data: { accounts: PayoutAccount[]; methods: string[] } }>('/api/tenant/payouts/accounts');
+  }
+
+  createPayoutAccount(payload: Record<string, unknown>) {
+    return this.http.post<{ data: PayoutAccount }>('/api/tenant/payouts/accounts', payload);
+  }
+
+  updatePayoutAccount(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: PayoutAccount }>(`/api/tenant/payouts/accounts/${id}`, payload);
+  }
+
+  deletePayoutAccount(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/payouts/accounts/${id}`);
+  }
+
+  // ----------- §12 tenant refunds & disputes
+
+  tenantRefunds(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Refund[]; summary: RefundSummary; meta: PageMeta }>('/api/tenant/refunds', {
+      params,
+    });
+  }
+
+  tenantRefund(id: number) {
+    return this.http.get<{ data: Refund }>(`/api/tenant/refunds/${id}`);
+  }
+
+  approveRefund(id: number, note?: string) {
+    return this.http.post<{ data: Refund }>(`/api/tenant/refunds/${id}/approve`, { note: note ?? null });
+  }
+
+  rejectRefund(id: number, note: string) {
+    return this.http.post<{ data: Refund }>(`/api/tenant/refunds/${id}/reject`, { note });
+  }
+
+  issueRefund(payload: {
+    seller_order_id: number;
+    amount: number;
+    reason?: string;
+    type?: string;
+    customer_note?: string | null;
+    restock?: boolean;
+  }) {
+    return this.http.post<{ data: Refund }>('/api/tenant/refunds/issue', payload);
+  }
+
+  refundableOrder(sellerOrderId: number) {
+    return this.http.get<{ data: RefundableOrder }>(`/api/tenant/orders/${sellerOrderId}/refundable`);
+  }
+
+  tenantDisputes(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Dispute[]; summary: DisputeSummary; meta: PageMeta }>('/api/tenant/disputes', {
+      params,
+    });
+  }
+
+  tenantDispute(id: number) {
+    return this.http.get<{ data: Dispute }>(`/api/tenant/disputes/${id}`);
+  }
+
+  replyToTenantDispute(id: number, body: string, isInternal = false) {
+    return this.http.post<{ data: Dispute }>(`/api/tenant/disputes/${id}/messages`, {
+      body,
+      is_internal: isInternal,
+    });
+  }
+
+  escalateTenantDispute(id: number, note?: string) {
+    return this.http.post<{ data: Dispute }>(`/api/tenant/disputes/${id}/escalate`, { note: note ?? null });
+  }
+
+  resolveTenantDispute(id: number, payload: Record<string, unknown>) {
+    return this.http.post<{ data: Dispute }>(`/api/tenant/disputes/${id}/resolve`, payload);
+  }
+
+  // ----------- §17 admin review moderation
+
+  adminReviews(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Review[]; summary: AdminReviewSummary; meta: PageMeta }>('/api/admin/reviews', {
+      params,
+    });
+  }
+
+  adminReview(id: number) {
+    return this.http.get<{ data: Review & { reports: ReviewReport[] } }>(`/api/admin/reviews/${id}`);
+  }
+
+  moderateReview(id: number, status: string, note?: string) {
+    return this.http.post<{ data: Review }>(`/api/admin/reviews/${id}/moderate`, { status, note: note ?? null });
+  }
+
+  bulkModerateReviews(ids: number[], status: string, note?: string) {
+    return this.http.post<{ data: { updated: number } }>('/api/admin/reviews/bulk', {
+      ids,
+      status,
+      note: note ?? null,
+    });
+  }
+
+  deleteAdminReview(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/reviews/${id}`);
+  }
+
+  adminReviewReports(params: Record<string, string> = {}) {
+    return this.http.get<{ data: ReviewReport[]; meta: PageMeta }>('/api/admin/reviews/reports', { params });
+  }
+
+  resolveReviewReport(id: number, status: string, note?: string) {
+    return this.http.post<{ data: { id: number; status: string } }>(`/api/admin/review-reports/${id}/resolve`, {
+      status,
+      note: note ?? null,
+    });
+  }
+
+  adminStoreRatings(limit = 20) {
+    return this.http.get<{ data: { id: number; name: string; slug: string; tenant?: string; rating_avg: number; rating_count: number }[] }>(
+      '/api/admin/reviews/store-ratings',
+      { params: { limit: String(limit) } },
+    );
+  }
+
+  // ----------- §14 admin commissions
+
+  commissionRules(params: Record<string, string> = {}) {
+    return this.http.get<{
+      data: CommissionRule[];
+      summary: { total: number; active: number; scheduled: number; expired: number; by_scope: Record<string, number> };
+      defaults: { platform_rate: string; config_rate: string };
+    }>('/api/admin/commissions', { params });
+  }
+
+  commissionMeta() {
+    return this.http.get<{ data: CommissionMeta }>('/api/admin/commissions/meta');
+  }
+
+  commissionEarnings(params: Record<string, string> = {}) {
+    return this.http.get<{ data: CommissionEarnings }>('/api/admin/commissions/earnings', { params });
+  }
+
+  createCommissionRule(payload: Record<string, unknown>) {
+    return this.http.post<{ data: CommissionRule }>('/api/admin/commissions', payload);
+  }
+
+  updateCommissionRule(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: CommissionRule }>(`/api/admin/commissions/${id}`, payload);
+  }
+
+  deleteCommissionRule(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/commissions/${id}`);
+  }
+
+  toggleCommissionRule(id: number) {
+    return this.http.post<{ data: CommissionRule }>(`/api/admin/commissions/${id}/toggle`, {});
+  }
+
+  simulateCommission(payload: Record<string, unknown>) {
+    return this.http.post<{ data: CommissionQuotePreview }>('/api/admin/commissions/simulate', payload);
+  }
+
+  // ----------- §12 admin payouts
+
+  adminPayouts() {
+    return this.http.get<{ data: AdminPayoutOverview }>('/api/admin/payouts');
+  }
+
+  adminPayoutBatches(params: Record<string, string> = {}) {
+    return this.http.get<{ data: PayoutBatch[]; summary: AdminPayoutOverview['summary']; meta: PageMeta }>(
+      '/api/admin/payouts/batches',
+      { params },
+    );
+  }
+
+  adminPayoutBatch(id: number) {
+    return this.http.get<{ data: PayoutBatch }>(`/api/admin/payouts/batches/${id}`);
+  }
+
+  createPayoutBatch(payload: Record<string, unknown>) {
+    return this.http.post<{ data: PayoutBatch }>('/api/admin/payouts/batches', payload);
+  }
+
+  runAllPayouts(onlyMeetingMinimum = true) {
+    return this.http.post<{ data: { created: number; batches: PayoutBatch[] } }>(
+      '/api/admin/payouts/batches/run-all',
+      { only_meeting_minimum: onlyMeetingMinimum },
+    );
+  }
+
+  recalculatePayoutBatch(id: number) {
+    return this.http.post<{ data: PayoutBatch }>(`/api/admin/payouts/batches/${id}/recalculate`, {});
+  }
+
+  releasePayoutBatch(id: number, externalRef?: string) {
+    return this.http.post<{ data: PayoutBatch }>(`/api/admin/payouts/batches/${id}/release`, {
+      external_ref: externalRef ?? null,
+    });
+  }
+
+  markPayoutBatchPaid(id: number, externalRef?: string) {
+    return this.http.post<{ data: PayoutBatch }>(`/api/admin/payouts/batches/${id}/paid`, {
+      external_ref: externalRef ?? null,
+    });
+  }
+
+  markPayoutBatchFailed(id: number, reason: string) {
+    return this.http.post<{ data: PayoutBatch }>(`/api/admin/payouts/batches/${id}/failed`, { reason });
+  }
+
+  cancelPayoutBatch(id: number) {
+    return this.http.post<{ data: PayoutBatch }>(`/api/admin/payouts/batches/${id}/cancel`, {});
+  }
+
+  adminSettlements(params: Record<string, string> = {}) {
+    return this.http.get<{ data: SettlementRow[]; meta: PageMeta }>('/api/admin/payouts/settlements', { params });
+  }
+
+  holdSettlement(id: number, reason: string) {
+    return this.http.post<{ data: SettlementRow }>(`/api/admin/payouts/settlements/${id}/hold`, { reason });
+  }
+
+  releaseSettlement(id: number) {
+    return this.http.post<{ data: SettlementRow }>(`/api/admin/payouts/settlements/${id}/release`, {});
+  }
+
+  payoutAdjustments(params: Record<string, string> = {}) {
+    return this.http.get<{ data: PayoutAdjustment[]; meta: PageMeta }>('/api/admin/payouts/adjustments', { params });
+  }
+
+  createPayoutAdjustment(payload: Record<string, unknown>) {
+    return this.http.post<{ data: PayoutAdjustment }>('/api/admin/payouts/adjustments', payload);
+  }
+
+  adminPayoutAccounts(params: Record<string, string> = {}) {
+    return this.http.get<{ data: PayoutAccount[]; meta: PageMeta }>('/api/admin/payouts/accounts', { params });
+  }
+
+  verifyPayoutAccount(id: number, status: string) {
+    return this.http.post<{ data: { id: number; status: string } }>(`/api/admin/payouts/accounts/${id}/verify`, {
+      status,
+    });
+  }
+
+  // ----------- §12 / §18 admin disputes & refunds
+
+  adminDisputes(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Dispute[]; summary: DisputeSummary; meta: PageMeta }>('/api/admin/disputes', {
+      params,
+    });
+  }
+
+  adminDispute(id: number) {
+    return this.http.get<{ data: Dispute }>(`/api/admin/disputes/${id}`);
+  }
+
+  replyToAdminDispute(id: number, body: string, isInternal = false) {
+    return this.http.post<{ data: Dispute }>(`/api/admin/disputes/${id}/messages`, {
+      body,
+      is_internal: isInternal,
+    });
+  }
+
+  assignDispute(id: number, adminId?: number | null) {
+    return this.http.post<{ data: Dispute }>(`/api/admin/disputes/${id}/assign`, { admin_id: adminId ?? null });
+  }
+
+  escalateAdminDispute(id: number, note?: string) {
+    return this.http.post<{ data: Dispute }>(`/api/admin/disputes/${id}/escalate`, { note: note ?? null });
+  }
+
+  resolveAdminDispute(id: number, payload: Record<string, unknown>) {
+    return this.http.post<{ data: Dispute }>(`/api/admin/disputes/${id}/resolve`, payload);
+  }
+
+  overdueDisputes() {
+    return this.http.get<{ data: Dispute[] }>('/api/admin/disputes/overdue');
+  }
+
+  adminRefunds(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Refund[]; summary: RefundSummary; meta: PageMeta }>('/api/admin/refunds', {
+      params,
+    });
+  }
+
+  adminApproveRefund(id: number, note?: string) {
+    return this.http.post<{ data: Refund }>(`/api/admin/refunds/${id}/approve`, { note: note ?? null });
+  }
+
+  adminRejectRefund(id: number, note: string) {
+    return this.http.post<{ data: Refund }>(`/api/admin/refunds/${id}/reject`, { note });
+  }
+
+  retryRefund(id: number) {
+    return this.http.post<{ data: Refund }>(`/api/admin/refunds/${id}/retry`, {});
+  }
+
+  // ----------- §7 admin catalog moderation
+
+  catalogCategories() {
+    return this.http.get<{ data: CatalogCategoriesPayload }>('/api/admin/catalog/categories');
+  }
+
+  createPlatformCategory(payload: Record<string, unknown>) {
+    return this.http.post<{ data: PlatformCategory }>('/api/admin/catalog/categories', payload);
+  }
+
+  updatePlatformCategory(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: PlatformCategory }>(`/api/admin/catalog/categories/${id}`, payload);
+  }
+
+  deletePlatformCategory(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/catalog/categories/${id}`);
+  }
+
+  reorderPlatformCategories(order: { id: number; position: number; parent_id?: number | null }[]) {
+    return this.http.post<{ data: { reordered: number } }>('/api/admin/catalog/categories/reorder', { order });
+  }
+
+  catalogTenantCategories(params: Record<string, string> = {}) {
+    return this.http.get<{ data: TenantCategoryRow[]; meta: PageMeta }>('/api/admin/catalog/tenant-categories', {
+      params,
+    });
+  }
+
+  mapTenantCategories(categoryIds: number[], platformCategoryId: number | null, cascade = true) {
+    return this.http.post<{ data: { categories: number; products: number } }>('/api/admin/catalog/map', {
+      category_ids: categoryIds,
+      platform_category_id: platformCategoryId,
+      cascade_products: cascade,
+    });
+  }
+
+  catalogProducts(params: Record<string, string> = {}) {
+    return this.http.get<{ data: ModeratedProduct[]; summary: CatalogProductSummary; meta: PageMeta }>(
+      '/api/admin/catalog/products',
+      { params },
+    );
+  }
+
+  moderateProduct(id: number, payload: Record<string, unknown>) {
+    return this.http.post<{ data: ModeratedProduct }>(`/api/admin/catalog/products/${id}/moderate`, payload);
+  }
+
+  bulkModerateProducts(ids: number[], moderationStatus: string, note?: string) {
+    return this.http.post<{ data: { updated: number } }>('/api/admin/catalog/products/bulk', {
+      ids,
+      moderation_status: moderationStatus,
+      note: note ?? null,
+    });
+  }
+
+  catalogReports(params: Record<string, string> = {}) {
+    return this.http.get<{ data: ProductReportRow[]; meta: PageMeta }>('/api/admin/catalog/reports', { params });
+  }
+
+  resolveCatalogReport(id: number, status: string, note?: string) {
+    return this.http.post<{ data: { id: number; status: string } }>(`/api/admin/catalog/reports/${id}/resolve`, {
+      status,
+      note: note ?? null,
+    });
+  }
+
+  // ----------- §18 admin coupons
+
+  adminCoupons(params: Record<string, string> = {}) {
+    return this.http.get<{ data: Coupon[]; summary: CouponSummary; meta: PageMeta }>('/api/admin/coupons', {
+      params,
+    });
+  }
+
+  adminCouponOptions() {
+    return this.http.get<{
+      data: {
+        discount_types: string[];
+        statuses: string[];
+        applies_to: string[];
+        tenants: { id: number; name: string }[];
+        stores: { id: number; tenant_id: number; name: string }[];
+        platform_categories: { id: number; name: string }[];
+      };
+    }>('/api/admin/coupons/options');
+  }
+
+  adminCoupon(id: number) {
+    return this.http.get<{ data: Coupon }>(`/api/admin/coupons/${id}`);
+  }
+
+  createAdminCoupon(payload: Record<string, unknown>) {
+    return this.http.post<{ data: Coupon }>('/api/admin/coupons', payload);
+  }
+
+  updateAdminCoupon(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: Coupon }>(`/api/admin/coupons/${id}`, payload);
+  }
+
+  deleteAdminCoupon(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/coupons/${id}`);
+  }
+
+  toggleAdminCoupon(id: number) {
+    return this.http.post<{ data: Coupon }>(`/api/admin/coupons/${id}/toggle`, {});
+  }
+
+  adminCouponRedemptions(id: number, params: Record<string, string> = {}) {
+    return this.http.get<{ data: CouponRedemption[]; meta: PageMeta }>(`/api/admin/coupons/${id}/redemptions`, {
+      params,
+    });
   }
 
   adminBackupDownloadUrl(id: number) {

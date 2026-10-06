@@ -2,13 +2,14 @@ import { Component, HostListener, computed, inject, signal } from '@angular/core
 import { NgTemplateOutlet } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { ApiService } from '../core/api.service';
 import { AuthService } from '../core/auth.service';
 import { CurrencyService } from '../core/currency.service';
 
 interface NavItem {
   path: string;
   label: string;
-  icon: 'home' | 'bag' | 'store' | 'cart' | 'orders' | 'quote';
+  icon: 'home' | 'bag' | 'store' | 'cart' | 'orders' | 'quote' | 'heart';
   exact: boolean;
 }
 
@@ -93,6 +94,23 @@ interface ActionLink {
                   <a routerLink="/quotes" (click)="closeProfile()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 1 1 16.1-3.8z"/><path d="M8.5 10.5h7M8.5 13.5h4"/></svg>
                     <span>My quotes</span>
+                  </a>
+                  <a routerLink="/wishlist" (click)="closeProfile()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1l1.7 1.7L12 21.2l7.1-6.8 1.7-1.7a5 5 0 0 0 0-7.1z"/></svg>
+                    <span>My wishlist</span>
+                  </a>
+                  <a routerLink="/reviews" (click)="closeProfile()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.8-5.2-2.75L6.8 19.6l1-5.8-4.2-4.1 5.8-.85z"/></svg>
+                    <span>My reviews</span>
+                  </a>
+                  <a routerLink="/support-cases" (click)="closeProfile()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M2.5 6.5h10.5v10H2.5z"/><path d="M13 9.5h4l3.5 3.5v3.5H13z"/><circle cx="6.75" cy="18" r="1.8"/><circle cx="16.75" cy="18" r="1.8"/></svg>
+                    <span>Refunds &amp; tracking</span>
+                  </a>
+                  <a routerLink="/notifications" (click)="closeProfile()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    <span>Notifications</span>
+                    @if (unreadNotifications() > 0) { <span class="notif-count">{{ unreadNotifications() }}</span> }
                   </a>
                   @if (hasTenantRole()) {
                     <a routerLink="/tenant" (click)="closeProfile()">
@@ -193,6 +211,9 @@ interface ActionLink {
           }
           @case ('orders') {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+          }
+          @case ('heart') {
+            <path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1l1.7 1.7L12 21.2l7.1-6.8 1.7-1.7a5 5 0 0 0 0-7.1z" />
           }
           @case ('quote') {
             <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 1 1 16.1-3.8z" /><path d="M8.5 10.5h7M8.5 13.5h4" />
@@ -338,6 +359,7 @@ interface ActionLink {
 
     /* Dropdown wrapper & Profile button */
     .dropdown-wrap { position: relative; }
+    .notif-count { margin-left: auto; min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 800; text-align: center; }
     .profile-btn {
       display: inline-flex;
       align-items: center;
@@ -416,6 +438,10 @@ interface ActionLink {
 export class ShellComponent {
   auth = inject(AuthService);
   currency = inject(CurrencyService);
+  private api = inject(ApiService);
+
+  /** §20 — unread badge on the account menu's notification entry. */
+  unreadNotifications = signal(0);
   private router = inject(Router);
   menuOpen = signal(false);
   profileOpen = signal(false);
@@ -448,11 +474,12 @@ export class ShellComponent {
     { path: '/', label: 'Home', icon: 'home', exact: true },
     { path: '/products', label: 'Products', icon: 'bag', exact: false },
     { path: '/stores', label: 'Stores', icon: 'store', exact: false },
+    { path: '/wishlist', label: 'Wishlist', icon: 'heart', exact: false },
     { path: '/cart', label: 'Cart', icon: 'cart', exact: false },
     { path: '/orders', label: 'Orders', icon: 'orders', exact: false },
   ];
 
-  /** Cart and Orders only make sense for a signed-in customer. */
+  /** Wishlist, Cart and Orders only make sense for a signed-in customer. */
   navItems = computed(() => (this.auth.isLoggedIn() ? this.baseNav : this.baseNav.slice(0, 3)));
 
   /** Guest: Log in / Join. Signed in: role entry points. */
@@ -476,6 +503,13 @@ export class ShellComponent {
       this.closeMenu();
       this.closeProfile();
     });
+
+    if (this.auth.isLoggedIn()) {
+      this.api.notificationSummary('customer').subscribe({
+        next: (res) => this.unreadNotifications.set(res.data?.unread ?? 0),
+        error: () => undefined,
+      });
+    }
   }
 
   toggleMenu() {

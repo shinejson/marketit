@@ -1,0 +1,667 @@
+// ---------------------------------------------------------------------------
+// Shared styling for the commerce & trust consoles added in the MarketHub spec:
+// reviews, wishlist, coupons, commissions, payouts, refunds, disputes,
+// delivery, notifications and catalog moderation.
+// Loaded globally from styles.scss so every screen shares one visual language.
+// ---------------------------------------------------------------------------
+
+.cx {
+  display: grid;
+  gap: 18px;
+  padding: 26px 0 64px;
+
+  // ---- page header -------------------------------------------------------
+  .cx-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+
+    .eyebrow {
+      margin: 0 0 4px;
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Fraunces, serif;
+      font-size: 30px;
+      line-height: 1.12;
+      letter-spacing: -0.015em;
+    }
+
+    .intro {
+      margin: 6px 0 0;
+      max-width: 62ch;
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: var(--ink-soft);
+    }
+
+    .cx-head-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+
+  // ---- metric strip ------------------------------------------------------
+  .cx-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+  }
+
+  .cx-stat {
+    padding: 15px 17px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--card);
+
+    span {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    strong {
+      display: block;
+      margin-top: 7px;
+      font-family: Fraunces, serif;
+      font-size: 25px;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    small {
+      display: block;
+      margin-top: 6px;
+      font-size: 11.5px;
+      color: var(--ink-soft);
+    }
+
+    &.good strong { color: var(--ok); }
+    &.warn strong { color: var(--gold); }
+    &.bad strong { color: var(--danger); }
+  }
+
+  // ---- toolbar -----------------------------------------------------------
+  .cx-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--card);
+
+    input[type='search'],
+    input[type='text'],
+    input[type='date'],
+    input[type='number'],
+    select {
+      min-width: 0;
+      padding: 8px 11px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--paper-2);
+      color: var(--ink);
+      font: inherit;
+      font-size: 12.5px;
+    }
+
+    input[type='search'] { flex: 1 1 210px; }
+    .spacer { margin-left: auto; }
+  }
+
+  .cx-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 13px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--ink-soft);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+
+      b {
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: var(--paper-2);
+        font-size: 10.5px;
+      }
+
+      &:hover { border-color: var(--accent); color: var(--accent); }
+
+      &.on {
+        border-color: var(--ink);
+        background: var(--ink);
+        color: var(--paper);
+
+        b { background: rgba(255, 255, 255, 0.18); color: inherit; }
+      }
+    }
+  }
+
+  // ---- layout ------------------------------------------------------------
+  .cx-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .cx-panel {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--card);
+
+    > header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--line);
+
+      h2 {
+        margin: 0;
+        font-size: 15.5px;
+        letter-spacing: -0.01em;
+      }
+
+      p {
+        margin: 3px 0 0;
+        font-size: 12px;
+        color: var(--ink-soft);
+      }
+    }
+
+    > .cx-panel-body { padding: 16px 18px; }
+    > footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 11px 18px;
+      border-top: 1px solid var(--line);
+      font-size: 11.5px;
+      color: var(--ink-soft);
+    }
+  }
+
+  // ---- tables ------------------------------------------------------------
+  .cx-table-scroll { overflow-x: auto; }
+
+  table.cx-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+
+    th {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--paper-2);
+      text-align: left;
+      font-size: 10.5px;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: var(--paper-2); }
+    tbody tr.on { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .sub { display: block; margin-top: 2px; font-size: 11px; color: var(--ink-soft); }
+    .act { width: 1%; white-space: nowrap; text-align: right; }
+  }
+
+  // ---- status chips ------------------------------------------------------
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper-2);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: capitalize;
+    white-space: nowrap;
+
+    &::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    &.plain::before { display: none; }
+
+    &.ok,
+    &.approved,
+    &.active,
+    &.paid,
+    &.completed,
+    &.delivered,
+    &.resolved,
+    &.verified,
+    &.available { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, var(--line)); }
+
+    &.warn,
+    &.pending,
+    &.pending_approval,
+    &.processing,
+    &.requested,
+    &.draft,
+    &.awaiting_seller,
+    &.awaiting_customer,
+    &.in_transit,
+    &.on_hold,
+    &.paused,
+    &.open { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 38%, var(--line)); }
+
+    &.bad,
+    &.rejected,
+    &.failed,
+    &.cancelled,
+    &.escalated,
+    &.flagged,
+    &.returned,
+    &.expired,
+    &.actioned { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--line)); }
+  }
+
+  // ---- stars -------------------------------------------------------------
+  .stars {
+    display: inline-flex;
+    gap: 1px;
+    color: var(--gold);
+    font-size: 13px;
+    letter-spacing: 1px;
+    line-height: 1;
+
+    i { font-style: normal; opacity: 0.25; }
+    i.on { opacity: 1; }
+  }
+
+  .star-pick {
+    display: inline-flex;
+    gap: 2px;
+
+    button {
+      padding: 0 2px;
+      border: 0;
+      background: none;
+      color: var(--gold);
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+      opacity: 0.25;
+
+      &.on { opacity: 1; }
+      &:hover { opacity: 0.8; }
+    }
+  }
+
+  .rating-bars {
+    display: grid;
+    gap: 6px;
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 34px 1fr 42px;
+      align-items: center;
+      gap: 8px;
+      font-size: 11.5px;
+      color: var(--ink-soft);
+    }
+
+    .bar {
+      height: 7px;
+      border-radius: 999px;
+      background: var(--paper-2);
+      overflow: hidden;
+
+      i {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--gold);
+      }
+    }
+  }
+
+  // ---- forms -------------------------------------------------------------
+  .cx-form {
+    display: grid;
+    gap: 12px;
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      font-size: 11.5px;
+      font-weight: 650;
+      color: var(--ink-soft);
+
+      > span.hint {
+        font-weight: 500;
+        font-size: 11px;
+      }
+    }
+
+    input,
+    select,
+    textarea {
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--paper-2);
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+    }
+
+    textarea { min-height: 86px; resize: vertical; }
+
+    label.check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      color: var(--ink);
+
+      input { width: 16px; height: 16px; padding: 0; }
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-top: 2px;
+    }
+  }
+
+  // ---- misc --------------------------------------------------------------
+  .cx-note {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 11px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    font-size: 12.5px;
+
+    &.ok { border-color: color-mix(in srgb, var(--ok) 40%, var(--line)); color: var(--ok); }
+    &.bad { border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); color: var(--danger); }
+    &.warn { border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); }
+
+    button {
+      margin-left: auto;
+      border: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  }
+
+  .cx-empty {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 54px 20px;
+    text-align: center;
+    color: var(--ink-soft);
+
+    strong { font-size: 15px; color: var(--ink); }
+    p { margin: 0; max-width: 42ch; font-size: 12.5px; }
+  }
+
+  .cx-skeleton {
+    display: grid;
+    gap: 9px;
+    padding: 16px 18px;
+
+    span {
+      height: 13px;
+      border-radius: 7px;
+      background: linear-gradient(90deg, var(--paper-2), var(--card), var(--paper-2));
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+    }
+
+    span:nth-child(odd) { width: 85%; }
+  }
+
+  .cx-pager {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+
+    button {
+      padding: 6px 12px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+
+      &:disabled { opacity: 0.45; cursor: not-allowed; }
+      &:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+    }
+  }
+
+  .cx-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .cx-item {
+    display: grid;
+    gap: 7px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: var(--card);
+
+    .top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .top strong { font-size: 13.5px; }
+    .top .when { margin-left: auto; font-size: 11px; color: var(--ink-soft); }
+    p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-soft); }
+    &.unread { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: color-mix(in srgb, var(--accent) 5%, var(--card)); }
+  }
+
+  .cx-thumb {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    object-fit: cover;
+    background: var(--paper-2);
+  }
+
+  .cx-media {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+
+    > div { min-width: 0; }
+    strong { display: block; font-size: 12.5px; }
+  }
+
+  .mini {
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    cursor: pointer;
+
+    &:hover { border-color: var(--accent); color: var(--accent); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+    &.danger:hover { border-color: var(--danger); color: var(--danger); }
+    &.go { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  }
+
+  .cx-kv {
+    display: grid;
+    gap: 0;
+    margin: 0;
+
+    > div {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+    }
+
+    > div:last-child { border-bottom: 0; }
+    dt { color: var(--ink-soft); }
+    dd { margin: 0; text-align: right; font-weight: 650; }
+  }
+
+  .cx-chat {
+    display: grid;
+    gap: 10px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+
+    .msg {
+      padding: 10px 13px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--paper-2);
+      font-size: 12.5px;
+
+      header {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 5px;
+        font-size: 11px;
+        color: var(--ink-soft);
+
+        strong { color: var(--ink); }
+        time { margin-left: auto; }
+      }
+
+      p { margin: 0; line-height: 1.55; white-space: pre-wrap; }
+      &.me { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); background: color-mix(in srgb, var(--accent) 7%, var(--card)); }
+      &.internal { border-style: dashed; }
+    }
+  }
+
+  .tree {
+    display: grid;
+    gap: 4px;
+
+    .node {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      font-size: 12.5px;
+      cursor: pointer;
+
+      &:hover { background: var(--paper-2); }
+      &.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+      &.child { margin-left: 20px; font-size: 12px; }
+      &.off { opacity: 0.55; }
+
+      .count {
+        margin-left: auto;
+        font-size: 10.5px;
+        color: var(--ink-soft);
+      }
+    }
+  }
+}
+
+@media (max-width: 1040px) {
+  .cx .cx-split { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .cx { padding-top: 18px; }
+  .cx .cx-head h1 { font-size: 24px; }
+  .cx .cx-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+// The seller console's notification dropdown footer lives here rather than in
+// the shell's inline styles, which already sit against the component budget.
+app-seller-shell .notif-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px;
+  padding: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+
+  span { font-size: 16px; line-height: 1; }
+}

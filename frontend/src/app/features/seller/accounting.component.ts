@@ -526,7 +526,7 @@ export class SellerAccountingComponent {
     if (current === 'overview') {
       this.api.accountingDashboard().pipe(finalize(() => this.loading.set(false))).subscribe({ next: (res) => { this.dashboard.set(res.data); this.currency.set(res.data.currency); }, error: (err) => this.fail(err) });
     } else if (current === 'invoices') {
-      const invoiceParams = { per_page: this.invoicePageSize, page: this.currentInvoicePage() };
+      const invoiceParams: Record<string, string | number> = { per_page: this.invoicePageSize, page: this.currentInvoicePage() };
       if (this.search.trim()) invoiceParams['search'] = this.search.trim();
       if (this.statusFilter) invoiceParams['status'] = this.statusFilter;
       invoiceParams['sort'] = '-issue_date';

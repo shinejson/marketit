@@ -5,14 +5,15 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { ProductCard } from '../../core/models';
+import { ProductCard, Review, ReviewSummary } from '../../core/models';
 import { MoneyPipe } from '../../shared/money.pipe';
+import { StarRatingComponent } from '../../shared/star-rating.component';
 
 type Variant = ProductCard['variants'][number];
 
 @Component({
   selector: 'app-product',
-  imports: [RouterLink, MoneyPipe, TitleCasePipe, FormsModule],
+  imports: [RouterLink, MoneyPipe, TitleCasePipe, FormsModule, StarRatingComponent],
   template: `
     <div class="wrap page">
       @if (error()) { <p class="err">{{ error() }}</p> }
@@ -40,6 +41,14 @@ type Variant = ProductCard['variants'][number];
           <section class="buy">
             <a class="store muted" [routerLink]="['/stores', p.store?.slug]">{{ p.store?.name }}</a>
             <h1>{{ p.name }}</h1>
+            @if (summary(); as rated) {
+              @if (rated.count) {
+                <button type="button" class="rating-link" (click)="scrollToReviews()">
+                  <app-stars [value]="rated.average" [showValue]="true" />
+                  <span class="muted">{{ rated.count }} review{{ rated.count === 1 ? '' : 's' }}</span>
+                </button>
+              }
+            }
             @if (p.short_description) { <p class="lede">{{ p.short_description }}</p> }
 
             <div class="price-row">
@@ -79,6 +88,12 @@ type Variant = ProductCard['variants'][number];
               <div class="actions">
                 <button class="btn accent" [disabled]="busy() || v.available < 1" (click)="add(v.id)">{{ busy() ? 'Adding…' : 'Add to cart' }}</button>
                 <button class="btn ghost" type="button" [disabled]="v.available < 1" (click)="openQuote()">Request a quote</button>
+                @if (auth.isLoggedIn()) {
+                  <button class="btn ghost heart" type="button" [class.saved]="saved()" (click)="toggleWishlist(p)" [attr.aria-pressed]="saved()">
+                    <span aria-hidden="true">{{ saved() ? '♥' : '♡' }}</span>
+                    {{ saved() ? 'Saved' : 'Save for later' }}
+                  </button>
+                }
               </div>
               @if (notice()) { <p class="notice">{{ notice() }}</p> }
             }
@@ -96,6 +111,78 @@ type Variant = ProductCard['variants'][number];
         @if (p.description) {
           <section class="card desc"><h2>About this product</h2><p>{{ p.description }}</p></section>
         }
+
+        <!-- §17 — verified customer reviews -->
+        <section class="card reviews" id="reviews">
+          <div class="reviews-head">
+            <div>
+              <h2>Customer reviews</h2>
+              @if (summary(); as rated) {
+                @if (rated.count) {
+                  <p class="muted">{{ rated.verified_count }} of {{ rated.count }} from verified buyers.</p>
+                } @else {
+                  <p class="muted">No reviews yet — be the first once you have received this item.</p>
+                }
+              }
+            </div>
+            @if (auth.isLoggedIn()) { <a class="btn ghost" routerLink="/reviews">Write a review</a> }
+          </div>
+
+          @if (summary(); as rated) {
+            @if (rated.count) {
+              <div class="reviews-summary">
+                <div class="score">
+                  <strong>{{ rated.average.toFixed(1) }}</strong>
+                  <app-stars [value]="rated.average" />
+                  <small class="muted">{{ rated.count }} review{{ rated.count === 1 ? '' : 's' }}</small>
+                </div>
+                <div class="bars">
+                  @for (bucket of rated.distribution; track bucket.rating) {
+                    <div class="bar-row">
+                      <span>{{ bucket.rating }}★</span>
+                      <span class="bar"><i [style.width.%]="bucket.percent"></i></span>
+                      <span>{{ bucket.count }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          }
+
+          @if (reviews().length) {
+            <ul class="review-list">
+              @for (review of reviews(); track review.id) {
+                <li>
+                  <div class="review-top">
+                    <app-stars [value]="review.rating" />
+                    <strong>{{ review.title || 'Verified review' }}</strong>
+                    @if (review.is_verified_purchase) { <span class="badge verified">Verified purchase</span> }
+                    <span class="muted when">{{ review.author?.name || 'Customer' }}</span>
+                  </div>
+                  @if (review.body) { <p>{{ review.body }}</p> }
+                  <div class="review-foot">
+                    <button type="button" class="helpful" [disabled]="!auth.isLoggedIn()" (click)="markHelpful(review)">
+                      Helpful ({{ review.helpful_count }})
+                    </button>
+                    @if (auth.isLoggedIn()) {
+                      <button type="button" class="helpful" (click)="report(review)">Report</button>
+                    }
+                  </div>
+                  @if (review.response_body) {
+                    <div class="seller-reply">
+                      <strong>{{ p.store?.name }} replied</strong>
+                      <p>{{ review.response_body }}</p>
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+            @if (moreReviews()) {
+              <button class="btn ghost" type="button" (click)="loadReviews(reviewPage() + 1)">Show more reviews</button>
+            }
+          }
+          @if (reviewNotice()) { <p class="notice">{{ reviewNotice() }}</p> }
+        </section>
 
         <!-- request-for-quote dialog -->
         @if (quoteOpen()) {
@@ -170,11 +257,41 @@ type Variant = ProductCard['variants'][number];
     .dialog input, .dialog textarea { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--card); color: var(--ink); font: inherit; font-weight: 500; }
     .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
     .err { color: var(--danger); }
+    .rating-link { display:inline-flex; align-items:center; gap:8px; margin:2px 0 6px; padding:0; border:0; background:none; color:inherit; font:inherit; font-size:12px; cursor:pointer; }
+    .rating-link:hover { color:var(--accent); }
+    .heart.saved { border-color:var(--accent); color:var(--accent); }
+    .reviews { padding:22px; margin-top:18px; display:grid; gap:16px; }
+    .reviews-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; }
+    .reviews-head h2 { margin:0; }
+    .reviews-head p { margin:3px 0 0; font-size:12.5px; }
+    .reviews-summary { display:grid; grid-template-columns:auto minmax(0,1fr); gap:24px; align-items:center; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--paper-2); }
+    .score { display:grid; justify-items:center; gap:4px; }
+    .score strong { font-family:Fraunces, serif; font-size:40px; line-height:1; }
+    .bars { display:grid; gap:6px; }
+    .bar-row { display:grid; grid-template-columns:32px minmax(0,1fr) 40px; gap:9px; align-items:center; font-size:11.5px; color:var(--ink-soft); }
+    .bar { height:7px; border-radius:999px; background:var(--card); overflow:hidden; }
+    .bar i { display:block; height:100%; border-radius:999px; background:var(--gold); }
+    .review-list { list-style:none; margin:0; padding:0; display:grid; gap:16px; }
+    .review-list li { padding-bottom:16px; border-bottom:1px solid var(--line); }
+    .review-list li:last-child { border-bottom:0; padding-bottom:0; }
+    .review-top { display:flex; flex-wrap:wrap; align-items:center; gap:9px; }
+    .review-top strong { font-size:13.5px; }
+    .review-top .when { margin-left:auto; font-size:11.5px; }
+    .badge.verified { padding:2px 8px; border-radius:999px; background:color-mix(in srgb,var(--ok) 15%,transparent); color:var(--ok); font-size:10.5px; font-weight:750; }
+    .review-list p { margin:7px 0 0; font-size:13px; line-height:1.6; }
+    .review-foot { display:flex; gap:12px; margin-top:8px; }
+    .helpful { padding:0; border:0; background:none; color:var(--ink-soft); font:inherit; font-size:11.5px; font-weight:650; cursor:pointer; text-decoration:underline; }
+    .helpful:hover:not(:disabled) { color:var(--accent); }
+    .helpful:disabled { opacity:.5; cursor:not-allowed; text-decoration:none; }
+    .seller-reply { margin-top:10px; padding:10px 13px; border-left:3px solid var(--accent); background:var(--paper-2); border-radius:0 10px 10px 0; }
+    .seller-reply strong { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); }
+    .seller-reply p { margin:4px 0 0; font-size:12.5px; }
+    @media (max-width:620px) { .reviews-summary { grid-template-columns:1fr; } }
   `],
 })
 export class ProductComponent {
   private api = inject(ApiService);
-  private auth = inject(AuthService);
+  auth = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
@@ -191,6 +308,14 @@ export class ProductComponent {
   error = signal('');
   notice = signal('');
   busy = signal(false);
+
+  // §17 reviews + §9 wishlist state
+  reviews = signal<Review[]>([]);
+  summary = signal<ReviewSummary | null>(null);
+  reviewPage = signal(1);
+  moreReviews = signal(false);
+  reviewNotice = signal('');
+  saved = signal(false);
 
   // quote dialog state
   quoteOpen = signal(false);
@@ -211,6 +336,80 @@ export class ProductComponent {
         this.quoteQty = min;
       },
       error: () => this.error.set('Product not found.'),
+    });
+
+    this.loadReviews(1);
+
+    if (this.auth.isLoggedIn()) {
+      this.api.wishlistIds().subscribe({
+        next: (res) => {
+          const current = this.product();
+          if (current) this.saved.set(res.data.product_ids.includes(current.id));
+          else this.pendingWishlistIds = res.data.product_ids;
+        },
+        error: () => undefined,
+      });
+    }
+  }
+
+  private pendingWishlistIds: number[] = [];
+
+  loadReviews(page: number) {
+    const slug = this.route.snapshot.paramMap.get('slug')!;
+    this.api.productReviews(slug, { page: String(page), per_page: '5' }).subscribe({
+      next: (res) => {
+        this.reviews.set(page === 1 ? res.data : [...this.reviews(), ...res.data]);
+        this.summary.set(res.summary);
+        this.reviewPage.set(page);
+        this.moreReviews.set(page < (res.meta?.last_page ?? 1));
+        if (this.pendingWishlistIds.length) {
+          const current = this.product();
+          if (current) this.saved.set(this.pendingWishlistIds.includes(current.id));
+        }
+      },
+      error: () => undefined,
+    });
+  }
+
+  scrollToReviews() {
+    document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  markHelpful(review: Review) {
+    this.api.voteReview(review.id, true).subscribe({
+      next: (res) => {
+        this.reviews.set(
+          this.reviews().map((row) => (row.id === review.id ? { ...row, helpful_count: res.data.helpful_count } : row)),
+        );
+      },
+      error: () => this.reviewNotice.set('We could not record that vote.'),
+    });
+  }
+
+  report(review: Review) {
+    this.api.reportReview(review.id, 'inappropriate').subscribe({
+      next: () => this.reviewNotice.set('Thanks — the marketplace team will review this.'),
+      error: () => this.reviewNotice.set('We could not submit that report.'),
+    });
+  }
+
+  toggleWishlist(product: ProductCard) {
+    if (this.saved()) {
+      this.api.removeWishlistProduct(product.id).subscribe({
+        next: () => {
+          this.saved.set(false);
+          this.notice.set('Removed from your wishlist.');
+        },
+        error: () => this.notice.set('We could not update your wishlist.'),
+      });
+      return;
+    }
+    this.api.addToWishlist({ product_id: product.id, variant_id: this.variant()?.id ?? null }).subscribe({
+      next: () => {
+        this.saved.set(true);
+        this.notice.set('Saved to your wishlist.');
+      },
+      error: () => this.notice.set('We could not update your wishlist.'),
     });
   }
 

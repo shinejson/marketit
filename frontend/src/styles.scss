@@ -7,6 +7,7 @@
 @use "./app/features/seller/ads.workspace";
 @use "./app/features/seller/analytics.workspace";
 @use "./app/features/seller/users.workspace";
+@use "./app/features/shared/commerce.workspace";
 
 :root {
   --ink: #1c1914;

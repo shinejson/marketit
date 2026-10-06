@@ -5,10 +5,16 @@ use App\Http\Controllers\Api\AccountingController;
 use App\Http\Controllers\Api\AccountingLedgerController;
 use App\Http\Controllers\Api\AdCampaignController;
 use App\Http\Controllers\Api\AdminBackupController;
+use App\Http\Controllers\Api\AdminCatalogController;
+use App\Http\Controllers\Api\AdminCommissionController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminCouponController;
+use App\Http\Controllers\Api\AdminDisputeController;
 use App\Http\Controllers\Api\AdminMarketingController;
 use App\Http\Controllers\Api\AdminOverviewController;
+use App\Http\Controllers\Api\AdminPayoutController;
 use App\Http\Controllers\Api\AdminPhase3Controller;
+use App\Http\Controllers\Api\AdminReviewController;
 use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AdminSubscriptionController;
@@ -21,6 +27,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\CurrencyController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\DashboardController;
@@ -32,20 +39,28 @@ use App\Http\Controllers\Api\TenantRoleController;
 use App\Http\Controllers\Api\TenantUserController;
 use App\Http\Controllers\Api\TenantSettingsController;
 use App\Http\Controllers\Api\TenantSupportController;
+use App\Http\Controllers\Api\DeliveryController;
 use App\Http\Controllers\Api\DeviceTokenController;
+use App\Http\Controllers\Api\DisputeController;
 use App\Http\Controllers\Api\DomainController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\MarketController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PayoutController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\QuoteRequestController;
+use App\Http\Controllers\Api\RefundController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SalesController;
 use App\Http\Controllers\Api\SellerOrderController;
 use App\Http\Controllers\Api\SellerPublicApiController;
 use App\Http\Controllers\Api\TenantAuditController;
 use App\Http\Controllers\Api\TenantController;
+use App\Http\Controllers\Api\TenantReviewController;
 use App\Http\Controllers\Api\WebhookController;
+use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:login')->group(function () {
@@ -66,6 +81,12 @@ Route::prefix('market')->middleware('throttle:60,1')->group(function () {
     Route::get('/stores/{slug}', [MarketController::class, 'store']);
     Route::get('/categories', [MarketController::class, 'categories']);
     Route::post('/ads/click/{impression}', [MarketController::class, 'click']);
+});
+
+// §9 / §17 — public review reads. Writing one needs an account.
+Route::prefix('market')->middleware('throttle:60,1')->group(function () {
+    Route::get('/products/{slug}/reviews', [ReviewController::class, 'forProduct']);
+    Route::get('/stores/{slug}/reviews', [ReviewController::class, 'forStore']);
 });
 
 // Currency catalog + ad-hoc conversion. Public: the storefront formats prices
@@ -117,6 +138,57 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
+
+    // §18 — coupons applied to the basket before checkout.
+    Route::middleware('throttle:30,1')->group(function () {
+        Route::post('/cart/coupon', [CartController::class, 'applyCoupon']);
+        Route::delete('/cart/coupon', [CartController::class, 'removeCoupon']);
+        Route::post('/cart/delivery', [CartController::class, 'chooseDelivery']);
+    });
+
+    // §9 / §17 — reviews, ratings and trust.
+    Route::get('/reviews/mine', [ReviewController::class, 'mine']);
+    Route::get('/reviews/pending', [ReviewController::class, 'pending']);
+    Route::post('/reviews', [ReviewController::class, 'store'])->middleware('throttle:20,1');
+    Route::patch('/reviews/{review}', [ReviewController::class, 'update']);
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
+    Route::post('/reviews/{review}/vote', [ReviewController::class, 'vote']);
+    Route::post('/reviews/{review}/report', [ReviewController::class, 'report'])->middleware('throttle:10,1');
+
+    // §9 / §20 #6 — wishlist and favourites.
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::get('/wishlist/ids', [WishlistController::class, 'ids']);
+    Route::post('/wishlist', [WishlistController::class, 'store']);
+    Route::delete('/wishlist/{item}', [WishlistController::class, 'destroy'])->whereNumber('item');
+    Route::delete('/wishlist/product/{product}', [WishlistController::class, 'destroyByProduct'])->whereNumber('product');
+    Route::post('/wishlist/{item}/move-to-cart', [WishlistController::class, 'moveToCart'])->whereNumber('item');
+    Route::post('/wishlist/stores', [WishlistController::class, 'toggleStore']);
+
+    // §12 — refunds a shopper asks for on their own orders.
+    Route::get('/refunds', [RefundController::class, 'mine']);
+    Route::post('/refunds', [RefundController::class, 'store'])->middleware('throttle:10,1');
+    Route::post('/refunds/{refund}/cancel', [RefundController::class, 'cancel']);
+
+    // §12 / §18 — buyer disputes.
+    Route::get('/disputes', [DisputeController::class, 'mine']);
+    Route::post('/disputes', [DisputeController::class, 'store'])->middleware('throttle:10,1');
+    Route::get('/disputes/{dispute}', [DisputeController::class, 'show']);
+    Route::post('/disputes/{dispute}/messages', [DisputeController::class, 'reply']);
+    Route::post('/disputes/{dispute}/escalate', [DisputeController::class, 'escalate']);
+
+    // §16 — track a parcel.
+    Route::get('/shipments/{reference}', [DeliveryController::class, 'track']);
+
+    // §20 #12 — notification centre, shared by all three consoles.
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/summary', [NotificationController::class, 'summary']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::post('/notifications/clear', [NotificationController::class, 'clear']);
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/{notification}/unread', [NotificationController::class, 'markUnread']);
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy']);
+    Route::get('/notification-preferences', [NotificationController::class, 'preferences']);
+    Route::put('/notification-preferences', [NotificationController::class, 'updatePreferences']);
 
     // Customer quote requests (RFQ): raise from a product page, track the
     // merchant's answer and accept or decline it.
@@ -318,6 +390,60 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/guides/{guide}', [TenantSupportController::class, 'readGuide']);
             Route::post('/guides/{guide}/feedback', [TenantSupportController::class, 'rateGuide']);
         });
+
+        // §17 — the seller's review inbox. Approval stays with the platform.
+        Route::get('/reviews', [TenantReviewController::class, 'index']);
+        Route::post('/reviews/{review}/respond', [TenantReviewController::class, 'respond']);
+        Route::post('/reviews/{review}/report', [TenantReviewController::class, 'report']);
+
+        // §18 — seller coupons.
+        Route::get('/coupons/meta', [CouponController::class, 'meta']);
+        Route::get('/coupons', [CouponController::class, 'index']);
+        Route::post('/coupons', [CouponController::class, 'store']);
+        Route::get('/coupons/{coupon}', [CouponController::class, 'show'])->whereNumber('coupon');
+        Route::patch('/coupons/{coupon}', [CouponController::class, 'update'])->whereNumber('coupon');
+        Route::delete('/coupons/{coupon}', [CouponController::class, 'destroy'])->whereNumber('coupon');
+        Route::get('/coupons/{coupon}/redemptions', [CouponController::class, 'redemptions'])->whereNumber('coupon');
+
+        // §16 — delivery zones, methods and shipment tracking.
+        Route::get('/delivery', [DeliveryController::class, 'index']);
+        Route::post('/delivery/zones', [DeliveryController::class, 'storeZone']);
+        Route::patch('/delivery/zones/{zone}', [DeliveryController::class, 'updateZone']);
+        Route::delete('/delivery/zones/{zone}', [DeliveryController::class, 'destroyZone']);
+        Route::post('/delivery/methods', [DeliveryController::class, 'storeMethod']);
+        Route::patch('/delivery/methods/{method}', [DeliveryController::class, 'updateMethod']);
+        Route::delete('/delivery/methods/{method}', [DeliveryController::class, 'destroyMethod']);
+        Route::get('/shipments', [DeliveryController::class, 'shipments']);
+        Route::get('/shipments/{shipment}', [DeliveryController::class, 'showShipment'])->whereNumber('shipment');
+        Route::patch('/shipments/{shipment}', [DeliveryController::class, 'updateShipment'])->whereNumber('shipment');
+        Route::post('/shipments/{shipment}/events', [DeliveryController::class, 'addShipmentEvent'])->whereNumber('shipment');
+        Route::post('/orders/{sellerOrder}/shipment', [DeliveryController::class, 'shipmentForOrder'])->whereNumber('sellerOrder');
+
+        // §12 — settlements, payout accounts and payout requests.
+        Route::get('/payouts', [PayoutController::class, 'overview']);
+        Route::get('/payouts/settlements', [PayoutController::class, 'settlements']);
+        Route::get('/payouts/batches', [PayoutController::class, 'batches']);
+        Route::get('/payouts/batches/{batch}', [PayoutController::class, 'showBatch'])->whereNumber('batch');
+        Route::post('/payouts/request', [PayoutController::class, 'requestPayout']);
+        Route::get('/payouts/accounts', [PayoutController::class, 'accounts']);
+        Route::post('/payouts/accounts', [PayoutController::class, 'storeAccount']);
+        Route::patch('/payouts/accounts/{account}', [PayoutController::class, 'updateAccount'])->whereNumber('account');
+        Route::delete('/payouts/accounts/{account}', [PayoutController::class, 'destroyAccount'])->whereNumber('account');
+
+        // §12 — the seller's refund queue.
+        Route::get('/refunds', [RefundController::class, 'index']);
+        Route::post('/refunds/issue', [RefundController::class, 'issue']);
+        Route::get('/refunds/{refund}', [RefundController::class, 'show'])->whereNumber('refund');
+        Route::post('/refunds/{refund}/approve', [RefundController::class, 'approve'])->whereNumber('refund');
+        Route::post('/refunds/{refund}/reject', [RefundController::class, 'reject'])->whereNumber('refund');
+        Route::get('/orders/{sellerOrder}/refundable', [RefundController::class, 'refundable'])->whereNumber('sellerOrder');
+
+        // §18 — the seller's dispute board.
+        Route::get('/disputes', [DisputeController::class, 'index']);
+        Route::get('/disputes/{dispute}', [DisputeController::class, 'show'])->whereNumber('dispute');
+        Route::post('/disputes/{dispute}/messages', [DisputeController::class, 'reply'])->whereNumber('dispute');
+        Route::post('/disputes/{dispute}/escalate', [DisputeController::class, 'escalate'])->whereNumber('dispute');
+        Route::post('/disputes/{dispute}/resolve', [DisputeController::class, 'resolve'])->whereNumber('dispute');
     });
 
     Route::post('/devices', [DeviceTokenController::class, 'store']);
@@ -431,6 +557,84 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/marketing/posts/{post}', [AdminMarketingController::class, 'updatePost']);
         Route::post('/marketing/posts/{post}/publish', [AdminMarketingController::class, 'publishPost']);
         Route::delete('/marketing/posts/{post}', [AdminMarketingController::class, 'destroyPost']);
+
+        // §17 — review moderation desk.
+        Route::get('/reviews', [AdminReviewController::class, 'index']);
+        Route::get('/reviews/reports', [AdminReviewController::class, 'reports']);
+        Route::get('/reviews/store-ratings', [AdminReviewController::class, 'storeRatings']);
+        Route::post('/reviews/bulk', [AdminReviewController::class, 'bulkModerate']);
+        Route::get('/reviews/{review}', [AdminReviewController::class, 'show'])->whereNumber('review');
+        Route::post('/reviews/{review}/moderate', [AdminReviewController::class, 'moderate'])->whereNumber('review');
+        Route::delete('/reviews/{review}', [AdminReviewController::class, 'destroy'])->whereNumber('review');
+        Route::post('/review-reports/{report}/resolve', [AdminReviewController::class, 'resolveReport']);
+
+        // §14 — the configurable commission engine.
+        Route::get('/commissions/meta', [AdminCommissionController::class, 'meta']);
+        Route::get('/commissions/earnings', [AdminCommissionController::class, 'earnings']);
+        Route::post('/commissions/simulate', [AdminCommissionController::class, 'simulate']);
+        Route::post('/commissions/reorder', [AdminCommissionController::class, 'reorder']);
+        Route::get('/commissions', [AdminCommissionController::class, 'index']);
+        Route::post('/commissions', [AdminCommissionController::class, 'store']);
+        Route::get('/commissions/{rule}', [AdminCommissionController::class, 'show'])->whereNumber('rule');
+        Route::patch('/commissions/{rule}', [AdminCommissionController::class, 'update'])->whereNumber('rule');
+        Route::delete('/commissions/{rule}', [AdminCommissionController::class, 'destroy'])->whereNumber('rule');
+        Route::post('/commissions/{rule}/toggle', [AdminCommissionController::class, 'toggle'])->whereNumber('rule');
+
+        // §12 — the platform payouts desk.
+        Route::get('/payouts', [AdminPayoutController::class, 'overview']);
+        Route::get('/payouts/batches', [AdminPayoutController::class, 'batches']);
+        Route::post('/payouts/batches', [AdminPayoutController::class, 'createBatch']);
+        Route::post('/payouts/batches/run-all', [AdminPayoutController::class, 'createAllBatches']);
+        Route::get('/payouts/batches/{batch}', [AdminPayoutController::class, 'showBatch'])->whereNumber('batch');
+        Route::post('/payouts/batches/{batch}/recalculate', [AdminPayoutController::class, 'recalculate'])->whereNumber('batch');
+        Route::post('/payouts/batches/{batch}/release', [AdminPayoutController::class, 'release'])->whereNumber('batch');
+        Route::post('/payouts/batches/{batch}/paid', [AdminPayoutController::class, 'markPaid'])->whereNumber('batch');
+        Route::post('/payouts/batches/{batch}/failed', [AdminPayoutController::class, 'markFailed'])->whereNumber('batch');
+        Route::post('/payouts/batches/{batch}/cancel', [AdminPayoutController::class, 'cancelBatch'])->whereNumber('batch');
+        Route::get('/payouts/settlements', [AdminPayoutController::class, 'settlements']);
+        Route::post('/payouts/settlements/{settlement}/hold', [AdminPayoutController::class, 'holdSettlement'])->whereNumber('settlement');
+        Route::post('/payouts/settlements/{settlement}/release', [AdminPayoutController::class, 'releaseSettlement'])->whereNumber('settlement');
+        Route::get('/payouts/adjustments', [AdminPayoutController::class, 'adjustments']);
+        Route::post('/payouts/adjustments', [AdminPayoutController::class, 'addAdjustment']);
+        Route::get('/payouts/accounts', [AdminPayoutController::class, 'accounts']);
+        Route::post('/payouts/accounts/{account}/verify', [AdminPayoutController::class, 'verifyAccount'])->whereNumber('account');
+
+        // §12 / §18 — arbitration: disputes plus the refund ledger.
+        Route::get('/disputes', [AdminDisputeController::class, 'index']);
+        Route::get('/disputes/overdue', [AdminDisputeController::class, 'overdue']);
+        Route::get('/disputes/{dispute}', [AdminDisputeController::class, 'show'])->whereNumber('dispute');
+        Route::post('/disputes/{dispute}/messages', [AdminDisputeController::class, 'reply'])->whereNumber('dispute');
+        Route::post('/disputes/{dispute}/assign', [AdminDisputeController::class, 'assign'])->whereNumber('dispute');
+        Route::post('/disputes/{dispute}/escalate', [AdminDisputeController::class, 'escalate'])->whereNumber('dispute');
+        Route::post('/disputes/{dispute}/resolve', [AdminDisputeController::class, 'resolve'])->whereNumber('dispute');
+        Route::get('/refunds', [AdminDisputeController::class, 'refunds']);
+        Route::post('/refunds/{refund}/approve', [AdminDisputeController::class, 'approveRefund'])->whereNumber('refund');
+        Route::post('/refunds/{refund}/reject', [AdminDisputeController::class, 'rejectRefund'])->whereNumber('refund');
+        Route::post('/refunds/{refund}/retry', [AdminDisputeController::class, 'retryRefund'])->whereNumber('refund');
+
+        // §7 — global category tree and product moderation.
+        Route::get('/catalog/categories', [AdminCatalogController::class, 'categories']);
+        Route::post('/catalog/categories', [AdminCatalogController::class, 'storeCategory']);
+        Route::post('/catalog/categories/reorder', [AdminCatalogController::class, 'reorderCategories']);
+        Route::patch('/catalog/categories/{category}', [AdminCatalogController::class, 'updateCategory'])->whereNumber('category');
+        Route::delete('/catalog/categories/{category}', [AdminCatalogController::class, 'destroyCategory'])->whereNumber('category');
+        Route::get('/catalog/tenant-categories', [AdminCatalogController::class, 'tenantCategories']);
+        Route::post('/catalog/map', [AdminCatalogController::class, 'mapCategory']);
+        Route::get('/catalog/products', [AdminCatalogController::class, 'products']);
+        Route::post('/catalog/products/bulk', [AdminCatalogController::class, 'bulkModerateProducts']);
+        Route::post('/catalog/products/{product}/moderate', [AdminCatalogController::class, 'moderateProduct'])->whereNumber('product');
+        Route::get('/catalog/reports', [AdminCatalogController::class, 'productReports']);
+        Route::post('/catalog/reports/{report}/resolve', [AdminCatalogController::class, 'resolveProductReport'])->whereNumber('report');
+
+        // §18 — platform-wide promotions.
+        Route::get('/coupons/options', [AdminCouponController::class, 'options']);
+        Route::get('/coupons', [AdminCouponController::class, 'index']);
+        Route::post('/coupons', [AdminCouponController::class, 'store']);
+        Route::get('/coupons/{coupon}', [AdminCouponController::class, 'show'])->whereNumber('coupon');
+        Route::patch('/coupons/{coupon}', [AdminCouponController::class, 'update'])->whereNumber('coupon');
+        Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy'])->whereNumber('coupon');
+        Route::post('/coupons/{coupon}/toggle', [AdminCouponController::class, 'toggle'])->whereNumber('coupon');
+        Route::get('/coupons/{coupon}/redemptions', [AdminCouponController::class, 'redemptions'])->whereNumber('coupon');
     });
 });
 

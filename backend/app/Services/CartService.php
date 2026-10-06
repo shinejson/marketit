@@ -2,18 +2,27 @@
 
 namespace App\Services;
 
+use App\Models\Address;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\TenantSetting;
 use App\Models\User;
+use App\Services\Commerce\CouponService;
+use App\Services\Delivery\DeliveryService;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CartService
 {
+    public function __construct(
+        protected DeliveryService $delivery,
+        protected CouponService $coupons,
+    ) {}
+
     public function getOrCreate(User $user): Cart
     {
         return Cart::query()->firstOrCreate(['user_id' => $user->id]);
@@ -116,11 +125,20 @@ class CartService
         $cart->items()->delete();
     }
 
-    public function groupedPayload(Cart $cart): array
+    /**
+     * Price the cart, grouped by seller store.
+     *
+     * @param  array{address?:Address|null, delivery_choices?:array<int,int|null>, apply_coupon?:bool}  $options
+     */
+    public function groupedPayload(Cart $cart, array $options = []): array
     {
+        /** @var Address|null $address */
+        $address = $options['address'] ?? null;
+        $choices = $options['delivery_choices'] ?? [];
+        $applyCoupon = $options['apply_coupon'] ?? true;
+
         $groups = [];
         $subtotal = '0.00';
-        $delivery = '0.00';
         $tax = '0.00';
         $taxRates = []; // tenant_id => default rate cache
 
@@ -130,18 +148,22 @@ class CartService
                 $groups[$storeId] = [
                     'store' => [
                         'id' => $item->store->id,
+                        'tenant_id' => $item->store->tenant_id,
                         'name' => $item->store->name,
                         'slug' => $item->store->slug,
                         'delivery_fee' => $item->store->delivery_fee,
                     ],
                     'items' => [],
                     'subtotal' => '0.00',
+                    'tax' => '0.00',
+                    'discount' => '0.00',
+                    'qty' => 0,
                 ];
-                $delivery = bcadd($delivery, (string) $item->store->delivery_fee, 2);
             }
 
             $line = bcmul((string) $item->unit_price, (string) $item->qty, 2);
             $groups[$storeId]['subtotal'] = bcadd($groups[$storeId]['subtotal'], $line, 2);
+            $groups[$storeId]['qty'] += (int) $item->qty;
 
             // Tax: per-product rate beats the tenant default; zero-rated /
             // exempt classes are always 0%. Rates are cached per tenant.
@@ -155,31 +177,104 @@ class CartService
             $rate = $this->lineTaxRate($product, $taxRates[$tenantId]);
             $lineTax = bcmul($line, (string) ($rate / 100), 2);
             $tax = bcadd($tax, $lineTax, 2);
-            $groups[$storeId]['tax'] = bcadd($groups[$storeId]['tax'] ?? '0.00', $lineTax, 2);
+            $groups[$storeId]['tax'] = bcadd($groups[$storeId]['tax'], $lineTax, 2);
             $groups[$storeId]['items'][] = [
                 'id' => $item->id,
                 'variant_id' => $item->variant_id,
+                'product_id' => $product->id,
+                'category_id' => $product->category_id,
+                'tenant_id' => $tenantId,
                 'sku' => $item->variant->sku,
-                'product_name' => $item->variant->product->name,
+                'product_name' => $product->name,
+                'product_slug' => $product->slug,
                 'options' => $item->variant->options,
                 'qty' => $item->qty,
                 'unit_price' => $item->unit_price,
                 'line_total' => $line,
                 'tax_rate' => $rate,
                 'line_tax' => $lineTax,
-                'image' => $item->variant->product->primaryImage()?->url,
+                'image' => $product->primaryImage()?->url,
                 'available' => $item->variant->availableQty(),
             ];
             $subtotal = bcadd($subtotal, $line, 2);
         }
 
-        $grand = bcadd(bcadd($subtotal, $delivery, 2), $tax, 2);
+        // Delivery is quoted per store once its subtotal is known (§16).
+        $delivery = '0.00';
+        foreach ($groups as $storeId => $group) {
+            $store = $cart->items->firstWhere('store_id', $storeId)?->store;
+            if (! $store) {
+                continue;
+            }
+            $options_ = $this->delivery->optionsForStore($store, $address, $group['subtotal'], (int) $group['qty']);
+            $selected = $this->delivery->quoteForStore(
+                $store,
+                $address,
+                $group['subtotal'],
+                (int) $group['qty'],
+                isset($choices[$storeId]) ? (int) $choices[$storeId] : null,
+            );
+
+            $groups[$storeId]['delivery_options'] = $options_;
+            $groups[$storeId]['delivery'] = $selected;
+            $groups[$storeId]['delivery_fee'] = $selected['fee'];
+            $delivery = bcadd($delivery, $selected['fee'], 2);
+        }
+
+        $flat = array_values($groups);
+
+        // Coupon (§18): priced against the eligible lines, then split back
+        // across the seller groups so each order carries its own share.
+        $discountTotal = '0.00';
+        $couponPayload = null;
+        if ($applyCoupon && $cart->coupon_id) {
+            $coupon = Coupon::query()->find($cart->coupon_id);
+            if ($coupon) {
+                try {
+                    $this->coupons->assertUsable($coupon, $cart->user_id ? User::query()->find($cart->user_id) : null);
+                    $discount = $this->coupons->discountFor($coupon, $flat);
+                    if (bccomp($discount['total'], '0', 2) === 1) {
+                        $discountTotal = $discount['total'];
+                        foreach ($discount['per_store'] as $storeId => $amount) {
+                            if (isset($groups[$storeId])) {
+                                $groups[$storeId]['discount'] = $amount;
+                            }
+                        }
+                        $couponPayload = [
+                            'id' => $coupon->id,
+                            'code' => $coupon->code,
+                            'name' => $coupon->name,
+                            'discount_type' => $coupon->discount_type,
+                            'value' => (string) $coupon->value,
+                            'amount' => $discount['total'],
+                            'free_shipping' => $discount['free_shipping'],
+                        ];
+                    } else {
+                        $couponPayload = ['code' => $coupon->code, 'amount' => '0.00', 'invalid' => true, 'message' => 'This code does not apply to your basket.'];
+                    }
+                } catch (ValidationException $e) {
+                    $couponPayload = [
+                        'code' => $coupon->code,
+                        'amount' => '0.00',
+                        'invalid' => true,
+                        'message' => collect($e->errors())->flatten()->first() ?? 'This coupon can no longer be used.',
+                    ];
+                }
+            }
+        }
+
+        $grand = bcadd(bcsub(bcadd($subtotal, $delivery, 2), $discountTotal, 2), $tax, 2);
+        if (bccomp($grand, '0', 2) === -1) {
+            $grand = '0.00';
+        }
 
         return [
             'id' => $cart->id,
             'groups' => array_values($groups),
+            'coupon' => $couponPayload,
             'totals' => [
                 'subtotal' => $subtotal,
+                'discount_total' => $discountTotal,
                 'delivery_total' => $delivery,
                 'tax_total' => $tax,
                 'grand_total' => $grand,

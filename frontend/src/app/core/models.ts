@@ -404,6 +404,8 @@ export interface ProductCard {
   warranty_months?: number | null;
   sponsored?: boolean;
   impression_id?: number;
+  rating_avg?: number;
+  rating_count?: number;
 }
 
 export interface Storefront {
@@ -416,36 +418,73 @@ export interface Storefront {
   delivery_fee: string | number;
   delivery_days: number;
   is_featured?: boolean;
+  logo_path?: string | null;
+  rating_avg?: number;
+  rating_count?: number;
+}
+
+export interface PageMeta {
+  page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
 }
 
 export interface Paginated<T> {
   data: T;
-  meta: { page: number; per_page: number; total: number; last_page: number };
+  meta: PageMeta;
+}
+
+export interface CartItemLine {
+  id: number;
+  variant_id: number;
+  product_id?: number;
+  category_id?: number | null;
+  tenant_id?: number;
+  sku: string;
+  product_name: string;
+  product_slug?: string;
+  options: Record<string, unknown> | null;
+  qty: number;
+  unit_price: string;
+  line_total: string;
+  tax_rate?: number;
+  line_tax?: string;
+  image?: string | null;
+  available: number;
+}
+
+export interface CartGroup {
+  store: { id: number; tenant_id?: number; name: string; slug: string; delivery_fee: string | number };
+  items: CartItemLine[];
+  subtotal: string;
+  tax?: string;
+  discount?: string;
+  qty?: number;
+  delivery_options?: DeliveryOption[];
+  delivery?: DeliveryOption | null;
+  delivery_fee?: string;
+}
+
+export interface CartCoupon {
+  id?: number;
+  code: string;
+  name?: string;
+  discount_type?: CouponDiscountType;
+  value?: string;
+  amount: string;
+  free_shipping?: boolean;
+  invalid?: boolean;
+  message?: string;
 }
 
 export interface CartPayload {
   id: number;
-  groups: {
-    store: { id: number; name: string; slug: string; delivery_fee: string | number };
-    items: {
-      id: number;
-      variant_id: number;
-      sku: string;
-      product_name: string;
-      options: Record<string, unknown> | null;
-      qty: number;
-      unit_price: string;
-      line_total: string;
-      tax_rate?: number;
-      line_tax?: string;
-      image?: string | null;
-      available: number;
-    }[];
-    subtotal: string;
-    tax?: string;
-  }[];
+  groups: CartGroup[];
+  coupon?: CartCoupon | null;
   totals: {
     subtotal: string;
+    discount_total?: string;
     delivery_total: string;
     tax_total: string;
     grand_total: string;
@@ -1951,4 +1990,846 @@ export interface CurrencyConversionPreview {
 export interface CurrencyConversionResult extends CurrencyConversionPreview {
   tables: Record<string, number>;
   rows: number;
+}
+
+// ---------------------------------------------------------------------------
+// §9 / §17 — Reviews, ratings & trust
+// ---------------------------------------------------------------------------
+
+export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'flagged';
+
+export interface ReviewAuthor {
+  name: string;
+  avatar_url?: string | null;
+}
+
+export interface Review {
+  id: number;
+  rating: number;
+  title?: string | null;
+  body?: string | null;
+  status: ReviewStatus;
+  is_verified_purchase: boolean;
+  helpful_count: number;
+  report_count?: number;
+  created_at?: string | null;
+  response_body?: string | null;
+  responded_at?: string | null;
+  moderation_note?: string | null;
+  moderated_at?: string | null;
+  author?: ReviewAuthor | null;
+  customer?: { id?: number; name: string; email?: string; avatar_url?: string | null } | null;
+  product?: { id: number; name: string; slug: string } | null;
+  store?: { id: number; name: string; slug: string } | null;
+  tenant?: string | null;
+}
+
+export interface ReviewSummary {
+  average: number;
+  count: number;
+  verified_count: number;
+  distribution: { rating: number; count: number; percent: number }[];
+}
+
+export interface ReviewFeed {
+  data: Review[];
+  summary: ReviewSummary;
+  meta: PageMeta;
+}
+
+export interface PendingReview {
+  product_id: number;
+  product_name: string;
+  product_slug: string;
+  image?: string | null;
+  store_id: number;
+  store_name?: string | null;
+  seller_order_id: number;
+  order_id: number;
+}
+
+export interface TenantReviewSummary {
+  total: number;
+  approved: number;
+  pending: number;
+  flagged: number;
+  needs_response: number;
+  average: number;
+  detractors: number;
+  promoters: number;
+}
+
+export interface AdminReviewSummary {
+  total: number;
+  pending: number;
+  flagged: number;
+  rejected: number;
+  reported: number;
+  open_reports: number;
+  average: number;
+}
+
+export interface ReviewReport {
+  id: number;
+  review_id: number;
+  reason: string;
+  note?: string | null;
+  status: 'open' | 'dismissed' | 'actioned';
+  reporter?: { id: number; name: string } | string | null;
+  created_at?: string | null;
+  review?: {
+    id: number;
+    rating: number;
+    title?: string | null;
+    body?: string | null;
+    status: ReviewStatus;
+    product?: string | null;
+    store?: string | null;
+  } | null;
+}
+
+// ---------------------------------------------------------------------------
+// §9 / §20 — Wishlist
+// ---------------------------------------------------------------------------
+
+export interface WishlistItem {
+  id: number;
+  product_id: number;
+  variant_id?: number | null;
+  note?: string | null;
+  notify_on_restock: boolean;
+  notify_on_price_drop: boolean;
+  price_at_save?: string | null;
+  current_price: string;
+  price_dropped: boolean;
+  created_at?: string | null;
+  product?: {
+    id: number;
+    name: string;
+    slug: string;
+    price: string;
+    image?: string | null;
+    status: string;
+    rating_avg: number;
+    rating_count: number;
+    in_stock: boolean;
+    store?: { id: number; name: string; slug: string; currency: string } | null;
+  } | null;
+  variant?: { id: number; sku: string; options: Record<string, unknown> | null; available: number } | null;
+}
+
+export interface WishlistStoreEntry {
+  id: number;
+  store?: {
+    id: number;
+    name: string;
+    slug: string;
+    logo_path?: string | null;
+    rating_avg: number;
+    rating_count: number;
+  } | null;
+}
+
+export interface WishlistPayload {
+  items: WishlistItem[];
+  stores: WishlistStoreEntry[];
+  counts: { items: number; stores: number };
+}
+
+// ---------------------------------------------------------------------------
+// §18 — Coupons & promotions
+// ---------------------------------------------------------------------------
+
+export type CouponDiscountType = 'percentage' | 'fixed' | 'free_shipping';
+export type CouponStatus = 'draft' | 'active' | 'paused' | 'expired' | 'archived';
+
+export interface CouponTarget {
+  target_type: 'product' | 'category' | 'store';
+  target_id: number;
+}
+
+export interface Coupon {
+  id: number;
+  tenant_id?: number | null;
+  tenant?: string | null;
+  store_id?: number | null;
+  store?: string | null;
+  code: string;
+  name: string;
+  description?: string | null;
+  discount_type: CouponDiscountType;
+  value: string;
+  currency?: string | null;
+  min_subtotal: string;
+  max_discount?: string | null;
+  usage_limit?: number | null;
+  per_user_limit?: number | null;
+  used_count: number;
+  redeemed_value: string;
+  applies_to: 'all' | 'products' | 'categories' | 'stores';
+  is_stackable: boolean;
+  first_order_only: boolean;
+  auto_apply: boolean;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  status: CouponStatus;
+  is_live: boolean;
+  remaining_uses?: number | null;
+  scope: 'platform' | 'seller';
+  created_at?: string | null;
+  targets?: CouponTarget[];
+}
+
+export interface CouponSummary {
+  total: number;
+  active: number;
+  redemptions: number;
+  discount_given: string;
+  platform?: number;
+  seller?: number;
+}
+
+export interface CouponRedemption {
+  id: number;
+  order_id?: number | null;
+  seller_order_id?: number | null;
+  code: string;
+  amount: string;
+  currency?: string | null;
+  status: string;
+  created_at?: string | null;
+  customer?: { id: number; name: string; email: string } | null;
+  order_total?: string | null;
+}
+
+export interface CouponMeta {
+  stores: { id: number; name: string; slug?: string }[];
+  categories: { id: number; name: string }[];
+  products: { id: number; name: string; price: string }[];
+  discount_types: CouponDiscountType[];
+  statuses: CouponStatus[];
+}
+
+// ---------------------------------------------------------------------------
+// §14 — Configurable commissions
+// ---------------------------------------------------------------------------
+
+export type CommissionScope = 'global' | 'plan' | 'tenant' | 'store' | 'category' | 'product';
+export type CommissionCalculation = 'percentage' | 'flat' | 'percentage_plus_flat' | 'tiered';
+
+export interface CommissionTier {
+  id?: number;
+  from_amount: string;
+  to_amount?: string | null;
+  rate: string;
+  flat_fee: string;
+}
+
+export interface CommissionRule {
+  id: number;
+  name: string;
+  description?: string | null;
+  scope_type: CommissionScope;
+  scope_id?: number | null;
+  scope_label: string;
+  calculation: CommissionCalculation;
+  rate: string;
+  flat_fee: string;
+  min_fee?: string | null;
+  max_fee?: string | null;
+  min_order_amount: string;
+  include_delivery: boolean;
+  priority: number;
+  specificity: number;
+  status: 'active' | 'inactive';
+  effective_from?: string | null;
+  effective_to?: string | null;
+  is_live: boolean;
+  summary: string;
+  created_at?: string | null;
+  tiers?: CommissionTier[];
+}
+
+export interface CommissionQuotePreview {
+  amount: string;
+  rate: string;
+  rule_id?: number | null;
+  rule_name?: string | null;
+  calculation: string;
+  basis: string;
+  sale_amount: string;
+  seller_receives: string;
+  scope_type: CommissionScope;
+  scope_id?: number | null;
+  matched: boolean;
+}
+
+export interface CommissionEarnings {
+  range: { from: string; to: string };
+  commission_total: string;
+  gross_total: string;
+  net_to_sellers: string;
+  settlement_count: number;
+  effective_rate: string;
+  top_tenants: { tenant_id: number; tenant: string; commission: string; gross: string; orders: number }[];
+}
+
+export interface CommissionMeta {
+  scope_types: CommissionScope[];
+  calculations: CommissionCalculation[];
+  plans: { id: number; name: string; commission_rate: string }[];
+  tenants: { id: number; name: string }[];
+  stores: { id: number; tenant_id: number; name: string }[];
+  categories: { id: number; tenant_id: number; name: string }[];
+}
+
+// ---------------------------------------------------------------------------
+// §12 — Payouts
+// ---------------------------------------------------------------------------
+
+export type PayoutBatchStatus =
+  | 'draft'
+  | 'pending_approval'
+  | 'processing'
+  | 'paid'
+  | 'failed'
+  | 'cancelled';
+
+export interface PayoutAccount {
+  id: number;
+  tenant_id?: number;
+  tenant?: string | null;
+  label?: string | null;
+  method: 'bank' | 'mobile_money' | 'paypal' | 'wallet';
+  account_name: string;
+  masked_account_number: string;
+  bank_name?: string | null;
+  branch?: string | null;
+  swift_code?: string | null;
+  mobile_network?: string | null;
+  currency: string;
+  country?: string | null;
+  status: 'pending' | 'verified' | 'rejected';
+  is_default: boolean;
+  verified_at?: string | null;
+}
+
+export interface PayoutBatchItem {
+  id: number;
+  seller_settlement_id: number;
+  seller_order_id?: number | null;
+  order_id?: number | null;
+  gross: string;
+  commission: string;
+  refund_amount: string;
+  amount: string;
+}
+
+export interface PayoutBatch {
+  id: number;
+  reference: string;
+  tenant_id: number;
+  tenant?: string | null;
+  status: PayoutBatchStatus;
+  currency: string;
+  gross: string;
+  commission: string;
+  delivery_fees: string;
+  refunds: string;
+  adjustments: string;
+  net: string;
+  settlement_count: number;
+  period_start?: string | null;
+  period_end?: string | null;
+  method?: string | null;
+  external_ref?: string | null;
+  notes?: string | null;
+  failure_reason?: string | null;
+  released_at?: string | null;
+  paid_at?: string | null;
+  created_at?: string | null;
+  is_editable?: boolean;
+  account?: Partial<PayoutAccount> | null;
+  items?: PayoutBatchItem[];
+  adjustment_entries?: PayoutAdjustment[];
+}
+
+export interface PayoutAdjustment {
+  id: number;
+  tenant_id?: number;
+  tenant?: string | null;
+  kind: 'credit' | 'debit';
+  amount: string;
+  signed_amount?: string;
+  reason: string;
+  status: 'pending' | 'applied' | 'void';
+  payout_batch_id?: number | null;
+  created_at?: string | null;
+}
+
+export interface SettlementRow {
+  id: number;
+  tenant_id?: number | null;
+  tenant?: string | null;
+  seller_order_id: number;
+  order_id?: number | null;
+  store?: string | null;
+  gross: string;
+  commission: string;
+  net: string;
+  commission_rate?: string | null;
+  currency: string;
+  status: 'pending' | 'available' | 'processing' | 'paid' | 'on_hold' | 'reversed';
+  available_at?: string | null;
+  released_at?: string | null;
+  hold_reason?: string | null;
+  payout_batch_id?: number | null;
+  created_at?: string | null;
+}
+
+export interface PayoutBalance {
+  pending: string;
+  pending_count: number;
+  available: string;
+  available_count: number;
+  processing: string;
+  processing_count: number;
+  paid: string;
+  paid_count: number;
+  on_hold: string;
+  on_hold_count: number;
+  adjustments: string;
+  payable: string;
+  currency: string;
+  hold_days: number;
+  minimum_payout: string;
+}
+
+export interface PayoutOverview {
+  balance: PayoutBalance;
+  account?: PayoutAccount | null;
+  recent_batches: PayoutBatch[];
+  next_release?: string | null;
+}
+
+export interface PlatformPayoutSummary {
+  pending: string;
+  available: string;
+  processing: string;
+  paid: string;
+  on_hold: string;
+  commission_earned: string;
+  batches: { draft: number; processing: number; paid: number; failed: number };
+  currency: string;
+  hold_days: number;
+  minimum_payout: string;
+}
+
+export interface PayableTenant {
+  tenant_id: number;
+  tenant_name: string;
+  settlements: number;
+  amount: string;
+  oldest_available_at?: string | null;
+  meets_minimum: boolean;
+  account?: Partial<PayoutAccount> | null;
+}
+
+export interface AdminPayoutOverview {
+  summary: PlatformPayoutSummary;
+  payable: PayableTenant[];
+  recent_batches: PayoutBatch[];
+}
+
+// ---------------------------------------------------------------------------
+// §12 — Refunds & disputes
+// ---------------------------------------------------------------------------
+
+export type RefundStatus = 'requested' | 'approved' | 'processing' | 'completed' | 'rejected' | 'failed';
+
+export interface RefundLine {
+  id: number;
+  order_item_id: number;
+  product_name?: string | null;
+  qty: number;
+  unit_price: string;
+  amount: string;
+}
+
+export interface Refund {
+  id: number;
+  reference: string;
+  order_id: number;
+  seller_order_id?: number | null;
+  tenant_id?: number | null;
+  tenant?: string | null;
+  dispute_id?: number | null;
+  type: 'full' | 'partial' | 'shipping_only' | 'goodwill';
+  reason: string;
+  status: RefundStatus;
+  amount: string;
+  delivery_refund?: string;
+  commission_reversal: string;
+  net_seller_impact: string;
+  currency: string;
+  customer_note?: string | null;
+  decision_note?: string | null;
+  restock?: boolean;
+  gateway_ref?: string | null;
+  requested_at?: string | null;
+  reviewed_at?: string | null;
+  processed_at?: string | null;
+  store?: { id: number; name: string; slug: string } | null;
+  customer?: { id: number; name: string; email: string } | null;
+  items?: RefundLine[];
+}
+
+export interface RefundSummary {
+  open: number;
+  completed: number;
+  rejected?: number;
+  failed?: number;
+  refunded_value: string;
+  commission_reversed?: string;
+}
+
+export interface RefundableOrder {
+  seller_order_id: number;
+  grand_total: string;
+  refunded_total: string;
+  refundable_total: string;
+  currency: string;
+  items: { order_item_id: number; product_name: string; sku: string; qty: number; unit_price: string; line_total: string }[];
+}
+
+export type DisputeStatus =
+  | 'open'
+  | 'awaiting_seller'
+  | 'awaiting_customer'
+  | 'escalated'
+  | 'resolved'
+  | 'rejected'
+  | 'closed';
+
+export interface DisputeMessage {
+  id: number;
+  author_role: 'customer' | 'seller' | 'admin' | 'system';
+  author_name: string;
+  body: string;
+  attachments: unknown[];
+  is_internal: boolean;
+  created_at?: string | null;
+}
+
+export interface Dispute {
+  id: number;
+  reference: string;
+  order_id: number;
+  seller_order_id?: number | null;
+  tenant_id?: number | null;
+  tenant?: string | null;
+  store_id?: number | null;
+  type: string;
+  status: DisputeStatus;
+  priority: string;
+  subject: string;
+  description: string;
+  amount_claimed: string;
+  currency: string;
+  outcome?: string | null;
+  resolution?: string | null;
+  seller_due_at?: string | null;
+  is_overdue: boolean;
+  escalated_at?: string | null;
+  resolved_at?: string | null;
+  last_activity_at?: string | null;
+  created_at?: string | null;
+  store?: { id: number; name: string; slug: string } | null;
+  customer?: { id: number; name: string; email: string } | null;
+  assigned_admin?: { id: number; name: string } | null;
+  messages?: DisputeMessage[];
+  refunds?: { id: number; reference: string; status: RefundStatus; amount: string; processed_at?: string | null }[];
+  seller_order?: {
+    id: number;
+    status: string;
+    subtotal: string;
+    discount: string;
+    delivery_fee: string;
+    grand_total: string;
+    refundable_total: string;
+    currency: string;
+  } | null;
+}
+
+export interface DisputeSummary {
+  open: number;
+  awaiting_seller?: number;
+  escalated: number;
+  overdue: number;
+  resolved: number;
+  claimed_value?: string;
+}
+
+// ---------------------------------------------------------------------------
+// §16 — Delivery zones, methods & tracking
+// ---------------------------------------------------------------------------
+
+export type ShipmentStatus =
+  | 'pending'
+  | 'ready_for_pickup'
+  | 'picked_up'
+  | 'in_transit'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'failed'
+  | 'returned'
+  | 'cancelled';
+
+export type DeliveryMethodType = 'pickup' | 'store_delivery' | 'courier' | 'platform';
+
+export interface DeliveryOption {
+  method_id: number | null;
+  zone_id?: number | null;
+  zone_name?: string | null;
+  name: string;
+  type: DeliveryMethodType;
+  carrier?: string | null;
+  service_level?: string | null;
+  fee: string;
+  min_days?: number | null;
+  max_days?: number | null;
+  pickup_address?: string | null;
+  pickup_hours?: string | null;
+  instructions?: string | null;
+  is_default?: boolean;
+  free_over?: string | null;
+}
+
+export interface DeliveryMethod {
+  id: number;
+  delivery_zone_id?: number | null;
+  store_id?: number | null;
+  name: string;
+  type: DeliveryMethodType;
+  carrier?: string | null;
+  service_level?: string | null;
+  fee: string;
+  free_over?: string | null;
+  min_days: number;
+  max_days: number;
+  pickup_address?: string | null;
+  pickup_hours?: string | null;
+  instructions?: string | null;
+  tracking_url_template?: string | null;
+  is_default: boolean;
+  status: 'active' | 'inactive';
+  position: number;
+}
+
+export interface DeliveryZone {
+  id: number;
+  store_id?: number | null;
+  name: string;
+  description?: string | null;
+  match_type: 'country' | 'region' | 'city' | 'postcode' | 'any';
+  countries: string[];
+  regions: string[];
+  cities: string[];
+  postcodes: string[];
+  base_fee: string;
+  per_item_fee: string;
+  per_kg_fee: string;
+  free_over?: string | null;
+  min_days: number;
+  max_days: number;
+  priority: number;
+  is_default: boolean;
+  status: 'active' | 'inactive';
+  methods: DeliveryMethod[];
+}
+
+export interface ShipmentEvent {
+  id: number;
+  status: ShipmentStatus;
+  description: string;
+  location?: string | null;
+  happened_at?: string | null;
+}
+
+export interface Shipment {
+  id: number;
+  reference: string;
+  seller_order_id: number;
+  order_id?: number | null;
+  store_id?: number;
+  status: ShipmentStatus;
+  status_label: string;
+  type: DeliveryMethodType;
+  carrier?: string | null;
+  service_level?: string | null;
+  tracking_number?: string | null;
+  tracking_url?: string | null;
+  cost: string;
+  recipient_name?: string | null;
+  recipient_phone?: string | null;
+  destination?: string | null;
+  estimated_delivery_from?: string | null;
+  estimated_delivery_to?: string | null;
+  dispatched_at?: string | null;
+  delivered_at?: string | null;
+  created_at?: string | null;
+  notes?: string | null;
+  method?: { id: number; name: string; type: DeliveryMethodType; carrier?: string | null } | null;
+  store?: { id: number; name: string; slug: string } | null;
+  events?: ShipmentEvent[];
+}
+
+export interface DeliverySettings {
+  stores: { id: number; name: string; slug: string; delivery_fee: string; delivery_days?: number | null; country?: string | null }[];
+  zones: DeliveryZone[];
+  methods: DeliveryMethod[];
+  match_types: string[];
+  method_types: DeliveryMethodType[];
+  shipment_statuses: ShipmentStatus[];
+  status_labels: Record<string, string>;
+}
+
+export interface ShipmentSummary {
+  total: number;
+  awaiting_dispatch: number;
+  in_transit: number;
+  delivered: number;
+  problem: number;
+}
+
+// ---------------------------------------------------------------------------
+// §20 — In-app notifications
+// ---------------------------------------------------------------------------
+
+export type NotificationAudience = 'customer' | 'tenant' | 'admin';
+export type NotificationCategory =
+  | 'order'
+  | 'payment'
+  | 'payout'
+  | 'review'
+  | 'dispute'
+  | 'catalog'
+  | 'inventory'
+  | 'security'
+  | 'system'
+  | 'promotion';
+
+export interface AppNotification {
+  id: number;
+  audience: NotificationAudience;
+  category: NotificationCategory;
+  level: 'info' | 'success' | 'warning' | 'critical';
+  title: string;
+  body?: string | null;
+  action_url?: string | null;
+  action_label?: string | null;
+  data?: Record<string, unknown> | null;
+  read: boolean;
+  read_at?: string | null;
+  created_at?: string | null;
+}
+
+export interface NotificationSummary {
+  unread: number;
+  total: number;
+  today: number;
+  by_category: Record<string, number>;
+  recent?: AppNotification[];
+}
+
+// ---------------------------------------------------------------------------
+// §7 — Global catalog moderation
+// ---------------------------------------------------------------------------
+
+export type ProductModerationStatus = 'pending' | 'approved' | 'flagged' | 'rejected';
+
+export interface PlatformCategory {
+  id: number;
+  parent_id?: number | null;
+  name: string;
+  slug: string;
+  description?: string | null;
+  icon?: string | null;
+  image_url?: string | null;
+  position: number;
+  is_active: boolean;
+  is_featured: boolean;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  children_count: number;
+  tenant_categories_count: number;
+  products_count: number;
+  children?: PlatformCategory[];
+}
+
+export interface CatalogCategoriesPayload {
+  tree: PlatformCategory[];
+  flat: PlatformCategory[];
+  summary: {
+    total: number;
+    active: number;
+    featured: number;
+    unmapped_tenant_categories: number;
+    unmapped_products: number;
+  };
+}
+
+export interface TenantCategoryRow {
+  id: number;
+  tenant_id: number;
+  tenant?: string | null;
+  name: string;
+  slug: string;
+  platform_category_id?: number | null;
+  platform_category?: string | null;
+  products_count: number;
+}
+
+export interface ModeratedProduct {
+  id: number;
+  name: string;
+  slug: string;
+  sku?: string | null;
+  price: string;
+  status: string;
+  moderation_status: ProductModerationStatus;
+  moderation_note?: string | null;
+  moderated_at?: string | null;
+  report_count: number;
+  rating_avg: number;
+  rating_count: number;
+  image?: string | null;
+  created_at?: string | null;
+  tenant?: string | null;
+  tenant_id?: number;
+  store?: { id: number; name: string; slug: string } | null;
+  category?: string | null;
+  platform_category_id?: number | null;
+  platform_category?: string | null;
+}
+
+export interface CatalogProductSummary {
+  total: number;
+  pending: number;
+  rejected: number;
+  flagged: number;
+  reported: number;
+  unmapped: number;
+  open_reports: number;
+}
+
+export interface ProductReportRow {
+  id: number;
+  product_id: number;
+  product?: { id: number; name: string; slug: string; store?: string | null; moderation_status: string } | null;
+  reason: string;
+  note?: string | null;
+  status: 'open' | 'dismissed' | 'actioned';
+  reporter?: string | null;
+  created_at?: string | null;
 }
