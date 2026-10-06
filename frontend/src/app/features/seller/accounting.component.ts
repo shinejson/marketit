@@ -150,9 +150,9 @@ type Drawer = 'invoice' | 'payment' | 'expense' | 'payExpense' | 'purchaseOrder'
           @case ('invoices') {
             <section class="table-panel panel">
               <div class="table-toolbar">
-                <div class="search-box"><span>⌕</span><input placeholder="Search number, customer or email" [(ngModel)]="search" (keyup.enter)="loadCurrent()" /></div>
-                <select [(ngModel)]="statusFilter" (change)="loadCurrent()"><option value="">All statuses</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="partial">Part paid</option><option value="overdue">Overdue</option><option value="paid">Paid</option><option value="void">Void</option></select>
-                <button class="filter-go" type="button" (click)="loadCurrent()">Filter</button>
+                <div class="search-box"><span>⌕</span><input placeholder="Search number, customer or email" [(ngModel)]="search" (keyup.enter)="resetInvoicePageAndLoad()" /></div>
+                <select [(ngModel)]="statusFilter" (change)="resetInvoicePageAndLoad()"><option value="">All statuses</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="partial">Part paid</option><option value="overdue">Overdue</option><option value="paid">Paid</option><option value="void">Void</option></select>
+                <button class="filter-go" type="button" (click)="resetInvoicePageAndLoad()">Filter</button>
               </div>
               <div class="table-wrap"><table>
                 <thead><tr><th>Invoice</th><th>Customer</th><th>Issued</th><th>Due</th><th>Status</th><th class="right">Total</th><th class="right">Balance</th><th></th></tr></thead>
@@ -164,18 +164,25 @@ type Drawer = 'invoice' | 'payment' | 'expense' | 'payExpense' | 'purchaseOrder'
                       <td>{{ invoice.issue_date | date:'MMM d, y' }}</td><td>{{ invoice.due_date | date:'MMM d, y' }}</td>
                       <td><span [class]="'status ' + invoice.status">{{ invoice.status === 'partial' ? 'Part paid' : pretty(invoice.status) }}</span></td>
                       <td class="right"><strong>{{ invoice.total | money:invoice.currency }}</strong></td><td class="right">{{ invoice.balance_due | money:invoice.currency }}</td>
-                      <td class="actions">
-                        <button type="button" (click)="openViewInvoice(invoice)">View</button>
-                        @if (invoice.status === 'draft') { <button type="button" (click)="sendInvoice(invoice)">Send</button> }
-                        @if (invoice.status === 'draft') { <button type="button" class="danger-action" (click)="deleteInvoice(invoice)">Delete</button> }
-                        @if (!['draft','paid','void'].includes(invoice.status)) { <button type="button" (click)="openPayment(invoice)">Record payment</button> }
-                        @if (invoice.status === 'paid') { <span class="paid-check">✓</span> }
+                      <td class="actions icon-actions">
+                        <button type="button" title="View invoice" (click)="openViewInvoice(invoice)"><i class="fa-solid fa-eye"></i></button>
+                        @if (invoice.status === 'draft') { <button type="button" title="Send invoice" (click)="sendInvoice(invoice)"><i class="fa-solid fa-paper-plane"></i></button> }
+                        @if (invoice.status === 'draft') { <button type="button" class="danger-action" title="Delete invoice" (click)="deleteInvoice(invoice)"><i class="fa-solid fa-trash"></i></button> }
+                        @if (!['draft','paid','void'].includes(invoice.status)) { <button type="button" title="Record payment" (click)="openPayment(invoice)"><i class="fa-solid fa-plus-circle"></i></button> }
+                        @if (invoice.status === 'paid') { <span class="paid-check" title="Paid">✓</span> }
                       </td>
                     </tr>
                   } @empty { <tr><td colspan="8"><div class="empty-state"><b>No invoices found</b><span>Create an invoice or change your filters.</span></div></td></tr> }
                 </tbody>
               </table></div>
-              <div class="table-foot"><span>Showing {{ invoices().length }} of {{ total() }} invoices</span><span>Payments update balances automatically</span></div>
+              <div class="table-foot">
+                <span>Showing {{ invoices().length }} items · Page {{ currentInvoicePage() }} of {{ totalInvoicePages() }} · {{ total() }} invoices total</span>
+                <div class="pagination-controls">
+                  <button type="button" [disabled]="currentInvoicePage() <= 1" (click)="prevInvoicePage()">← Previous</button>
+                  <span class="page-info">Page {{ currentInvoicePage() }}/{{ totalInvoicePages() }}</span>
+                  <button type="button" [disabled]="currentInvoicePage() >= totalInvoicePages()" (click)="nextInvoicePage()">Next →</button>
+                </div>
+              </div>
             </section>
           }
 
@@ -186,12 +193,20 @@ type Drawer = 'invoice' | 'payment' | 'expense' | 'payExpense' | 'purchaseOrder'
               <div><span class="summary-icon net">≈</span><p>Net movement</p><strong>{{ paymentSum('incoming') - paymentSum('outgoing') | money:currency() }}</strong></div>
             </section>
             <section class="table-panel panel">
-              <div class="table-toolbar"><div class="search-box"><span>⌕</span><input placeholder="Search reference or method" [(ngModel)]="search" (keyup.enter)="loadCurrent()" /></div><select [(ngModel)]="statusFilter" (change)="loadCurrent()"><option value="">All movements</option><option value="incoming">Money in</option><option value="outgoing">Money out</option></select><button class="filter-go" (click)="loadCurrent()">Filter</button></div>
+              <div class="table-toolbar"><div class="search-box"><span>⌕</span><input placeholder="Search reference or method" [(ngModel)]="search" (keyup.enter)="resetPaymentPageAndLoad()" /></div><select [(ngModel)]="statusFilter" (change)="resetPaymentPageAndLoad()"><option value="">All movements</option><option value="incoming">Money in</option><option value="outgoing">Money out</option></select><button class="filter-go" (click)="resetPaymentPageAndLoad()">Filter</button></div>
               <div class="table-wrap"><table><thead><tr><th>Date</th><th>Reference</th><th>Related record</th><th>Method</th><th>Direction</th><th class="right">Amount</th></tr></thead><tbody>
                 @for (payment of payments(); track payment.id) {
                   <tr><td>{{ payment.paid_on | date:'MMM d, y' }}</td><td><strong class="mono">{{ payment.reference }}</strong></td><td><strong>{{ relatedPayment(payment) }}</strong><small>{{ payment.invoice ? payment.invoice.customer_name : payment.expense?.vendor_name || '' }}</small></td><td>{{ pretty(payment.method) }}</td><td><span [class]="'movement ' + payment.direction">{{ payment.direction === 'incoming' ? '↙ Money in' : '↗ Money out' }}</span></td><td class="right movement-amount" [class.outgoing]="payment.direction === 'outgoing'">{{ payment.direction === 'outgoing' ? '−' : '+' }}{{ payment.amount | money:payment.currency }}</td></tr>
                 } @empty { <tr><td colspan="6"><div class="empty-state">No payment activity found.</div></td></tr> }
               </tbody></table></div>
+              <div class="table-foot">
+                <span>Showing {{ payments().length }} items · Page {{ currentPaymentPage() }} of {{ totalPaymentPages() }} · {{ total() }} payments total</span>
+                <div class="pagination-controls">
+                  <button type="button" [disabled]="currentPaymentPage() <= 1" (click)="prevPaymentPage()">← Previous</button>
+                  <span class="page-info">Page {{ currentPaymentPage() }}/{{ totalPaymentPages() }}</span>
+                  <button type="button" [disabled]="currentPaymentPage() >= totalPaymentPages()" (click)="nextPaymentPage()">Next →</button>
+                </div>
+              </div>
             </section>
           }
 
@@ -428,6 +443,10 @@ export class SellerAccountingComponent {
   error = signal('');
   toast = signal('');
   total = signal(0);
+  currentInvoicePage = signal(1);
+  readonly invoicePageSize = 10;
+  currentPaymentPage = signal(1);
+  readonly paymentPageSize = 10;
   dashboard = signal<AccountingDashboard | null>(null);
   invoices = signal<AccountingInvoice[]>([]);
   payments = signal<AccountingPayment[]>([]);
@@ -470,6 +489,8 @@ export class SellerAccountingComponent {
       this.page.set((data['page'] as AccountingPage) || 'overview');
       this.search = '';
       this.statusFilter = '';
+      this.currentInvoicePage.set(1);
+      this.currentPaymentPage.set(1);
       this.loadCurrent();
     });
     this.loadContacts();
@@ -505,9 +526,21 @@ export class SellerAccountingComponent {
     if (current === 'overview') {
       this.api.accountingDashboard().pipe(finalize(() => this.loading.set(false))).subscribe({ next: (res) => { this.dashboard.set(res.data); this.currency.set(res.data.currency); }, error: (err) => this.fail(err) });
     } else if (current === 'invoices') {
-      this.api.accountingInvoices(params).pipe(finalize(() => this.loading.set(false))).subscribe({ next: (res) => { this.invoices.set(res.data); this.total.set(res.meta.total); if (res.data[0]) this.currency.set(res.data[0].currency); }, error: (err) => this.fail(err) });
+      const invoiceParams = { per_page: this.invoicePageSize, page: this.currentInvoicePage() };
+      if (this.search.trim()) invoiceParams['search'] = this.search.trim();
+      if (this.statusFilter) invoiceParams['status'] = this.statusFilter;
+      invoiceParams['sort'] = '-issue_date';
+      this.api.accountingInvoices(invoiceParams).pipe(finalize(() => this.loading.set(false))).subscribe({ next: (res) => { this.invoices.set(res.data); this.total.set(res.meta.total); if (res.data[0]) this.currency.set(res.data[0].currency); }, error: (err) => this.fail(err) });
     } else if (current === 'payments') {
-      this.api.accountingPayments(params).pipe(finalize(() => this.loading.set(false))).subscribe({ next: (res) => { this.payments.set(res.data); this.total.set(res.meta.total); if (res.data[0]) this.currency.set(res.data[0].currency); }, error: (err) => this.fail(err) });
+      const paymentParams: Record<string, string | number> = { per_page: this.paymentPageSize, page: this.currentPaymentPage() };
+      if (this.search.trim()) paymentParams['search'] = this.search.trim();
+      if (this.statusFilter && this.statusFilter !== 'incoming' && this.statusFilter !== 'outgoing') {
+        paymentParams['status'] = this.statusFilter;
+      } else if (this.statusFilter) {
+        paymentParams['direction'] = this.statusFilter;
+      }
+      paymentParams['sort'] = '-paid_on';
+      this.api.accountingPayments(paymentParams).pipe(finalize(() => this.loading.set(false))).subscribe({ next: (res) => { this.payments.set(res.data); this.total.set(res.meta.total); if (res.data[0]) this.currency.set(res.data[0].currency); }, error: (err) => this.fail(err) });
     } else if (current === 'expenses') {
       this.api.accountingExpenses(params).pipe(finalize(() => this.loading.set(false))).subscribe({ next: (res) => { this.expenses.set(res.data); this.total.set(res.meta.total); if (res.data[0]) this.currency.set(res.data[0].currency); }, error: (err) => this.fail(err) });
     } else if (current === 'procurement') {
@@ -527,6 +560,52 @@ export class SellerAccountingComponent {
       forkJoin({ banks: this.api.accountingBankAccounts(), transactions: this.api.accountingBankTransactions(params), payments: this.api.accountingPayments({ per_page: 100 }) })
         .pipe(finalize(() => this.loading.set(false))).subscribe({ next: (res) => { this.bankAccounts.set(res.banks.data); this.bankTransactions.set(res.transactions.data); this.payments.set(res.payments.data); if (res.banks.data[0]) this.currency.set(res.banks.data[0].currency); }, error: (err) => this.fail(err) });
     }
+  }
+
+  nextInvoicePage(): void {
+    if (this.currentInvoicePage() < this.totalInvoicePages()) {
+      this.currentInvoicePage.set(this.currentInvoicePage() + 1);
+      this.loadCurrent();
+    }
+  }
+
+  prevInvoicePage(): void {
+    if (this.currentInvoicePage() > 1) {
+      this.currentInvoicePage.set(this.currentInvoicePage() - 1);
+      this.loadCurrent();
+    }
+  }
+
+  resetInvoicePageAndLoad(): void {
+    this.currentInvoicePage.set(1);
+    this.loadCurrent();
+  }
+
+  totalInvoicePages(): number {
+    return Math.ceil(this.total() / this.invoicePageSize);
+  }
+
+  nextPaymentPage(): void {
+    if (this.currentPaymentPage() < this.totalPaymentPages()) {
+      this.currentPaymentPage.set(this.currentPaymentPage() + 1);
+      this.loadCurrent();
+    }
+  }
+
+  prevPaymentPage(): void {
+    if (this.currentPaymentPage() > 1) {
+      this.currentPaymentPage.set(this.currentPaymentPage() - 1);
+      this.loadCurrent();
+    }
+  }
+
+  resetPaymentPageAndLoad(): void {
+    this.currentPaymentPage.set(1);
+    this.loadCurrent();
+  }
+
+  totalPaymentPages(): number {
+    return Math.ceil(this.total() / this.paymentPageSize);
   }
 
   open(kind: Exclude<Drawer, null>): void {

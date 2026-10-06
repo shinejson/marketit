@@ -198,6 +198,14 @@
 
   .muted { color: var(--muted); }
 
+  // --------------------------------------------------------- pagination
+  .table-foot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; padding: 13px 17px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+  .pagination-controls { display: flex; align-items: center; gap: 8px; }
+  .pagination-controls button { border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); color: var(--ink); padding: 6px 11px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .pagination-controls button:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+  .pagination-controls button[disabled] { opacity: .4; cursor: not-allowed; }
+  .page-info { font-size: 11px; color: var(--muted); font-weight: 600; }
+
   @media (max-width: 1180px) {
     .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
   }
