@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -24,14 +24,26 @@ type Variant = ProductCard['variants'][number];
         </nav>
 
         <div class="layout">
-          <section class="gallery">
-            <div class="card frame" [style.backgroundImage]="activeImage() ? 'url(' + activeImage() + ')' : 'linear-gradient(135deg,#1f4b3a,#c45c26)'">
+          <section class="gallery" aria-label="Product image gallery">
+            <div class="card frame gallery-stage" [style.background]="activeImage() ? 'var(--paper-2)' : 'linear-gradient(135deg,#1f4b3a,#c45c26)'" (mouseenter)="pauseSlideshow()" (mouseleave)="startSlideshow()">
+              @for (img of p.images; track img.id) {
+                @if (img.url === activeImage()) {
+                  <img class="gallery-image" [src]="img.url" [alt]="p.name + ' — image ' + (activeImageIndex(p) + 1)" />
+                }
+              }
               @if (p.on_sale) { <span class="sale-flag">−{{ p.discount_percent }}%</span> }
+              @if (p.images.length > 1) {
+                <div class="gallery-controls">
+                  <button type="button" class="gallery-arrow previous" (click)="previousImage(p)" aria-label="Previous product image">‹</button>
+                  <span class="gallery-counter" aria-live="polite">{{ activeImageIndex(p) + 1 }} / {{ p.images.length }}</span>
+                  <button type="button" class="gallery-arrow next" (click)="nextImage(p)" aria-label="Next product image">›</button>
+                </div>
+              }
             </div>
             @if (p.images.length > 1) {
-              <div class="thumbs">
-                @for (img of p.images; track img.id) {
-                  <button type="button" class="thumb" [class.on]="img.url === activeImage()" [style.backgroundImage]="'url(' + img.url + ')'" (click)="activeImage.set(img.url)" [attr.aria-label]="'View image ' + img.id"></button>
+              <div class="thumbs" aria-label="Choose a product image">
+                @for (img of p.images; track img.id; let index = $index) {
+                  <button type="button" class="thumb" [class.on]="img.url === activeImage()" [style.backgroundImage]="'url(' + img.url + ')'" (click)="selectImage(img.url)" [attr.aria-label]="'View image ' + (index + 1) + ' of ' + p.images.length" [attr.aria-current]="img.url === activeImage() ? 'true' : null"></button>
                 }
               </div>
             }
@@ -125,11 +137,20 @@ type Variant = ProductCard['variants'][number];
     .crumbs a { color: inherit; } .crumbs b { color: var(--ink); font-weight: 600; }
     .layout { display: grid; grid-template-columns: 1.05fr 1fr; gap: 34px; align-items: start; }
     @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
-    .frame { min-height: 460px; background-color: var(--paper-2); background-position: center; background-size: cover; position: relative; border-radius: 16px; }
-    .sale-flag { position: absolute; top: 14px; left: 14px; background: var(--accent); color: #fff; font-weight: 800; padding: 7px 12px; border-radius: 999px; font-size: 14px; }
+    .frame { min-height: 460px; background-color: var(--paper-2); position: relative; overflow: hidden; border-radius: 16px; }
+    .gallery-stage { isolation: isolate; }
+    .gallery-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: gallery-slide-in .34s ease-out both; }
+    .sale-flag { position: absolute; z-index: 2; top: 14px; left: 14px; background: var(--accent); color: #fff; font-weight: 800; padding: 7px 12px; border-radius: 999px; font-size: 14px; }
+    .gallery-controls { position: absolute; z-index: 2; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px solid rgba(255,255,255,.32); border-radius: 999px; background: rgba(18,17,14,.56); backdrop-filter: blur(8px); }
+    .gallery-arrow { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent; color: #fff; font-size: 25px; line-height: 1; cursor: pointer; }
+    .gallery-arrow:hover, .gallery-arrow:focus-visible { background: rgba(255,255,255,.2); outline: none; }
+    .gallery-counter { min-width: 34px; color: #fff; font-size: 11px; font-weight: 800; text-align: center; }
     .thumbs { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
     .thumb { width: 68px; height: 68px; border-radius: 12px; border: 2px solid var(--line); cursor: pointer; background: var(--paper-2) center/cover; padding: 0; }
-    .thumb.on { border-color: var(--accent); }
+    .thumb.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(196,92,38,.14); }
+    .thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    @keyframes gallery-slide-in { from { opacity: .2; transform: translateX(12px) scale(1.015); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .gallery-image { animation: none; } }
     .store { font-size: 13px; letter-spacing: .02em; }
     h1 { margin: 6px 0 8px; font-size: clamp(26px, 3.4vw, 38px); line-height: 1.1; }
     .lede { color: var(--ink-soft); margin: 0 0 6px; }
@@ -172,7 +193,7 @@ type Variant = ProductCard['variants'][number];
     .err { color: var(--danger); }
   `],
 })
-export class ProductComponent {
+export class ProductComponent implements OnDestroy {
   private api = inject(ApiService);
   private auth = inject(AuthService);
   private router = inject(Router);
@@ -199,6 +220,8 @@ export class ProductComponent {
   quoteQty = 1;
   quoteMessage = '';
 
+  private slideshowTimer?: ReturnType<typeof setInterval>;
+
   constructor() {
     const slug = this.route.snapshot.paramMap.get('slug')!;
     this.api.marketProduct(slug).subscribe({
@@ -206,12 +229,69 @@ export class ProductComponent {
         this.product.set(res.data);
         this.variant.set(res.data.variants.find((v) => v.status === 'active') ?? res.data.variants[0] ?? null);
         this.activeImage.set(res.data.images.find((i) => i.is_primary)?.url ?? res.data.images[0]?.url ?? null);
+        this.startSlideshow();
         const min = this.minQty(res.data);
         this.qty = min;
         this.quoteQty = min;
       },
       error: () => this.error.set('Product not found.'),
     });
+  }
+
+  ngOnDestroy(): void {
+    this.pauseSlideshow();
+  }
+
+  activeImageIndex(product: ProductCard): number {
+    const index = product.images.findIndex((image) => image.url === this.activeImage());
+    return index >= 0 ? index : 0;
+  }
+
+  selectImage(url: string): void {
+    this.activeImage.set(url);
+    this.restartSlideshow();
+  }
+
+  previousImage(product: ProductCard): void {
+    this.moveImage(product, -1);
+  }
+
+  nextImage(product: ProductCard): void {
+    this.moveImage(product, 1);
+  }
+
+  /** Start a gentle, pauseable carousel for galleries with two or more images. */
+  startSlideshow(): void {
+    this.pauseSlideshow();
+    const product = this.product();
+    if (!product || product.images.length < 2 || this.prefersReducedMotion()) return;
+
+    this.slideshowTimer = setInterval(() => {
+      const current = this.product();
+      if (current) this.moveImage(current, 1, false);
+    }, 5000);
+  }
+
+  pauseSlideshow(): void {
+    if (this.slideshowTimer) {
+      clearInterval(this.slideshowTimer);
+      this.slideshowTimer = undefined;
+    }
+  }
+
+  private restartSlideshow(): void {
+    this.startSlideshow();
+  }
+
+  private moveImage(product: ProductCard, direction: 1 | -1, restart = true): void {
+    if (product.images.length < 2) return;
+    const next = (this.activeImageIndex(product) + direction + product.images.length) % product.images.length;
+    this.activeImage.set(product.images[next].url);
+    if (restart) this.restartSlideshow();
+  }
+
+  private prefersReducedMotion(): boolean {
+    return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   minQty(p: ProductCard): number {

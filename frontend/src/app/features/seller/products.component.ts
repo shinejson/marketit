@@ -716,8 +716,13 @@ const PRESET_GLYPHS: Record<string, string> = {
 
             @case ('media') {
               <section class="field-block">
-                <h3>Photography</h3>
-                <p class="hint">The first image is the one shoppers see in search results and cards.</p>
+                <div class="block-head">
+                  <div>
+                    <h3>Photography <span class="media-count">{{ imageCount() }} / {{ maxProductImages }} photos</span></h3>
+                    <p class="hint">Add one to four photos. Shoppers can browse them as a slideshow; the first image is the cover shown in cards and search results.</p>
+                  </div>
+                  @if (imageSlotsRemaining() > 0) { <span class="slots-left">{{ imageSlotsRemaining() }} slot{{ imageSlotsRemaining() === 1 ? '' : 's' }} left</span> }
+                </div>
                 <div class="media-grid">
                   @for (image of draftImages(); track image.id) {
                     <div class="media-tile" [class.primary]="image.is_primary">
@@ -727,11 +732,17 @@ const PRESET_GLYPHS: Record<string, string> = {
                     </div>
                   }
                   @for (pending of pendingImages; track pending.preview) {
-                    <div class="media-tile pending"><img [src]="pending.preview" alt="Pending upload" /><span class="badge">Uploads on save</span></div>
+                    <div class="media-tile pending">
+                      <img [src]="pending.preview" alt="Pending upload" />
+                      <span class="badge">Uploads on save</span>
+                      <button type="button" class="remove" (click)="removePendingImage(pending)" aria-label="Remove pending image">×</button>
+                    </div>
                   }
-                  <label class="media-drop">
-                    <input type="file" accept="image/*" multiple (change)="onFilesPicked($event)" />
-                    <span>＋</span><b>Add photos</b><small>JPG or PNG, up to 5 MB</small>
+                  <label class="media-drop" [class.disabled]="imageSlotsRemaining() === 0">
+                    <input type="file" accept="image/jpeg,image/png,image/webp" multiple [disabled]="imageSlotsRemaining() === 0" (change)="onFilesPicked($event)" />
+                    <span>＋</span>
+                    <b>{{ imageSlotsRemaining() ? 'Add photos' : 'Gallery full' }}</b>
+                    <small>{{ imageSlotsRemaining() ? 'JPG, PNG or WebP · up to 5 MB each' : 'Remove a photo to add another' }}</small>
                   </label>
                 </div>
               </section>
@@ -850,6 +861,8 @@ export class SellerProductsComponent {
   variants: VariantDraft[] = [];
   optionDefs: OptionDraft[] = [];
   customSpecs: SpecRow[] = [];
+  /** Product galleries are intentionally compact so the public carousel stays focused. */
+  readonly maxProductImages = 4;
   pendingImages: { file: File; preview: string }[] = [];
   tagInput = '';
 
@@ -1286,12 +1299,33 @@ export class SellerProductsComponent {
   removeTag(tag: string): void { this.draft.tags = this.draft.tags.filter((t) => t !== tag); }
 
   // ----------------------------------------------------------------- media
+  imageCount(): number {
+    return this.draftImages().length + this.pendingImages.length;
+  }
+
+  imageSlotsRemaining(): number {
+    return Math.max(0, this.maxProductImages - this.imageCount());
+  }
+
   onFilesPicked(event: Event): void {
     const input = event.target as HTMLInputElement;
-    for (const file of Array.from(input.files ?? [])) {
+    const selected = Array.from(input.files ?? []);
+    const available = this.imageSlotsRemaining();
+    const eligible = selected.filter((file) => file.type.startsWith('image/')).slice(0, available);
+
+    for (const file of eligible) {
       this.pendingImages.push({ file, preview: URL.createObjectURL(file) });
     }
+
+    if (selected.length > eligible.length) {
+      this.formError.set(`A product can have up to ${this.maxProductImages} photos. Only the available gallery slots were added.`);
+    }
     input.value = '';
+  }
+
+  removePendingImage(pending: { file: File; preview: string }): void {
+    URL.revokeObjectURL(pending.preview);
+    this.pendingImages = this.pendingImages.filter((image) => image.preview !== pending.preview);
   }
 
   removeImage(image: TenantProductImage): void {
