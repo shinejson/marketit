@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Inventory;
+use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\Store;
+use App\Services\Notifications\NotificationService;
 use App\Support\ProductCatalog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -121,14 +123,31 @@ class ProductController extends Controller
         $tenantId = $request->user()->tenantId();
         $data = $request->validate($this->rules($tenantId, creating: true));
 
-        $product = DB::transaction(function () use ($data, $request) {
-            $product = Product::query()->create($this->productAttributes($data, null));
+        // §7 — when the platform moderates listings, new products queue for
+        // approval instead of appearing on the storefront straight away.
+        $moderates = filter_var(PlatformSetting::get('moderate_new_products', false) ?? false, FILTER_VALIDATE_BOOL);
+
+        $product = DB::transaction(function () use ($data, $request, $moderates) {
+            $product = Product::query()->create([
+                ...$this->productAttributes($data, null),
+                'moderation_status' => $moderates ? Product::MODERATION_PENDING : Product::MODERATION_APPROVED,
+            ]);
             $this->syncVariants($product, $data['variants'] ?? null, $data, creating: true);
             $this->syncImageUrls($product, $data['image_urls'] ?? null);
             $this->applyPublishedAt($product);
 
             return $product;
         });
+
+        if ($moderates) {
+            app(NotificationService::class)->toAdmins('catalog', 'Listing awaiting approval', [
+                'body' => '"'.$product->name.'" needs a moderation decision.',
+                'action_url' => '/admin/catalog',
+                'action_label' => 'Moderate catalog',
+                'subject_type' => Product::class,
+                'subject_id' => $product->id,
+            ]);
+        }
 
         return response()->json(['data' => $this->fresh($product)], 201);
     }

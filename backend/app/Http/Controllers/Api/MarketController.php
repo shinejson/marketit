@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\PlatformCategory;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -27,6 +28,7 @@ class MarketController extends Controller
             $q = Product::query()
                 ->with(['images', 'store', 'category', 'variants.inventory'])
                 ->where('status', Product::STATUS_ACTIVE)
+                ->whereIn('moderation_status', Product::PUBLIC_MODERATION_STATUSES)
                 ->whereHas('store', fn ($s) => $s
                     ->where('status', Store::STATUS_ACTIVE)
                     ->whereHas('tenant', fn ($t) => $t->where('status', Tenant::STATUS_ACTIVE)));
@@ -99,6 +101,7 @@ class MarketController extends Controller
                 ->with(['images', 'store', 'category', 'variants.inventory'])
                 ->where('slug', $slug)
                 ->where('status', Product::STATUS_ACTIVE)
+                ->whereIn('moderation_status', Product::PUBLIC_MODERATION_STATUSES)
                 ->whereHas('store', fn ($s) => $s
                     ->where('status', Store::STATUS_ACTIVE)
                     ->whereHas('tenant', fn ($t) => $t->where('status', Tenant::STATUS_ACTIVE)))
@@ -125,10 +128,19 @@ class MarketController extends Controller
             if ($request->filled('q')) {
                 $q->where('name', 'like', '%'.$request->string('q').'%');
             }
-            $page = $q->orderBy('name')->paginate($request->integer('per_page', 12));
+            if ($request->boolean('top_rated')) {
+                $q->orderByDesc('rating_avg')->orderByDesc('rating_count');
+            } else {
+                $q->orderBy('name');
+            }
+            $page = $q->paginate($request->integer('per_page', 12));
 
             return response()->json([
-                'data' => $page->items(),
+                'data' => collect($page->items())->map(fn (Store $s) => [
+                    ...$s->toArray(),
+                    'rating_avg' => (float) $s->rating_avg,
+                    'rating_count' => (int) $s->rating_count,
+                ])->all(),
                 'meta' => [
                     'page' => $page->currentPage(),
                     'per_page' => $page->perPage(),
@@ -155,6 +167,7 @@ class MarketController extends Controller
                 ->with(['images', 'variants.inventory'])
                 ->where('store_id', $store->id)
                 ->where('status', Product::STATUS_ACTIVE)
+                ->whereIn('moderation_status', Product::PUBLIC_MODERATION_STATUSES)
                 ->orderByDesc('id')
                 ->limit(24)
                 ->get()
@@ -175,6 +188,20 @@ class MarketController extends Controller
     {
         TenantContext::bypass(true);
         try {
+            // §7 — the curated marketplace tree is the shopper-facing taxonomy.
+            $platform = PlatformCategory::query()
+                ->with(['children' => fn ($q) => $q->where('is_active', true)])
+                ->where('is_active', true)
+                ->whereNull('parent_id')
+                ->orderBy('position')
+                ->orderBy('name')
+                ->get();
+
+            if ($platform->isNotEmpty()) {
+                return response()->json(['data' => $platform]);
+            }
+
+            // Nothing curated yet: fall back to the tenant-defined categories.
             $cats = Category::query()->with('children')->whereNull('parent_id')->orderBy('position')->get();
 
             return response()->json(['data' => $cats]);
@@ -228,6 +255,8 @@ class MarketController extends Controller
                 'slug' => $p->category->slug,
             ] : null,
             'sponsored' => false,
+            'rating_avg' => (float) $p->rating_avg,
+            'rating_count' => (int) $p->rating_count,
             'variants' => $p->variants->map(fn ($v) => [
                 'id' => $v->id,
                 'sku' => $v->sku,
