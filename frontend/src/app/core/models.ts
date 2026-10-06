@@ -9,6 +9,7 @@ export interface User {
   tenant_name?: string | null;
   tenant_status?: 'pending' | 'active' | 'suspended' | 'rejected' | null;
   department?: string | null;
+  avatar_url?: string | null;
   roles: { role: string; tenant_id: number | null; store_id: number | null; department?: string | null }[];
 }
 

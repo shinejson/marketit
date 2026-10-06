@@ -87,6 +87,8 @@ export const routes: Routes = [
       { path: 'orders', canActivate: [authGuard], loadComponent: () => import('./features/customer/orders.component').then((m) => m.OrdersComponent) },
       { path: 'orders/:id', canActivate: [authGuard], loadComponent: () => import('./features/customer/order-detail.component').then((m) => m.OrderDetailComponent) },
       { path: 'sell', canActivate: [authGuard], loadComponent: () => import('./features/auth/sell.component').then((m) => m.SellComponent) },
+      { path: 'profile', canActivate: [authGuard], loadComponent: () => import('./features/seller/profile.component').then((m) => m.SellerProfileComponent) },
+      { path: 'account', redirectTo: 'profile', pathMatch: 'full' },
     ],
   },
   {
@@ -144,6 +146,8 @@ export const routes: Routes = [
         path: 'support/guides',
         loadComponent: () => import('./features/admin/support-guides.component').then((m) => m.AdminSupportGuidesComponent),
       },
+      { path: 'profile', loadComponent: () => import('./features/seller/profile.component').then((m) => m.SellerProfileComponent) },
+      { path: 'account', redirectTo: 'profile', pathMatch: 'full' },
     ],
   },
   { path: '**', redirectTo: '' },

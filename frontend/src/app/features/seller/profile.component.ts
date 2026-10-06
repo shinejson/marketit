@@ -29,7 +29,7 @@ type ProfileTab = 'overview' | 'activity' | 'security';
     <div class="profile-page">
       <header class="page-head">
         <div>
-          <p class="eyebrow">Tenant console / Account</p>
+          <p class="eyebrow">{{ profile()?.tenant ? 'Tenant console / Account' : 'MarketHub / Account' }}</p>
           <h1>My profile</h1>
           <p class="intro">Your details, your activity trail and the sessions signed in as you.</p>
         </div>
@@ -78,6 +78,8 @@ type ProfileTab = 'overview' | 'activity' | 'security';
           <div class="card kpi"><p>Active sessions</p><strong>{{ p.stats.active_sessions | number }}</strong><small>devices signed in as you</small></div>
           @if (p.stats.products_in_workspace !== undefined) {
             <div class="card kpi"><p>Workspace catalogue</p><strong>{{ p.stats.products_in_workspace | number }}</strong><small>products · {{ p.stats.stores_in_workspace ?? 0 }} stores</small></div>
+          } @else if (p.stats.orders_placed !== undefined) {
+            <div class="card kpi"><p>Orders placed</p><strong>{{ p.stats.orders_placed | number }}</strong><small>orders on MarketHub</small></div>
           }
         </div>
 
@@ -222,7 +224,7 @@ type ProfileTab = 'overview' | 'activity' | 'security';
     </div>
   `,
   styles: [`
-    :host{display:block;max-width:1100px;margin:0 auto;padding-bottom:70px}
+    :host{display:block;max-width:1100px;width:calc(100% - 32px);margin:24px auto 0;padding-bottom:70px}
     .page-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:18px}
     .eyebrow{margin:0 0 6px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
     .page-head h1{margin:0;font-size:clamp(28px,3vw,38px)}

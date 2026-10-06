@@ -12,25 +12,41 @@ import { ProductCardComponent } from '../../shared/product-card.component';
   template: `
     <!-- Hero: search + CTAs + live counts (§9 Marketplace and Storefront) -->
     <section class="hero">
-      <div class="wrap">
-        <p class="kicker">Independent stores. One checkout.</p>
-        <h1>A marketplace built like a city market — many stalls, one square.</h1>
-        <p class="lede">Browse products across many sellers, keep a multi-store cart, and pay once. Every store packs and delivers its own orders.</p>
-        <form class="search" (ngSubmit)="search()">
-          <input [(ngModel)]="q" name="q" placeholder="Search products across every store…" aria-label="Search products" />
-          <button class="btn accent" type="submit">Search</button>
-        </form>
-        <div class="cta">
-          <a routerLink="/products" class="btn">Shop the square</a>
-          <a [routerLink]="sellTarget()" class="btn ghost">Open your store</a>
-        </div>
-        @if (statsReady()) {
-          <div class="stats">
-            <div><strong>{{ productsTotal() }}</strong><span>products listed</span></div>
-            <div><strong>{{ storesTotal() }}</strong><span>independent stores</span></div>
-            <div><strong>{{ categories().length }}</strong><span>categories to browse</span></div>
+      <div class="wrap hero-wrap">
+        <div class="hero-content">
+          <p class="kicker">Independent stores. One checkout.</p>
+          <h1>A marketplace built like a city market — many stalls, one square.</h1>
+          <p class="lede">Browse products across many sellers, keep a multi-store cart, and pay once. Every store packs and delivers its own orders.</p>
+          <form class="search" (ngSubmit)="search()">
+            <input [(ngModel)]="q" name="q" placeholder="Search products across every store…" aria-label="Search products" />
+            <button class="btn accent" type="submit">Search</button>
+          </form>
+          <div class="cta">
+            <a routerLink="/products" class="btn">Shop the square</a>
+            <a [routerLink]="sellTarget()" class="btn ghost">Open your store</a>
           </div>
-        }
+          @if (statsReady()) {
+            <div class="stats">
+              <div><strong>{{ productsTotal() }}</strong><span>products listed</span></div>
+              <div><strong>{{ storesTotal() }}</strong><span>independent stores</span></div>
+              <div><strong>{{ categories().length }}</strong><span>categories to browse</span></div>
+            </div>
+          }
+        </div>
+        <div class="hero-media">
+          <div class="hero-frame">
+            <img
+              src="/images/market-shopper.jpg"
+              alt="Female shopper happily browsing stalls in the bustling market square"
+              class="hero-img"
+              loading="eager"
+            />
+            <div class="hero-tag">
+              <span class="pulse-dot"></span>
+              <span>Live market square · Independent stalls</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -136,17 +152,52 @@ import { ProductCardComponent } from '../../shared/product-card.component';
     </section>
   `,
   styles: [`
-    .hero { padding: 72px 0 48px; background: radial-gradient(1200px 400px at 10% -10%, #f3d9b8, transparent); }
-    h1 { font-size: clamp(36px, 6vw, 64px); margin: 8px 0 12px; max-width: 16ch; }
+    .hero { padding: 64px 0 52px; background: radial-gradient(1200px 500px at 15% -10%, #f3d9b8, transparent); overflow: hidden; }
+    .hero .wrap { width: min(1260px, calc(100% - 32px)); }
+    .hero-wrap { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; gap: 40px; }
+    .hero-content { display: flex; flex-direction: column; justify-content: center; }
+    h1 { font-size: clamp(34px, 4.5vw, 56px); margin: 8px 0 14px; line-height: 1.12; max-width: 17ch; }
     .kicker { letter-spacing: .16em; text-transform: uppercase; font-size: 12px; font-weight: 700; color: var(--accent); margin: 0 0 6px; }
-    .lede { max-width: 56ch; font-size: 18px; color: var(--ink-soft); margin: 0; }
-    .search { display: flex; gap: 8px; max-width: 560px; margin-top: 22px; }
+    .lede { max-width: 52ch; font-size: 17.5px; line-height: 1.5; color: var(--ink-soft); margin: 0; }
+    .search { display: flex; gap: 8px; max-width: 540px; margin-top: 24px; }
     .search input { flex: 1; border: 1px solid var(--line); border-radius: 999px; padding: 13px 18px; background: #fff; }
-    .cta { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
-    .stats { display: flex; gap: 32px; margin-top: 34px; flex-wrap: wrap; }
+    .cta { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .stats { display: flex; gap: 32px; margin-top: 36px; flex-wrap: wrap; }
     .stats div { display: flex; flex-direction: column; }
     .stats strong { font-family: Fraunces, Georgia, serif; font-size: 28px; font-weight: 650; }
     .stats span { font-size: 13px; color: var(--ink-soft); }
+
+    /* Hero media - Expanded */
+    .hero-media { display: flex; align-items: stretch; justify-content: center; width: 100%; height: 100%; }
+    .hero-frame {
+      position: relative; width: 100%; height: 100%; min-height: 520px; border-radius: 28px;
+      overflow: hidden; box-shadow: 0 24px 64px rgba(28, 25, 20, 0.18);
+      border: 1px solid rgba(217, 208, 192, 0.85); background: var(--card);
+    }
+    .hero-img {
+      width: 100%; height: 100%; object-fit: cover; object-position: center 25%;
+      display: block; transition: transform 0.45s ease;
+    }
+    .hero-frame:hover .hero-img { transform: scale(1.025); }
+    .hero-tag {
+      position: absolute; bottom: 18px; left: 18px;
+      background: rgba(28, 25, 20, 0.84); backdrop-filter: blur(10px);
+      color: #fff; padding: 9px 18px; border-radius: 999px; font-size: 13px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 9px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    }
+    .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.35); flex: none; }
+
+    @media (max-width: 980px) {
+      .hero-wrap { grid-template-columns: 1fr; gap: 36px; }
+      .hero-frame { min-height: 400px; max-height: 500px; aspect-ratio: 16 / 10; margin: 0 auto; }
+      h1 { max-width: 100%; }
+      .lede { max-width: 100%; }
+    }
+
+    @media (max-width: 600px) {
+      .hero-frame { min-height: 280px; aspect-ratio: 4 / 3; border-radius: 20px; }
+    }
     .chain { background: var(--accent-2); color: #f1ede4; padding: 16px 0; }
     .links { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; font-weight: 600; font-size: 15px; }
     .links i { color: var(--gold); font-style: normal; }

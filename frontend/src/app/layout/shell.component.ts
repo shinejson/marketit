@@ -50,7 +50,69 @@ interface ActionLink {
             <a [routerLink]="a.path" class="btn" [class.ghost]="a.ghost" (click)="closeMenu()">{{ a.label }}</a>
           }
           @if (auth.isLoggedIn()) {
-            <button class="btn" (click)="auth.logout()">Log out</button>
+            <div class="dropdown-wrap" (click)="$event.stopPropagation()">
+              <button
+                type="button"
+                class="profile-btn"
+                (click)="toggleProfile()"
+                [attr.aria-expanded]="profileOpen()"
+                aria-label="User account menu"
+                title="Account menu"
+              >
+                @if (auth.user()?.avatar_url) {
+                  <img [src]="auth.user()?.avatar_url" [alt]="auth.user()?.name" class="avatar-img" />
+                } @else {
+                  <span class="avatar">{{ initials() }}</span>
+                }
+                <span class="who">
+                  <span class="who-name">{{ auth.user()?.name }}</span>
+                  <span class="who-role muted">{{ roleLabel() }}</span>
+                </span>
+                <svg class="chevron-icon" [class.open]="profileOpen()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              @if (profileOpen()) {
+                <div class="dropdown profile-panel">
+                  <div class="profile-info">
+                    <p class="who-name">{{ auth.user()?.name }}</p>
+                    <p class="muted email">{{ auth.user()?.email }}</p>
+                    @if (auth.user()?.tenant_name) {
+                      <p class="pill">{{ auth.user()?.tenant_name }}</p>
+                    }
+                  </div>
+                  <a routerLink="/profile" (click)="closeProfile()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span>My profile</span>
+                  </a>
+                  <a routerLink="/orders" (click)="closeProfile()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span>My orders</span>
+                  </a>
+                  <a routerLink="/quotes" (click)="closeProfile()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 1 1 16.1-3.8z"/><path d="M8.5 10.5h7M8.5 13.5h4"/></svg>
+                    <span>My quotes</span>
+                  </a>
+                  @if (hasTenantRole()) {
+                    <a routerLink="/tenant" (click)="closeProfile()">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                      <span>Tenant console</span>
+                    </a>
+                  }
+                  @if (hasAdminRole()) {
+                    <a routerLink="/admin" (click)="closeProfile()">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      <span>Admin console</span>
+                    </a>
+                  }
+                  <button type="button" class="logout-btn" (click)="onLogout()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <span>Log out</span>
+                  </button>
+                </div>
+              }
+            </div>
           }
         </div>
 
@@ -91,7 +153,15 @@ interface ActionLink {
               <a [routerLink]="a.path" class="btn" [class.ghost]="a.ghost" (click)="closeMenu()">{{ a.label }}</a>
             }
             @if (auth.isLoggedIn()) {
-              <button class="btn" (click)="auth.logout()">Log out</button>
+              <a routerLink="/profile" class="btn profile-link-mobile" (click)="closeMenu()">
+                @if (auth.user()?.avatar_url) {
+                  <img [src]="auth.user()?.avatar_url" [alt]="auth.user()?.name" class="avatar-sm-img" />
+                } @else {
+                  <span class="avatar-sm">{{ initials() }}</span>
+                }
+                <span>Profile ({{ auth.user()?.name }})</span>
+              </a>
+              <button class="btn ghost logout-btn-mobile" (click)="onLogout()">Log out</button>
             }
           </div>
         </div>
@@ -133,22 +203,97 @@ interface ActionLink {
   `,
   styles: [`
     .top { position: sticky; top: 0; z-index: 20; background: rgba(244,239,230,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-    .bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 20px; min-height: 72px; }
-    .brand { font-size: 26px; justify-self: start; }
-    .currency-picker { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; font-size: 12px; font-weight: 700; }
-    .currency-picker select { border: 0; background: transparent; color: var(--ink); font-weight: 700; font-size: 12px; cursor: pointer; }
-    .desktop-nav { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+    .bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 72px;
+    }
+    .brand { font-size: 26px; flex: 0 0 auto; }
+    .currency-picker {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--card);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-sizing: border-box;
+      white-space: nowrap;
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .currency-picker:hover {
+      background: var(--paper-2);
+      border-color: var(--ink-soft);
+    }
+    .currency-picker span {
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 13px;
+      line-height: 1;
+    }
+    .currency-picker select {
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      padding: 0;
+      line-height: 1;
+    }
+    .desktop-nav {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      align-items: center;
+      flex: 1 1 auto;
+      flex-wrap: nowrap;
+    }
     .desktop-nav a {
-      display: inline-flex; align-items: center; gap: 7px;
-      font-weight: 600; color: var(--ink-soft);
-      padding: 8px 14px; border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 600;
+      color: var(--ink-soft);
+      padding: 8px 14px;
+      border-radius: 999px;
+      white-space: nowrap;
       transition: color .15s ease, background .15s ease;
     }
     .desktop-nav a:hover { color: var(--ink); background: var(--paper-2); }
     .desktop-nav a.on { color: var(--accent); background: rgba(196, 92, 38, .12); }
     .desktop-nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .desktop-nav svg { width: 18px; height: 18px; flex: none; }
-    .actions { display:flex; gap: 8px; align-items:center; justify-content: flex-end; flex-wrap: wrap; justify-self: end; }
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+      flex: 0 0 auto;
+      flex-wrap: nowrap;
+    }
+    .desktop-actions .btn {
+      height: 40px;
+      padding: 0 18px;
+      border-radius: 999px;
+      font-size: 13.5px;
+      font-weight: 600;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      line-height: 1;
+      transition: background .15s ease, border-color .15s ease;
+    }
 
     /* Hamburger + mobile panel (small screens only) */
     .burger {
@@ -191,6 +336,76 @@ interface ActionLink {
       .panel-actions .btn { flex: 1 1 auto; }
     }
 
+    /* Dropdown wrapper & Profile button */
+    .dropdown-wrap { position: relative; }
+    .profile-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 40px;
+      padding: 0 12px 0 4px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      cursor: pointer;
+      box-sizing: border-box;
+      white-space: nowrap;
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .profile-btn:hover { background: var(--paper-2); border-color: var(--ink-soft); }
+    .profile-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .chevron-icon { width: 14px; height: 14px; color: var(--ink-soft); transition: transform .18s ease; flex: none; }
+    .chevron-icon.open { transform: rotate(180deg); }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 999px; background: var(--ink); color: var(--paper);
+      display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: none;
+    }
+    .avatar-img { width: 32px; height: 32px; border-radius: 999px; object-fit: cover; flex: none; }
+    .who { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; text-align: left; }
+    .who-name { font-weight: 700; font-size: 13px; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .who-role { font-size: 10.5px; }
+
+    /* Profile panel dropdown */
+    .dropdown {
+      position: absolute; top: calc(100% + 8px); right: 0;
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+      box-shadow: var(--shadow); overflow: hidden; z-index: 50;
+    }
+    .profile-panel { width: 250px; padding: 6px; }
+    .profile-info { padding: 10px 10px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+    .profile-info .who-name { font-size: 14px; font-weight: 750; }
+    .profile-info .email { font-size: 12px; margin: 2px 0 6px; word-break: break-all; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(196, 92, 38, .12); color: var(--accent); font-size: 11px; font-weight: 700; }
+    .profile-panel a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px; border-radius: 10px; font-weight: 600; font-size: 13.5px;
+      color: var(--ink); text-decoration: none; transition: background .12s ease;
+    }
+    .profile-panel a:hover { background: var(--paper-2); }
+    .panel-icon { width: 16px; height: 16px; flex: none; color: var(--ink-soft); }
+    .logout-btn {
+      width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+      background: none; border: 0; padding: 9px 10px; border-radius: 10px;
+      font-weight: 600; font-size: 13.5px; color: var(--danger); cursor: pointer;
+      transition: background .12s ease;
+    }
+    .logout-btn:hover { background: var(--paper-2); }
+    .logout-btn .panel-icon { color: var(--danger); }
+
+    /* Mobile profile button */
+    .profile-link-mobile { display: inline-flex; align-items: center; gap: 8px; }
+    .avatar-sm { width: 24px; height: 24px; border-radius: 999px; background: var(--ink); color: var(--paper); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex: none; }
+    .avatar-sm-img { width: 24px; height: 24px; border-radius: 999px; object-fit: cover; flex: none; }
+    .logout-btn-mobile { color: var(--danger) !important; }
+
+    @media (max-width: 960px) {
+      .desktop-nav a { padding: 7px 10px; font-size: 13px; gap: 5px; }
+      .desktop-nav svg { width: 16px; height: 16px; }
+      .who-role { display: none; }
+      .who-name { max-width: 90px; }
+    }
+
     @media (max-width: 400px) {
       .brand { font-size: 21px; }
       .burger { width: 40px; height: 40px; }
@@ -203,11 +418,31 @@ export class ShellComponent {
   currency = inject(CurrencyService);
   private router = inject(Router);
   menuOpen = signal(false);
+  profileOpen = signal(false);
 
   /** Switch the storefront's display currency (persisted per browser). */
   onCurrencyChange(event: Event): void {
     this.currency.setDisplay((event.target as HTMLSelectElement).value);
   }
+
+  initials = computed(() => {
+    const name = this.auth.user()?.name ?? '';
+    const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+    return parts.map((p) => p[0]?.toUpperCase()).join('') || 'U';
+  });
+
+  roleLabel = computed(() => {
+    const user = this.auth.user();
+    if (!user) return '';
+    if (user.role === 'super_admin') return 'Admin';
+    if (user.role === 'tenant_owner') return 'Seller';
+    if (user.role === 'store_staff') return user.department ? `${user.department} staff` : 'Staff';
+    if (user.role === 'customer') return 'Customer';
+    return user.role;
+  });
+
+  hasTenantRole = computed(() => this.auth.hasRole('tenant_owner', 'store_staff'));
+  hasAdminRole = computed(() => this.auth.hasRole('super_admin'));
 
   private readonly baseNav: NavItem[] = [
     { path: '/', label: 'Home', icon: 'home', exact: true },
@@ -215,13 +450,12 @@ export class ShellComponent {
     { path: '/stores', label: 'Stores', icon: 'store', exact: false },
     { path: '/cart', label: 'Cart', icon: 'cart', exact: false },
     { path: '/orders', label: 'Orders', icon: 'orders', exact: false },
-    { path: '/quotes', label: 'Quotes', icon: 'quote', exact: false },
   ];
 
   /** Cart and Orders only make sense for a signed-in customer. */
   navItems = computed(() => (this.auth.isLoggedIn() ? this.baseNav : this.baseNav.slice(0, 3)));
 
-  /** Guest: Log in / Join. Signed in: role entry points (Log out renders separately). */
+  /** Guest: Log in / Join. Signed in: role entry points. */
   actionLinks = computed<ActionLink[]>(() => {
     if (!this.auth.isLoggedIn()) {
       return [
@@ -238,7 +472,10 @@ export class ShellComponent {
   });
 
   constructor() {
-    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => this.closeMenu());
+    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
+      this.closeMenu();
+      this.closeProfile();
+    });
   }
 
   toggleMenu() {
@@ -249,8 +486,28 @@ export class ShellComponent {
     this.menuOpen.set(false);
   }
 
+  toggleProfile() {
+    this.profileOpen.update((open) => !open);
+  }
+
+  closeProfile() {
+    this.profileOpen.set(false);
+  }
+
+  onLogout() {
+    this.closeProfile();
+    this.closeMenu();
+    this.auth.logout();
+  }
+
+  @HostListener('document:click')
+  onDocClick() {
+    this.closeProfile();
+  }
+
   @HostListener('document:keydown.escape')
   onEscape() {
     this.closeMenu();
+    this.closeProfile();
   }
 }
