@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\PlatformCategory;
+use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -153,15 +154,19 @@ class MarketController extends Controller
         }
     }
 
-    public function store(string $slug): JsonResponse
+    public function store(Request $request, string $slug): JsonResponse
     {
         TenantContext::bypass(true);
         try {
-            $store = Store::query()
-                ->where('slug', $slug)
-                ->where('status', Store::STATUS_ACTIVE)
-                ->whereHas('tenant', fn ($t) => $t->where('status', Tenant::STATUS_ACTIVE))
-                ->firstOrFail();
+            $store = Store::query()->where('slug', $slug)->firstOrFail();
+
+            if ($store->status !== Store::STATUS_ACTIVE) {
+                $user = $request->user('sanctum');
+                $canViewDraft = $user && ($user->isSuperAdmin() || (int) $user->tenantId() === (int) $store->tenant_id);
+                abort_unless($canViewDraft, 404, 'Store is not active.');
+            } else {
+                abort_unless($store->tenant && $store->tenant->status === Tenant::STATUS_ACTIVE, 404, 'Store is not active.');
+            }
 
             $products = Product::query()
                 ->with(['images', 'variants.inventory'])
@@ -177,6 +182,29 @@ class MarketController extends Controller
                 'data' => [
                     'store' => $store,
                     'products' => $products,
+                ],
+            ]);
+        } finally {
+            TenantContext::bypass(false);
+        }
+    }
+
+    public function contact(Request $request, string $slug): JsonResponse
+    {
+        TenantContext::bypass(true);
+        try {
+            $store = Store::query()->where('slug', $slug)->firstOrFail();
+            $request->validate([
+                'name' => ['required', 'string', 'max:100'],
+                'email' => ['required', 'email', 'max:150'],
+                'subject' => ['nullable', 'string', 'max:200'],
+                'message' => ['required', 'string', 'max:2000'],
+            ]);
+
+            return response()->json([
+                'data' => [
+                    'sent' => true,
+                    'message' => 'Thank you for reaching out to ' . $store->name . '! Your message has been received.',
                 ],
             ]);
         } finally {
@@ -223,6 +251,52 @@ class MarketController extends Controller
         $ok = $this->ads->recordClick($impression, $request->user()?->id);
 
         return response()->json(['data' => ['ok' => $ok]]);
+    }
+
+    public function heroSlides(): JsonResponse
+    {
+        $defaultSlides = [
+            [
+                'id' => 'slide_1',
+                'image_url' => '/images/market-shopper.jpg',
+                'tag' => 'Live market square · Independent stalls',
+                'title' => 'A marketplace built like a city market',
+                'link' => '/products',
+                'alt' => 'Shopper browsing stalls in the bustling market square',
+            ],
+            [
+                'id' => 'slide_2',
+                'image_url' => 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1200&q=80',
+                'tag' => 'Handcrafted goods · Local artisans',
+                'title' => 'Discover handcrafted & artisan items',
+                'link' => '/products',
+                'alt' => 'Artisan produce and handcrafted market goods',
+            ],
+            [
+                'id' => 'slide_3',
+                'image_url' => 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80',
+                'tag' => 'Curated boutiques · Unique fashion & lifestyle',
+                'title' => 'Curated independent boutiques',
+                'link' => '/stores',
+                'alt' => 'Curated independent boutiques and shops',
+            ],
+        ];
+
+        $slides = PlatformSetting::get('hero_slides', $defaultSlides);
+        if (!is_array($slides) || empty($slides)) {
+            $slides = $defaultSlides;
+        }
+
+        $autoplay = filter_var(PlatformSetting::get('hero_autoplay', true), FILTER_VALIDATE_BOOL);
+        $interval = (int) (PlatformSetting::get('hero_interval', 5) ?: 5);
+
+        return response()->json([
+            'data' => [
+                'slides' => array_values($slides),
+                'autoplay' => $autoplay,
+                'interval' => $interval,
+            ],
+        ]);
     }
 
     protected function productCard(Product $p, bool $detailed = false): array

@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -42,6 +43,7 @@ class AdminSettingController extends Controller
         'general' => ['label' => 'General', 'icon' => 'sliders', 'description' => 'Platform identity, locale and availability.'],
         'owner' => ['label' => 'Owner & company', 'icon' => 'building', 'description' => 'Legal entity and the people legally responsible for the platform.'],
         'branding' => ['label' => 'Branding & assets', 'icon' => 'palette', 'description' => 'Logo, favicon, colours and social preview artwork.'],
+        'homepage' => ['label' => 'Hero & homepage', 'icon' => 'image', 'description' => 'Hero slideshow, image uploads, autoplay speed and captions.'],
         'commerce' => ['label' => 'Commerce', 'icon' => 'cart', 'description' => 'Commission, payouts and tax defaults applied to sellers.'],
         'billing' => ['label' => 'Billing', 'icon' => 'card', 'description' => 'Trials, dunning and invoice numbering.'],
         'payments' => ['label' => 'Payments', 'icon' => 'card', 'description' => 'Online providers, payment methods and webhook safety.'],
@@ -50,6 +52,33 @@ class AdminSettingController extends Controller
         'notifications' => ['label' => 'Notifications', 'icon' => 'bell', 'description' => 'What the platform tells admins, sellers and buyers.'],
         'security' => ['label' => 'Security', 'icon' => 'shield', 'description' => 'Authentication hardening and upload limits.'],
         'backup' => ['label' => 'Backup & recovery', 'icon' => 'database', 'description' => 'Snapshot schedule, retention and restore points.'],
+    ];
+
+    public const DEFAULT_HERO_SLIDES = [
+        [
+            'id' => 'slide_1',
+            'image_url' => '/images/market-shopper.jpg',
+            'tag' => 'Live market square · Independent stalls',
+            'title' => 'A marketplace built like a city market',
+            'link' => '/products',
+            'alt' => 'Shopper browsing stalls in the bustling market square',
+        ],
+        [
+            'id' => 'slide_2',
+            'image_url' => 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1200&q=80',
+            'tag' => 'Handcrafted goods · Local artisans',
+            'title' => 'Discover handcrafted & artisan items',
+            'link' => '/products',
+            'alt' => 'Artisan produce and handcrafted market goods',
+        ],
+        [
+            'id' => 'slide_3',
+            'image_url' => 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80',
+            'tag' => 'Curated boutiques · Unique fashion & lifestyle',
+            'title' => 'Curated independent boutiques',
+            'link' => '/stores',
+            'alt' => 'Curated independent boutiques and shops',
+        ],
     ];
 
     /**
@@ -98,6 +127,10 @@ class AdminSettingController extends Controller
         'brand_primary_color' => ['branding', 'color', 'Primary colour', 'Buttons, links and highlights across the platform.', '#c45c26'],
         'brand_accent_color' => ['branding', 'color', 'Accent colour', 'Secondary emphasis — badges, charts and success states.', '#1f4b3a'],
         'brand_email_footer' => ['branding', 'text', 'Email footer', 'Appended to every transactional email, usually the legal address.', '', ['columns' => 'full']],
+
+        // ----------------------------------------------------------- homepage
+        'hero_autoplay' => ['homepage', 'bool', 'Autoplay slideshow', 'Automatically rotate through hero slides.', true],
+        'hero_interval' => ['homepage', 'number', 'Slide duration (seconds)', 'How many seconds each slide stays before rotating.', 5, ['unit' => 'sec']],
 
         // ----------------------------------------------------------- commerce
         'commission_rate' => ['commerce', 'number', 'Default commission (%)', 'Applied to sellers without a plan override.', 10, ['unit' => '%']],
@@ -399,6 +432,187 @@ class AdminSettingController extends Controller
         $this->audit($request, 'settings.asset_removed', ['asset' => $asset]);
 
         return response()->json(['data' => $this->groups()]);
+    }
+
+    public function heroSlides(): JsonResponse
+    {
+        $slides = PlatformSetting::get('hero_slides', self::DEFAULT_HERO_SLIDES);
+        if (!is_array($slides) || empty($slides)) {
+            $slides = self::DEFAULT_HERO_SLIDES;
+        }
+
+        return response()->json([
+            'data' => [
+                'slides' => array_values($slides),
+                'autoplay' => filter_var(PlatformSetting::get('hero_autoplay', true), FILTER_VALIDATE_BOOL),
+                'interval' => (int) (PlatformSetting::get('hero_interval', 5) ?: 5),
+            ],
+        ]);
+    }
+
+    public function uploadHeroSlide(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:5120'],
+            'tag' => ['nullable', 'string', 'max:100'],
+            'title' => ['nullable', 'string', 'max:150'],
+            'link' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $path = $request->file('file')->store('platform/hero', 'public');
+        $url = $this->assetUrl($path);
+
+        $slides = PlatformSetting::get('hero_slides', self::DEFAULT_HERO_SLIDES);
+        if (!is_array($slides)) {
+            $slides = self::DEFAULT_HERO_SLIDES;
+        }
+
+        $newSlide = [
+            'id' => 'slide_' . uniqid(),
+            'image_url' => $url,
+            'tag' => $request->string('tag')->trim()->toString() ?: 'Live market square · Independent stalls',
+            'title' => $request->string('title')->trim()->toString() ?: 'Market stall',
+            'link' => $request->string('link')->trim()->toString() ?: '/products',
+            'alt' => $request->string('title')->trim()->toString() ?: 'Marketplace hero image',
+        ];
+
+        $slides[] = $newSlide;
+
+        PlatformSetting::query()->updateOrCreate(
+            ['key' => 'hero_slides'],
+            [
+                'group' => 'homepage',
+                'type' => 'json',
+                'value' => json_encode(array_values($slides)),
+                'updated_by' => $request->user()->id,
+            ]
+        );
+
+        $this->audit($request, 'settings.hero_slide_uploaded', ['slide_id' => $newSlide['id'], 'path' => $path]);
+
+        return response()->json([
+            'data' => [
+                'slide' => $newSlide,
+                'slides' => array_values($slides),
+                'autoplay' => filter_var(PlatformSetting::get('hero_autoplay', true), FILTER_VALIDATE_BOOL),
+                'interval' => (int) (PlatformSetting::get('hero_interval', 5) ?: 5),
+            ],
+            'message' => 'Slide uploaded successfully.',
+        ]);
+    }
+
+    public function updateHeroSlides(Request $request): JsonResponse
+    {
+        $request->validate([
+            'slides' => ['required', 'array'],
+            'slides.*.id' => ['required', 'string'],
+            'slides.*.image_url' => ['required', 'string'],
+            'slides.*.tag' => ['nullable', 'string'],
+            'slides.*.title' => ['nullable', 'string'],
+            'slides.*.link' => ['nullable', 'string'],
+        ]);
+
+        $slides = collect($request->input('slides'))->map(function ($s) {
+            return [
+                'id' => (string) ($s['id'] ?? uniqid('slide_')),
+                'image_url' => (string) $s['image_url'],
+                'tag' => (string) ($s['tag'] ?? 'Live market square · Independent stalls'),
+                'title' => (string) ($s['title'] ?? ''),
+                'link' => (string) ($s['link'] ?? '/products'),
+                'alt' => (string) ($s['alt'] ?? $s['title'] ?? 'Marketplace hero slide'),
+            ];
+        })->values()->all();
+
+        PlatformSetting::query()->updateOrCreate(
+            ['key' => 'hero_slides'],
+            [
+                'group' => 'homepage',
+                'type' => 'json',
+                'value' => json_encode($slides),
+                'updated_by' => $request->user()->id,
+            ]
+        );
+
+        if ($request->has('autoplay')) {
+            PlatformSetting::query()->updateOrCreate(
+                ['key' => 'hero_autoplay'],
+                [
+                    'group' => 'homepage',
+                    'type' => 'bool',
+                    'value' => $request->boolean('autoplay') ? '1' : '0',
+                    'updated_by' => $request->user()->id,
+                ]
+            );
+        }
+
+        if ($request->has('interval')) {
+            $interval = max(2, min(30, (int) $request->input('interval', 5)));
+            PlatformSetting::query()->updateOrCreate(
+                ['key' => 'hero_interval'],
+                [
+                    'group' => 'homepage',
+                    'type' => 'number',
+                    'value' => (string) $interval,
+                    'updated_by' => $request->user()->id,
+                ]
+            );
+        }
+
+        $this->audit($request, 'settings.hero_slides_updated', ['count' => count($slides)]);
+
+        return response()->json([
+            'data' => [
+                'slides' => $slides,
+                'autoplay' => filter_var(PlatformSetting::get('hero_autoplay', true), FILTER_VALIDATE_BOOL),
+                'interval' => (int) (PlatformSetting::get('hero_interval', 5) ?: 5),
+            ],
+            'message' => 'Hero slides updated successfully.',
+        ]);
+    }
+
+    public function destroyHeroSlide(Request $request, string $id): JsonResponse
+    {
+        $slides = PlatformSetting::get('hero_slides', self::DEFAULT_HERO_SLIDES);
+        if (!is_array($slides)) {
+            $slides = self::DEFAULT_HERO_SLIDES;
+        }
+
+        $remaining = [];
+
+        foreach ($slides as $slide) {
+            if (($slide['id'] ?? '') === $id) {
+                $imgUrl = $slide['image_url'] ?? '';
+                if (str_contains($imgUrl, '/storage/platform/hero/')) {
+                    $relative = str_replace('/storage/', '', $imgUrl);
+                    if (Storage::disk('public')->exists($relative)) {
+                        Storage::disk('public')->delete($relative);
+                    }
+                }
+            } else {
+                $remaining[] = $slide;
+            }
+        }
+
+        PlatformSetting::query()->updateOrCreate(
+            ['key' => 'hero_slides'],
+            [
+                'group' => 'homepage',
+                'type' => 'json',
+                'value' => json_encode(array_values($remaining)),
+                'updated_by' => $request->user()->id,
+            ]
+        );
+
+        $this->audit($request, 'settings.hero_slide_deleted', ['slide_id' => $id]);
+
+        return response()->json([
+            'data' => [
+                'slides' => array_values($remaining),
+                'autoplay' => filter_var(PlatformSetting::get('hero_autoplay', true), FILTER_VALIDATE_BOOL),
+                'interval' => (int) (PlatformSetting::get('hero_interval', 5) ?: 5),
+            ],
+            'message' => 'Slide removed successfully.',
+        ]);
     }
 
     /** Fire a test email through the saved transport so the admin can verify SMTP. */

@@ -6,6 +6,7 @@ import { AuthService } from '../../core/auth.service';
 import {
   BackupMeta,
   GatewayTestResult,
+  HeroSlide,
   PlatformBackup,
   SettingField,
   SettingGroupMeta,
@@ -48,6 +49,7 @@ const CLEAR_SECRET = '__clear__';
                   @case ('sliders') { <path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/> }
                   @case ('building') { <path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15 9h3a2 2 0 0 1 2 2v10"/><path d="M8 7h3M8 11h3M8 15h3M2 21h20"/> }
                   @case ('palette') { <path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.4-.3-.4-.5-.9-.5-1.4 0-1.1.9-2 2-2h1.5A4.5 4.5 0 0 0 21 9.7C20.8 5.9 16.9 3 12 3Z"/><circle cx="7.5" cy="10.5" r="1.1"/><circle cx="12" cy="7.5" r="1.1"/><circle cx="16.5" cy="10.5" r="1.1"/> }
+                  @case ('image') { <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/> }
                   @case ('cart') { <circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/> }
                   @case ('card') { <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/> }
                   @case ('mail') { <rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3 7 9 6 9-6"/> }
@@ -144,6 +146,130 @@ const CLEAR_SECRET = '__clear__';
                 <div class="swatches">
                   <span class="swatch" [style.background]="settingValue('brand_primary_color') || '#c45c26'">Primary</span>
                   <span class="swatch" [style.background]="settingValue('brand_accent_color') || '#1f4b3a'">Accent</span>
+                </div>
+              </div>
+            </section>
+          }
+
+          <!-- ----------------------------------------------- homepage / hero -->
+          @if (group() === 'homepage') {
+            <section class="card pad hero-settings-card">
+              <div class="block-head">
+                <h3>Hero Slideshow & Carousel</h3>
+                <p class="muted small">Setup and upload the sliding pictures displayed in the homepage hero section. You can reorder slides, customize badge tags, and configure rotation speed.</p>
+              </div>
+
+              <!-- Slideshow configuration controls -->
+              <div class="hero-config-bar">
+                <div class="toggle-field">
+                  <label class="toggle-label">
+                    <input type="checkbox" [(ngModel)]="heroAutoplay" (ngModelChange)="markSlidesDirty()" />
+                    <span>Autoplay slideshow</span>
+                  </label>
+                  <small class="muted">Rotate through slides automatically</small>
+                </div>
+                <div class="interval-field">
+                  <label>Duration per slide (seconds)</label>
+                  <input type="number" min="2" max="30" [(ngModel)]="heroInterval" (ngModelChange)="markSlidesDirty()" />
+                </div>
+                <div class="config-actions">
+                  <button class="btn accent small-btn" type="button" (click)="saveHeroSlides()" [disabled]="savingSlides() || !slidesDirty()">
+                    {{ savingSlides() ? 'Saving…' : 'Save slide settings' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Current Slides List -->
+              <div class="slides-manage-list">
+                <div class="slides-head">
+                  <strong>Current slides ({{ heroSlides().length }})</strong>
+                  <span class="muted tiny">Use arrows to change slide order or edit captions</span>
+                </div>
+
+                @if (heroSlidesLoading()) {
+                  <div class="skeleton" style="height:160px"></div>
+                } @else if (!heroSlides().length) {
+                  <div class="empty">No slides configured yet. Upload a picture below to create the first slide.</div>
+                } @else {
+                  <div class="slides-grid">
+                    @for (slide of heroSlides(); track slide.id; let idx = $index) {
+                      <div class="slide-item-card">
+                        <div class="slide-thumb-wrap">
+                          <img [src]="slide.image_url" [alt]="slide.title || 'Slide ' + (idx + 1)" />
+                          <span class="slide-order-badge">#{{ idx + 1 }}</span>
+                          @if (slide.tag) {
+                            <div class="slide-thumb-tag">
+                              <span class="thumb-dot"></span>
+                              <span>{{ slide.tag }}</span>
+                            </div>
+                          }
+                        </div>
+                        <div class="slide-fields">
+                          <div class="field">
+                            <label>Badge / Tag Text</label>
+                            <input type="text" [(ngModel)]="slide.tag" (ngModelChange)="markSlidesDirty()" placeholder="e.g. Live market square · Independent stalls" />
+                          </div>
+                          <div class="field">
+                            <label>Slide Title (Optional)</label>
+                            <input type="text" [(ngModel)]="slide.title" (ngModelChange)="markSlidesDirty()" placeholder="e.g. Handmade & Artisan Goods" />
+                          </div>
+                          <div class="field">
+                            <label>Link (Optional)</label>
+                            <input type="text" [(ngModel)]="slide.link" (ngModelChange)="markSlidesDirty()" placeholder="/products or /stores" />
+                          </div>
+                        </div>
+                        <div class="slide-card-actions">
+                          <button class="btn ghost small-btn icon-btn-pad" type="button" (click)="moveSlide(idx, -1)" [disabled]="idx === 0" title="Move Up">↑</button>
+                          <button class="btn ghost small-btn icon-btn-pad" type="button" (click)="moveSlide(idx, 1)" [disabled]="idx === heroSlides().length - 1" title="Move Down">↓</button>
+                          <button class="btn ghost small-btn danger" type="button" (click)="deleteSlide(slide)" title="Delete Slide">Delete</button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              <!-- Upload New Slide Box -->
+              <div class="upload-new-slide-box">
+                <h4>Upload New Slide Picture</h4>
+                <p class="muted small">Upload an image file (JPG, PNG, WebP or SVG up to 5MB). High-resolution landscape images (~1200×800) work best.</p>
+
+                <div class="new-slide-form">
+                  <div class="upload-drop-area">
+                    <input type="file" id="heroSlideFileInput" accept="image/png,image/jpeg,image/webp,image/svg+xml" (change)="onSlideFileSelected($event)" />
+                    <label for="heroSlideFileInput" class="file-drop-label">
+                      @if (newSlidePreview) {
+                        <img [src]="newSlidePreview" class="new-preview-img" alt="Upload preview" />
+                        <span class="replace-hint">Click to choose different image</span>
+                      } @else {
+                        <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" fill="none" stroke-width="2">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                          <circle cx="8.5" cy="8.5" r="1.5"/>
+                          <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <span>Choose picture to upload</span>
+                        <small class="muted">PNG, JPG, WebP up to 5MB</small>
+                      }
+                    </label>
+                  </div>
+
+                  <div class="new-slide-inputs">
+                    <div class="field">
+                      <label>Badge / Tag Text</label>
+                      <input type="text" [(ngModel)]="newSlideTag" placeholder="e.g. Live market square · Independent stalls" />
+                    </div>
+                    <div class="field">
+                      <label>Headline / Title (Optional)</label>
+                      <input type="text" [(ngModel)]="newSlideTitle" placeholder="e.g. Discover our vibrant stalls" />
+                    </div>
+                    <div class="field">
+                      <label>Link URL</label>
+                      <input type="text" [(ngModel)]="newSlideLink" placeholder="/products" />
+                    </div>
+                    <button class="btn accent" type="button" (click)="uploadNewSlide()" [disabled]="!newSlideFile || uploadingSlide()">
+                      {{ uploadingSlide() ? 'Uploading picture…' : 'Upload & add slide' }}
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -447,6 +573,52 @@ const CLEAR_SECRET = '__clear__';
     .method-chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
     .method-chip { padding:5px 9px; border-radius:999px; font-size:11px; font-weight:700; background:color-mix(in srgb,var(--ok) 12%,transparent); color:var(--ok); }
     .method-chip.off { background:var(--paper-2); color:var(--ink-soft); }
+
+    /* Hero Slideshow Settings */
+    .hero-settings-card { margin-bottom: 20px; }
+    .hero-config-bar { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-2); margin-bottom: 24px; }
+    .toggle-field { display: flex; flex-direction: column; gap: 4px; }
+    .toggle-label { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+    .toggle-label input { width: 18px; height: 18px; cursor: pointer; }
+    .interval-field { display: flex; flex-direction: column; gap: 4px; }
+    .interval-field label { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+    .interval-field input { width: 110px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .config-actions { margin-left: auto; }
+    .slides-manage-list { margin-bottom: 28px; }
+    .slides-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+    .empty-slides { padding: 24px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; color: var(--ink-soft); }
+    .slides-grid { display: flex; flex-direction: column; gap: 14px; }
+    .slide-item-card { display: grid; grid-template-columns: 190px 1fr auto; gap: 18px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper-2); align-items: center; }
+    .slide-thumb-wrap { position: relative; height: 115px; border-radius: 12px; overflow: hidden; background: #1c1914; }
+    .slide-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .slide-order-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.75); color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .slide-thumb-tag { position: absolute; bottom: 6px; left: 6px; right: 6px; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; display: flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .thumb-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; flex: none; }
+    .slide-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .slide-fields .field { display: flex; flex-direction: column; gap: 4px; }
+    .slide-fields label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); }
+    .slide-fields input { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 13px; }
+    .slide-card-actions { display: flex; flex-direction: column; gap: 6px; }
+    .icon-btn-pad { padding: 5px 10px; font-size: 14px; font-weight: 700; }
+    .upload-new-slide-box { padding: 22px; border: 1px dashed var(--line); border-radius: 16px; background: var(--paper-2); margin-top: 14px; }
+    .upload-new-slide-box h4 { margin: 0 0 6px; font-size: 16px; }
+    .new-slide-form { display: grid; grid-template-columns: 220px 1fr; gap: 20px; margin-top: 16px; align-items: start; }
+    .upload-drop-area { position: relative; border: 2px dashed var(--line); border-radius: 14px; background: #fff; min-height: 160px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; text-align: center; }
+    .upload-drop-area:hover { border-color: var(--accent); }
+    .upload-drop-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 2; width: 100%; height: 100%; }
+    .file-drop-label { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px; cursor: pointer; width: 100%; }
+    .file-drop-label span { font-weight: 600; font-size: 13px; color: var(--ink); }
+    .new-preview-img { max-height: 130px; max-width: 100%; object-fit: cover; border-radius: 8px; margin-bottom: 6px; }
+    .replace-hint { font-size: 11px; color: var(--accent); font-weight: 600; }
+    .new-slide-inputs { display: flex; flex-direction: column; gap: 12px; }
+    .new-slide-inputs .field { display: flex; flex-direction: column; gap: 4px; }
+    .new-slide-inputs label { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+    .new-slide-inputs input { padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    @media (max-width: 860px) {
+      .slide-item-card { grid-template-columns: 1fr; }
+      .slide-card-actions { flex-direction: row; }
+      .new-slide-form { grid-template-columns: 1fr; }
+    }
   `],
 })
 export class AdminSettingsComponent {
@@ -483,6 +655,21 @@ export class AdminSettingsComponent {
   backupScope = 'settings';
   backupNote = '';
   private backupsLoaded = false;
+
+  // Hero slides
+  heroSlides = signal<HeroSlide[]>([]);
+  heroSlidesLoading = signal(false);
+  heroAutoplay = true;
+  heroInterval = 5;
+  slidesDirty = signal(false);
+  savingSlides = signal(false);
+  uploadingSlide = signal(false);
+  newSlideFile: File | null = null;
+  newSlidePreview: string | null = null;
+  newSlideTag = 'Live market square · Independent stalls';
+  newSlideTitle = '';
+  newSlideLink = '/products';
+  private heroSlidesLoaded = false;
 
   activeGroup = computed(() => this.groups().find((g) => g.key === this.group()) ?? null);
   visible = computed(() => this.data()[this.group()] ?? []);
@@ -525,12 +712,125 @@ export class AdminSettingsComponent {
     this.error.set('');
     if (key === 'backup' && !this.backupsLoaded) this.loadBackups();
     if (key === 'payments') this.loadPaymentStatus();
+    if (key === 'homepage' && !this.heroSlidesLoaded) this.loadHeroSlides();
   }
 
   loadPaymentStatus() {
     this.api.adminPaymentStatus().subscribe({
       next: (res) => this.paymentStatus.set(res.data),
       error: () => this.paymentStatus.set(null),
+    });
+  }
+
+  // --------------------------------------------------------- hero slides
+  loadHeroSlides() {
+    this.heroSlidesLoading.set(true);
+    this.api.adminHeroSlides().subscribe({
+      next: (res) => {
+        this.heroSlides.set(res.data.slides || []);
+        this.heroAutoplay = res.data.autoplay !== false;
+        this.heroInterval = res.data.interval || 5;
+        this.slidesDirty.set(false);
+        this.heroSlidesLoading.set(false);
+        this.heroSlidesLoaded = true;
+      },
+      error: () => {
+        this.heroSlidesLoading.set(false);
+        this.error.set('Could not load hero slides.');
+      },
+    });
+  }
+
+  markSlidesDirty() {
+    this.slidesDirty.set(true);
+  }
+
+  moveSlide(index: number, direction: number) {
+    const list = [...this.heroSlides()];
+    const target = index + direction;
+    if (target < 0 || target >= list.length) return;
+    const temp = list[index];
+    list[index] = list[target];
+    list[target] = temp;
+    this.heroSlides.set(list);
+    this.markSlidesDirty();
+  }
+
+  deleteSlide(slide: HeroSlide) {
+    if (!confirm(`Delete this slide picture?`)) return;
+    this.heroSlidesLoading.set(true);
+    this.api.deleteHeroSlide(slide.id).subscribe({
+      next: (res) => {
+        this.heroSlides.set(res.data.slides || []);
+        this.heroSlidesLoading.set(false);
+        this.slidesDirty.set(false);
+        this.notice.set('Slide removed.');
+      },
+      error: (e) => {
+        this.heroSlidesLoading.set(false);
+        this.error.set(this.message(e, 'Could not delete the slide.'));
+      },
+    });
+  }
+
+  onSlideFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.newSlideFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.newSlidePreview = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  uploadNewSlide() {
+    if (!this.newSlideFile) return;
+    this.uploadingSlide.set(true);
+    this.error.set('');
+    this.api.uploadHeroSlide(this.newSlideFile, {
+      tag: this.newSlideTag,
+      title: this.newSlideTitle,
+      link: this.newSlideLink,
+    }).subscribe({
+      next: (res) => {
+        this.uploadingSlide.set(false);
+        this.heroSlides.set(res.data.slides || []);
+        this.newSlideFile = null;
+        this.newSlidePreview = null;
+        this.newSlideTitle = '';
+        this.notice.set('Slide picture uploaded successfully.');
+        const fileInput = document.getElementById('heroSlideFileInput') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+      },
+      error: (e) => {
+        this.uploadingSlide.set(false);
+        this.error.set(this.message(e, 'Could not upload the slide picture.'));
+      },
+    });
+  }
+
+  saveHeroSlides() {
+    this.savingSlides.set(true);
+    this.error.set('');
+    this.api.updateHeroSlides({
+      slides: this.heroSlides(),
+      autoplay: this.heroAutoplay,
+      interval: this.heroInterval,
+    }).subscribe({
+      next: (res) => {
+        this.savingSlides.set(false);
+        this.heroSlides.set(res.data.slides || []);
+        this.heroAutoplay = res.data.autoplay !== false;
+        this.heroInterval = res.data.interval || 5;
+        this.slidesDirty.set(false);
+        this.notice.set('Hero slides and rotation settings saved.');
+      },
+      error: (e) => {
+        this.savingSlides.set(false);
+        this.error.set(this.message(e, 'Could not save hero slides.'));
+      },
     });
   }
 

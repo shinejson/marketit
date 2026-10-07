@@ -112,6 +112,8 @@ import {
   StockMovementType,
   TenantAnalyticsReport,
   SettingsPayload,
+  HeroSlide,
+  HeroSlidesPayload,
   SocialAccount,
   SocialPost,
   Storefront,
@@ -156,8 +158,16 @@ export class ApiService {
     return this.http.get<{ data: { store: Storefront; products: ProductCard[] } }>(`/api/market/stores/${slug}`);
   }
 
+  contactStore(slug: string, payload: { name: string; email: string; subject?: string; message: string }) {
+    return this.http.post<{ data: { sent: boolean; message: string } }>(`/api/market/stores/${slug}/contact`, payload);
+  }
+
   marketCategories() {
     return this.http.get<{ data: Category[] }>('/api/market/categories');
+  }
+
+  marketHeroSlides() {
+    return this.http.get<{ data: HeroSlidesPayload }>('/api/market/hero-slides');
   }
 
   cart() {
@@ -697,6 +707,16 @@ export class ApiService {
     return this.http.delete<{ data: { ok: boolean } }>(`/api/tenant/stores/${id}`);
   }
 
+  uploadStoreMedia(storeId: number, file: File, type?: string) {
+    const fd = new FormData();
+    fd.append('file', file);
+    if (type) fd.append('type', type);
+    return this.http.post<{ data: { url: string; filename: string; type?: string } }>(
+      `/api/tenant/stores/${storeId}/media`,
+      fd
+    );
+  }
+
   sellerCategories() {
     return this.http.get<{ data: Category[] }>('/api/tenant/categories');
   }
@@ -1113,6 +1133,35 @@ export class ApiService {
 
   sendTestSms(to: string) {
     return this.http.post<{ data: GatewayTestResult }>('/api/admin/settings/sms/test', { to });
+  }
+
+  adminHeroSlides() {
+    return this.http.get<{ data: HeroSlidesPayload }>('/api/admin/settings/hero-slides');
+  }
+
+  uploadHeroSlide(file: File, meta?: { tag?: string; title?: string; link?: string }) {
+    const form = new FormData();
+    form.append('file', file);
+    if (meta?.tag) form.append('tag', meta.tag);
+    if (meta?.title) form.append('title', meta.title);
+    if (meta?.link) form.append('link', meta.link);
+    return this.http.post<{ data: { slide: HeroSlide; slides: HeroSlide[]; autoplay: boolean; interval: number }; message: string }>(
+      '/api/admin/settings/hero-slides',
+      form
+    );
+  }
+
+  updateHeroSlides(payload: { slides: HeroSlide[]; autoplay?: boolean; interval?: number }) {
+    return this.http.put<{ data: HeroSlidesPayload; message: string }>(
+      '/api/admin/settings/hero-slides',
+      payload
+    );
+  }
+
+  deleteHeroSlide(id: string) {
+    return this.http.delete<{ data: { slides: HeroSlide[]; autoplay: boolean; interval: number }; message: string }>(
+      `/api/admin/settings/hero-slides/${id}`
+    );
   }
 
   adminBackups() {

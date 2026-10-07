@@ -79,8 +79,10 @@ Route::prefix('market')->middleware('throttle:60,1')->group(function () {
     Route::get('/products/{slug}', [MarketController::class, 'product']);
     Route::get('/stores', [MarketController::class, 'stores']);
     Route::get('/stores/{slug}', [MarketController::class, 'store']);
+    Route::post('/stores/{slug}/contact', [MarketController::class, 'contact']);
     Route::get('/categories', [MarketController::class, 'categories']);
     Route::post('/ads/click/{impression}', [MarketController::class, 'click']);
+    Route::get('/hero-slides', [MarketController::class, 'heroSlides']);
 });
 
 // §9 / §17 — public review reads. Writing one needs an account.
@@ -208,6 +210,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/stores/{store}', [TenantController::class, 'showStore']);
         Route::patch('/stores/{store}', [TenantController::class, 'updateStore']);
         Route::delete('/stores/{store}', [TenantController::class, 'destroyStore']);
+        Route::post('/stores/{store}/media', [TenantController::class, 'uploadMedia']);
 
         // Workspace currency: active code, catalog, and a dry-run of what a
         // switch would do to stored prices.
@@ -497,6 +500,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/settings/assets/{asset}', [AdminSettingController::class, 'destroyAsset']);
         Route::post('/settings/email/test', [AdminSettingController::class, 'testEmail'])->middleware('throttle:6,1');
         Route::post('/settings/sms/test', [AdminSettingController::class, 'testSms'])->middleware('throttle:6,1');
+        Route::get('/settings/hero-slides', [AdminSettingController::class, 'heroSlides']);
+        Route::post('/settings/hero-slides', [AdminSettingController::class, 'uploadHeroSlide']);
+        Route::put('/settings/hero-slides', [AdminSettingController::class, 'updateHeroSlides']);
+        Route::delete('/settings/hero-slides/{id}', [AdminSettingController::class, 'destroyHeroSlide']);
 
         Route::get('/backups', [AdminBackupController::class, 'index']);
         Route::post('/backups', [AdminBackupController::class, 'store']);

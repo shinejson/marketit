@@ -234,16 +234,34 @@ class TenantController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'slug' => ['sometimes', 'string', 'max:255', 'alpha_dash:ascii', Rule::unique('stores', 'slug')->ignore($store->id)],
             'description' => ['nullable', 'string'],
+            'logo_path' => ['nullable', 'string', 'max:500'],
+            'banner_path' => ['nullable', 'string', 'max:500'],
             'theme_config' => ['sometimes', 'array'],
-            'theme_config.primary_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'theme_config.accent_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'theme_config.font' => ['nullable', Rule::in(['modern', 'editorial', 'friendly'])],
-            'theme_config.hero_style' => ['nullable', Rule::in(['split', 'centered', 'minimal'])],
-            'page_sections' => ['sometimes', 'array', 'max:12'],
+            'theme_config.primary_color' => ['nullable', 'string'],
+            'theme_config.accent_color' => ['nullable', 'string'],
+            'theme_config.surface_color' => ['nullable', 'string'],
+            'theme_config.font' => ['nullable', 'string'],
+            'theme_config.hero_style' => ['nullable', 'string'],
+            'theme_config.banner_image' => ['nullable', 'string', 'max:1000'],
+            'theme_config.logo_image' => ['nullable', 'string', 'max:1000'],
+            'theme_config.hero_badge' => ['nullable', 'string', 'max:255'],
+            'theme_config.hero_image' => ['nullable', 'string', 'max:1000'],
+            'theme_config.hero_slides' => ['nullable', 'array'],
+            'theme_config.pages' => ['nullable', 'array'],
+            'page_sections' => ['sometimes', 'array', 'max:25'],
             'page_sections.*.id' => ['required_with:page_sections', 'string', 'max:64'],
-            'page_sections.*.type' => ['required_with:page_sections', Rule::in(['hero', 'featured_products', 'rich_text', 'newsletter', 'trust_bar'])],
+            'page_sections.*.type' => ['required_with:page_sections', 'string', 'max:64'],
             'page_sections.*.title' => ['nullable', 'string', 'max:255'],
-            'page_sections.*.subtitle' => ['nullable', 'string', 'max:1000'],
+            'page_sections.*.subtitle' => ['nullable', 'string', 'max:2000'],
+            'page_sections.*.badge' => ['nullable', 'string', 'max:255'],
+            'page_sections.*.image_url' => ['nullable', 'string', 'max:1000'],
+            'page_sections.*.button_text' => ['nullable', 'string', 'max:100'],
+            'page_sections.*.button_link' => ['nullable', 'string', 'max:255'],
+            'page_sections.*.content' => ['nullable', 'string', 'max:10000'],
+            'page_sections.*.layout' => ['nullable', 'string', 'max:64'],
+            'page_sections.*.overlay_opacity' => ['nullable', 'numeric'],
+            'page_sections.*.items' => ['nullable', 'array'],
+            'page_sections.*.steps' => ['nullable', 'array'],
             'page_sections.*.enabled' => ['required_with:page_sections', 'boolean'],
             'seo_title' => ['nullable', 'string', 'max:70'],
             'seo_description' => ['nullable', 'string', 'max:170'],
@@ -256,6 +274,7 @@ class TenantController extends Controller
             'delivery_days' => ['nullable', 'integer', 'min:0'],
             'contact_email' => ['nullable', 'email'],
             'contact_phone' => ['nullable', 'string'],
+            'address_line' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string'],
             'country' => ['nullable', 'string', 'size:2'],
         ]);
@@ -275,6 +294,38 @@ class TenantController extends Controller
         $store->update($data);
 
         return response()->json(['data' => $store->fresh()->loadCount('products')]);
+    }
+
+    public function uploadMedia(Request $request, Store $store): JsonResponse
+    {
+        $this->authorize('update', $store);
+
+        $request->validate([
+            'file' => ['required', 'file', 'image', 'mimes:jpeg,jpg,png,webp,svg', 'max:5120'],
+            'type' => ['nullable', 'string', Rule::in(['logo', 'banner', 'hero', 'section', 'gallery'])],
+        ]);
+
+        $file = $request->file('file');
+        $ext = $file->getClientOriginalExtension() ?: 'jpg';
+        $filename = Str::random(32) . '.' . $ext;
+        $directory = "stores/{$store->id}";
+        $path = $file->storeAs($directory, $filename, 'public');
+
+        $url = "/storage/{$path}";
+
+        if ($request->input('type') === 'logo') {
+            $store->update(['logo_path' => $url]);
+        } elseif ($request->input('type') === 'banner') {
+            $store->update(['banner_path' => $url]);
+        }
+
+        return response()->json([
+            'data' => [
+                'url' => $url,
+                'filename' => $filename,
+                'type' => $request->input('type'),
+            ],
+        ]);
     }
 
     public function destroyStore(Store $store): JsonResponse

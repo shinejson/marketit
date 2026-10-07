@@ -212,10 +212,97 @@ interface ActionLink {
       </div>
     </header>
     <main><router-outlet /></main>
-    <footer>
+    <footer class="site-footer">
       <div class="wrap">
-        <p class="serif">One marketplace. Many stores.</p>
-        <p class="muted">Phase 1 marketplace SaaS — demo accounts use password <code>password</code>.</p>
+        <!-- Brand band: the vision (§2) + CTAs + how the square works (§10–§12) -->
+        <section class="foot-hero">
+          <div class="foot-intro">
+            <p class="foot-kicker">The market square, open every day</p>
+            <h2 class="serif">One marketplace. Many stores.</h2>
+            <p class="foot-lede">
+              Browse independent stalls, keep a single multi-store cart and check out once —
+              every store packs and delivers its own orders.
+            </p>
+            <div class="foot-cta">
+              <a routerLink="/products" class="btn light">Shop the square</a>
+              <a routerLink="/sell" class="btn outline">Open your store</a>
+            </div>
+          </div>
+
+          <ul class="foot-points">
+            <li>
+              <span class="fp-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" /></svg>
+              </span>
+              <div>
+                <strong>One cart, everywhere</strong>
+                <p>Shop across many independent stores without juggling separate checkouts.</p>
+              </div>
+            </li>
+            <li>
+              <span class="fp-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+              </span>
+              <div>
+                <strong>Pay once at checkout</strong>
+                <p>One master order pays every seller in a single secure transaction.</p>
+              </div>
+            </li>
+            <li>
+              <span class="fp-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="3" width="15" height="13" rx="1.5" /><path d="M16 8h4l3 3v5h-7z" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
+              </span>
+              <div>
+                <strong>Stores ship their own</strong>
+                <p>Each stall packs its part of the order and tracks it to your door.</p>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Directory: brand + link columns (only routes that exist in app.routes.ts) -->
+        <div class="foot-links">
+          <div class="foot-brandcol">
+            <a routerLink="/" class="foot-logo serif">MarketHub</a>
+            <p class="muted">A multi-store marketplace SaaS — many sellers, one square, one checkout.</p>
+            <span class="foot-pill"><i></i> Demo build</span>
+          </div>
+
+          <nav class="foot-col" aria-label="Marketplace links">
+            <h3>Marketplace</h3>
+            <a routerLink="/products">All products</a>
+            <a routerLink="/stores">Stores</a>
+            <a routerLink="/wishlist">Wishlist</a>
+            <a routerLink="/cart">Cart</a>
+            <a routerLink="/orders">My orders</a>
+          </nav>
+
+          <nav class="foot-col" aria-label="Account and help links">
+            <h3>Account &amp; help</h3>
+            <a routerLink="/login">Log in</a>
+            <a routerLink="/register">Create account</a>
+            <a routerLink="/notifications">Notifications</a>
+            <a routerLink="/support-cases">Support centre</a>
+            <a routerLink="/reviews">My reviews</a>
+          </nav>
+
+          <nav class="foot-col" aria-label="Selling links">
+            <h3>Selling</h3>
+            <a routerLink="/sell">Open your store</a>
+            <a routerLink="/tenant/login">Seller console</a>
+            <p class="foot-note">Payouts, analytics and seller support live inside the console.</p>
+          </nav>
+        </div>
+
+        <div class="foot-rule" aria-hidden="true"></div>
+
+        <div class="foot-bottom">
+          <p>© {{ year }} MarketHub · Phase 1 marketplace SaaS — demo accounts use password <code>password</code>.</p>
+          <button class="to-top" type="button" aria-label="Back to top" (click)="scrollTop()">
+            Back to top
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>
+          </button>
+        </div>
       </div>
     </footer>
 
@@ -360,8 +447,8 @@ interface ActionLink {
     }
     .mobile-panel.open { max-height: 520px; border-top-color: var(--line); }
 
-    main { min-height: calc(100vh - 200px); }
-    footer { padding: 40px 0 56px; border-top: 1px solid var(--line); }
+    /* Layout + footer styling live in layout/shell-footer.scss (global) so this
+       component stays within its anyComponentStyle budget. */
 
     @media (max-width: 720px) {
       .bar { display: flex; justify-content: space-between; padding: 10px 0; gap: 10px; }
@@ -599,6 +686,14 @@ export class ShellComponent {
       next: (res) => this.wishlistCount.set(res.data?.counts?.items ?? res.data?.items?.length ?? 0),
       error: () => undefined,
     });
+  }
+
+  /** Footer copyright year — rendered once so it can't drift mid-session. */
+  readonly year = new Date().getFullYear();
+
+  /** "Back to top" control in the site footer. */
+  scrollTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   toggleMenu() {

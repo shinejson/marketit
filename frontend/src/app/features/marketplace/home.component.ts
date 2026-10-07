@@ -1,9 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { ApiService } from '../../core/api.service';
-import { Category, ProductCard, Storefront } from '../../core/models';
+import { Category, HeroSlide, ProductCard, Storefront } from '../../core/models';
 import { ProductCardComponent } from '../../shared/product-card.component';
 
 @Component({
@@ -34,17 +34,71 @@ import { ProductCardComponent } from '../../shared/product-card.component';
           }
         </div>
         <div class="hero-media">
-          <div class="hero-frame">
-            <img
-              src="/images/market-shopper.jpg"
-              alt="Female shopper happily browsing stalls in the bustling market square"
-              class="hero-img"
-              loading="eager"
-            />
-            <div class="hero-tag">
-              <span class="pulse-dot"></span>
-              <span>Live market square · Independent stalls</span>
-            </div>
+          <div
+            class="hero-frame"
+            (mouseenter)="pauseSlider()"
+            (mouseleave)="resumeSlider()"
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="Market highlights"
+          >
+            @for (slide of slides(); track slide.id; let idx = $index) {
+              <div
+                class="hero-slide"
+                [class.active]="currentSlide() === idx"
+                [attr.aria-hidden]="currentSlide() !== idx"
+              >
+                <img
+                  [src]="slide.image_url"
+                  [alt]="slide.alt || slide.title || 'Marketplace hero photo'"
+                  class="hero-img"
+                  [loading]="idx === 0 ? 'eager' : 'lazy'"
+                />
+                @if (slide.tag) {
+                  <div class="hero-tag">
+                    <span class="pulse-dot"></span>
+                    <span>{{ slide.tag }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (slides().length > 1) {
+              <button
+                type="button"
+                class="hero-nav prev"
+                (click)="prevSlide($event)"
+                aria-label="Previous slide"
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="hero-nav next"
+                (click)="nextSlide($event)"
+                aria-label="Next slide"
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+
+              <div class="hero-dots" role="tablist" aria-label="Slides">
+                @for (slide of slides(); track slide.id; let idx = $index) {
+                  <button
+                    type="button"
+                    class="hero-dot"
+                    [class.active]="currentSlide() === idx"
+                    (click)="goToSlide(idx, $event)"
+                    [attr.aria-label]="'Go to slide ' + (idx + 1)"
+                    [attr.aria-selected]="currentSlide() === idx"
+                    role="tab"
+                  ></button>
+                }
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -167,26 +221,69 @@ import { ProductCardComponent } from '../../shared/product-card.component';
     .stats strong { font-family: Fraunces, Georgia, serif; font-size: 28px; font-weight: 650; }
     .stats span { font-size: 13px; color: var(--ink-soft); }
 
-    /* Hero media - Expanded */
+    /* Hero media - Slideshow Carousel */
     .hero-media { display: flex; align-items: stretch; justify-content: center; width: 100%; height: 100%; }
     .hero-frame {
       position: relative; width: 100%; height: 100%; min-height: 520px; border-radius: 28px;
       overflow: hidden; box-shadow: 0 24px 64px rgba(28, 25, 20, 0.18);
-      border: 1px solid rgba(217, 208, 192, 0.85); background: var(--card);
+      border: 1px solid rgba(217, 208, 192, 0.85); background: #1c1914;
+    }
+    .hero-slide {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      opacity: 0; transform: scale(1.02);
+      transition: opacity 0.75s cubic-bezier(0.4, 0, 0.2, 1), transform 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none; z-index: 1;
+    }
+    .hero-slide.active {
+      opacity: 1; transform: scale(1);
+      pointer-events: auto; z-index: 2;
     }
     .hero-img {
       width: 100%; height: 100%; object-fit: cover; object-position: center 25%;
-      display: block; transition: transform 0.45s ease;
+      display: block; transition: transform 0.6s ease;
     }
-    .hero-frame:hover .hero-img { transform: scale(1.025); }
+    .hero-frame:hover .hero-slide.active .hero-img { transform: scale(1.025); }
     .hero-tag {
-      position: absolute; bottom: 18px; left: 18px;
-      background: rgba(28, 25, 20, 0.84); backdrop-filter: blur(10px);
-      color: #fff; padding: 9px 18px; border-radius: 999px; font-size: 13px; font-weight: 600;
+      position: absolute; bottom: 20px; left: 20px;
+      background: rgba(28, 25, 20, 0.86); backdrop-filter: blur(12px);
+      color: #fff; padding: 10px 20px; border-radius: 999px; font-size: 13px; font-weight: 600;
       display: inline-flex; align-items: center; gap: 9px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); z-index: 5;
+      pointer-events: none; max-width: calc(100% - 130px);
     }
     .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.35); flex: none; }
+
+    /* Navigation arrows */
+    .hero-nav {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: rgba(28, 25, 20, 0.65); backdrop-filter: blur(8px);
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 10; opacity: 0; transition: all 0.25s ease;
+    }
+    .hero-nav:hover { background: rgba(28, 25, 20, 0.9); transform: translateY(-50%) scale(1.08); border-color: rgba(255, 255, 255, 0.6); }
+    .hero-nav.prev { left: 16px; }
+    .hero-nav.next { right: 16px; }
+    .hero-frame:hover .hero-nav { opacity: 1; }
+
+    /* Indicator dots */
+    .hero-dots {
+      position: absolute; bottom: 20px; right: 20px;
+      display: flex; gap: 7px; align-items: center;
+      background: rgba(28, 25, 20, 0.65); backdrop-filter: blur(10px);
+      padding: 7px 12px; border-radius: 999px; z-index: 10;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+    .hero-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      border: 0; padding: 0; background: rgba(255, 255, 255, 0.4);
+      cursor: pointer; transition: all 0.25s ease;
+    }
+    .hero-dot.active {
+      width: 22px; border-radius: 6px; background: #fff;
+    }
+    .hero-dot:hover:not(.active) { background: rgba(255, 255, 255, 0.75); }
 
     @media (max-width: 980px) {
       .hero-wrap { grid-template-columns: 1fr; gap: 36px; }
@@ -241,10 +338,42 @@ import { ProductCardComponent } from '../../shared/product-card.component';
   `],
 
 })
-export class HomeComponent {
+export class HomeComponent implements OnDestroy {
   private api = inject(ApiService);
   private router = inject(Router);
   auth = inject(AuthService);
+
+  slides = signal<HeroSlide[]>([
+    {
+      id: 'slide_1',
+      image_url: '/images/market-shopper.jpg',
+      tag: 'Live market square · Independent stalls',
+      title: 'A marketplace built like a city market',
+      link: '/products',
+      alt: 'Female shopper happily browsing stalls in the bustling market square',
+    },
+    {
+      id: 'slide_2',
+      image_url: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1200&q=80',
+      tag: 'Handcrafted goods · Local artisans',
+      title: 'Discover handcrafted & artisan items',
+      link: '/products',
+      alt: 'Artisan produce and handcrafted market goods',
+    },
+    {
+      id: 'slide_3',
+      image_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80',
+      tag: 'Curated boutiques · Unique fashion & lifestyle',
+      title: 'Curated independent boutiques',
+      link: '/stores',
+      alt: 'Curated independent boutiques and shops',
+    },
+  ]);
+  currentSlide = signal(0);
+  autoplay = signal(true);
+  intervalSeconds = signal(5);
+  private timer: any = null;
+  private isPaused = false;
 
   products = signal<ProductCard[]>([]);
   stores = signal<Storefront[]>([]);
@@ -259,6 +388,18 @@ export class HomeComponent {
   q = '';
 
   constructor() {
+    this.api.marketHeroSlides().subscribe({
+      next: (res) => {
+        if (res.data?.slides?.length) {
+          this.slides.set(res.data.slides);
+          this.autoplay.set(res.data.autoplay !== false);
+          this.intervalSeconds.set(res.data.interval || 5);
+        }
+        this.startAutoplay();
+      },
+      error: () => this.startAutoplay(),
+    });
+
     this.api.marketProducts({ per_page: 8 }).subscribe({
       next: (res) => {
         this.products.set(res.data);
@@ -280,6 +421,55 @@ export class HomeComponent {
       next: (res) => { this.categories.set(res.data); this.catsLoaded.set(true); },
       error: () => this.catsLoaded.set(true),
     });
+  }
+
+  ngOnDestroy() {
+    this.stopAutoplay();
+  }
+
+  startAutoplay() {
+    this.stopAutoplay();
+    if (!this.autoplay() || this.slides().length <= 1) return;
+    this.timer = setInterval(() => {
+      if (!this.isPaused) {
+        this.nextSlide();
+      }
+    }, Math.max(2, this.intervalSeconds()) * 1000);
+  }
+
+  stopAutoplay() {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+
+  pauseSlider() {
+    this.isPaused = true;
+  }
+
+  resumeSlider() {
+    this.isPaused = false;
+  }
+
+  nextSlide(e?: Event) {
+    e?.stopPropagation();
+    const count = this.slides().length;
+    if (count <= 1) return;
+    this.currentSlide.update((curr) => (curr + 1) % count);
+  }
+
+  prevSlide(e?: Event) {
+    e?.stopPropagation();
+    const count = this.slides().length;
+    if (count <= 1) return;
+    this.currentSlide.update((curr) => (curr - 1 + count) % count);
+  }
+
+  goToSlide(idx: number, e?: Event) {
+    e?.stopPropagation();
+    this.currentSlide.set(idx);
+    this.startAutoplay();
   }
 
   search() {

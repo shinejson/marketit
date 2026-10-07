@@ -408,10 +408,90 @@ export interface ProductCard {
   rating_count?: number;
 }
 
+export interface StorePageSectionItem {
+  title: string;
+  desc?: string;
+  icon?: string;
+  image?: string;
+  link?: string;
+}
+
+export interface StoreProductionStep {
+  step_num?: number;
+  title: string;
+  description: string;
+  tag?: string;
+}
+
+export interface StorePageSection {
+  id: string;
+  type: 'hero' | 'featured_products' | 'banner' | 'rich_text' | 'production' | 'gallery' | 'trust_bar' | 'reviews' | 'newsletter' | 'contact_card' | string;
+  title?: string;
+  subtitle?: string;
+  badge?: string;
+  image_url?: string;
+  button_text?: string;
+  button_link?: string;
+  content?: string;
+  layout?: 'split' | 'centered' | 'full' | 'cards' | 'grid' | 'carousel' | string;
+  overlay_opacity?: number;
+  enabled: boolean;
+  items?: StorePageSectionItem[];
+  steps?: StoreProductionStep[];
+}
+
+export interface StoreThemePagesConfig {
+  about?: {
+    enabled?: boolean;
+    nav_label?: string;
+    hero_title?: string;
+    hero_subtitle?: string;
+    cover_image?: string;
+    story_title?: string;
+    story_body?: string;
+    story_image?: string;
+    mission_title?: string;
+    mission_body?: string;
+    craft_title?: string;
+    craft_body?: string;
+    craft_image?: string;
+    craft_steps?: StoreProductionStep[];
+    values?: { icon: string; title: string; desc: string }[];
+  };
+  contact?: {
+    enabled?: boolean;
+    nav_label?: string;
+    title?: string;
+    subtitle?: string;
+    address?: string;
+    hours?: string;
+    phone?: string;
+    email?: string;
+    show_form?: boolean;
+    form_intro?: string;
+  };
+}
+
+export interface StoreThemeConfig {
+  primary_color?: string;
+  accent_color?: string;
+  surface_color?: string;
+  font?: 'modern' | 'editorial' | 'friendly' | 'classic' | string;
+  hero_style?: 'split' | 'centered' | 'minimal' | 'full_banner' | string;
+  banner_image?: string;
+  logo_image?: string;
+  hero_badge?: string;
+  hero_image?: string;
+  pages?: StoreThemePagesConfig;
+}
+
 export interface Storefront {
   id: number;
+  tenant_id?: number;
   name: string;
   slug: string;
+  status?: string;
+  currency?: string;
   description?: string | null;
   city?: string | null;
   country?: string | null;
@@ -419,8 +499,19 @@ export interface Storefront {
   delivery_days: number;
   is_featured?: boolean;
   logo_path?: string | null;
+  banner_path?: string | null;
+  theme_config?: StoreThemeConfig | null;
+  page_sections?: StorePageSection[] | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  address_line?: string | null;
+  customer_accounts_enabled?: boolean;
+  guest_checkout_enabled?: boolean;
   rating_avg?: number;
   rating_count?: number;
+  products_count?: number;
 }
 
 export interface PageMeta {
@@ -968,6 +1059,21 @@ export interface SettingGroupMeta {
 export interface SettingsPayload {
   data: Record<string, SettingField[]>;
   meta: { groups: SettingGroupMeta[]; assets: string[] };
+}
+
+export interface HeroSlide {
+  id: string;
+  image_url: string;
+  tag: string;
+  title?: string;
+  link?: string;
+  alt?: string;
+}
+
+export interface HeroSlidesPayload {
+  slides: HeroSlide[];
+  autoplay: boolean;
+  interval: number;
 }
 
 export interface PlatformBackup {
