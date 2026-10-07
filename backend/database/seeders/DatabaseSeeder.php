@@ -198,6 +198,7 @@ class DatabaseSeeder extends Seeder
         $this->call(SupportSeeder::class);
         $this->call(AccessControlSeeder::class);
         $this->call(AuditLogSeeder::class);
+        $this->call(TemplateSeeder::class);
     }
 
     protected function seedPhase3(): void

@@ -3,7 +3,10 @@
 namespace App\Services\Payment;
 
 use App\Models\Order;
+use App\Models\PageTemplate;
 use App\Models\PaymentTransaction;
+use App\Models\TemplatePurchase;
+use App\Models\User;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -52,6 +55,42 @@ class ConfiguredPaymentGateway implements PaymentGateway
         };
     }
 
+    public function createTemplateIntent(
+        TemplatePurchase $purchase,
+        PageTemplate $template,
+        User $user,
+        string $amount,
+        string $currency,
+        ?string $paymentMethod = null,
+    ): PaymentIntentResult {
+        $provider = $this->config->provider();
+        if ($provider === 'mock') {
+            return $this->mock->createTemplateIntent($purchase, $template, $user, $amount, $currency, $paymentMethod);
+        }
+
+        if (strtoupper($currency) !== $this->config->currency()) {
+            throw ValidationException::withMessages([
+                'payment' => 'This template is priced in '.$currency.'. Configure the platform payment currency to match before selling it.',
+            ]);
+        }
+        if (! $this->config->providerConfigured($provider)) {
+            throw ValidationException::withMessages([
+                'payment' => "Configure the {$provider} credentials in Admin Settings before accepting template payments.",
+            ]);
+        }
+
+        $base = rtrim((string) $this->config->get('platform_url', config('app.url')), '/');
+        $currencyCode = strtolower($currency);
+        $reference = 'template_'.$purchase->id.'_'.Str::lower(Str::random(12));
+
+        return match ($provider) {
+            'stripe' => $this->templateStripe($purchase, $template, $amount, $currencyCode, $base),
+            'paystack' => $this->templatePaystack($purchase, $template, $user, $amount, strtoupper($currency), $base, $reference, $paymentMethod),
+            'flutterwave' => $this->templateFlutterwave($purchase, $template, $user, $amount, strtoupper($currency), $base, $reference, $paymentMethod),
+            default => throw ValidationException::withMessages(['payment' => 'The selected payment provider is not supported.']),
+        };
+    }
+
     public function verifyAndParse(WebhookRequest $req): ?WebhookResult
     {
         $provider = $this->config->provider();
@@ -77,6 +116,97 @@ class ConfiguredPaymentGateway implements PaymentGateway
         }
 
         return new RefundResult(false, '', 'Refunds must be initiated from the configured payment provider dashboard.');
+    }
+
+    private function templateStripe(PageTemplate $template, TemplatePurchase $purchase, string $amount, string $currency, string $base): PaymentIntentResult
+    {
+        $response = $this->http('stripe')->asForm()->post('https://api.stripe.com/v1/checkout/sessions', [
+            'mode' => 'payment',
+            'success_url' => $base.'/tenant/templates?payment=success',
+            'cancel_url' => $base.'/tenant/templates?payment=cancelled',
+            'client_reference_id' => 'template_purchase_'.$purchase->id,
+            'metadata[template_purchase_id]' => (string) $purchase->id,
+            'line_items[0][quantity]' => 1,
+            'line_items[0][price_data][currency]' => $currency,
+            'line_items[0][price_data][unit_amount]' => $this->minor($amount),
+            'line_items[0][price_data][product_data][name]' => $template->name.' template licence',
+        ]);
+
+        if ($response->failed() || ! $response->json('id') || ! $response->json('url')) {
+            throw ValidationException::withMessages(['payment' => 'Stripe could not start template checkout. Try again or choose another method.']);
+        }
+
+        return new PaymentIntentResult(
+            gatewayRef: (string) $response->json('id'),
+            type: 'redirect',
+            url: (string) $response->json('url'),
+            meta: ['provider' => 'stripe', 'payment_method' => 'card', 'template_purchase_id' => $purchase->id],
+        );
+    }
+
+    private function templatePaystack(
+        TemplatePurchase $purchase,
+        PageTemplate $template,
+        User $user,
+        string $amount,
+        string $currency,
+        string $base,
+        string $reference,
+        ?string $paymentMethod,
+    ): PaymentIntentResult {
+        $response = $this->http('paystack')->post('https://api.paystack.co/transaction/initialize', [
+            'email' => $user->email,
+            'amount' => $this->minor($amount),
+            'currency' => $currency,
+            'reference' => $reference,
+            'channels' => [$paymentMethod === 'mobile_money' ? 'mobile_money' : 'card'],
+            'callback_url' => $base.'/tenant/templates?payment=success',
+            'metadata' => ['template_purchase_id' => $purchase->id, 'template_id' => $template->id],
+        ]);
+
+        if ($response->failed() || ! $response->json('data.authorization_url')) {
+            throw ValidationException::withMessages(['payment' => 'Paystack could not start template checkout. Try again or choose another method.']);
+        }
+
+        return new PaymentIntentResult(
+            gatewayRef: (string) ($response->json('data.reference') ?: $reference),
+            type: 'redirect',
+            url: (string) $response->json('data.authorization_url'),
+            meta: ['provider' => 'paystack', 'payment_method' => $paymentMethod ?: 'card', 'template_purchase_id' => $purchase->id],
+        );
+    }
+
+    private function templateFlutterwave(
+        TemplatePurchase $purchase,
+        PageTemplate $template,
+        User $user,
+        string $amount,
+        string $currency,
+        string $base,
+        string $reference,
+        ?string $paymentMethod,
+    ): PaymentIntentResult {
+        $response = $this->http('flutterwave')->post('https://api.flutterwave.com/v3/payments', [
+            'tx_ref' => $reference,
+            'amount' => (float) $amount,
+            'currency' => $currency,
+            'payment_options' => $paymentMethod === 'mobile_money' ? 'mobilemoney' : 'card',
+            'redirect_url' => $base.'/tenant/templates?payment=success',
+            'customer' => ['email' => $user->email, 'name' => $user->name],
+            'customizations' => ['title' => (string) $this->config->get('platform_name', 'MarketHub'), 'description' => $template->name.' template licence'],
+            'meta' => ['template_purchase_id' => $purchase->id, 'template_id' => $template->id],
+        ]);
+
+        if ($response->failed() || ! $response->json('data.link')) {
+            throw ValidationException::withMessages(['payment' => 'Flutterwave could not start template checkout. Try again or choose another method.']);
+        }
+
+        return new PaymentIntentResult(
+            gatewayRef: $reference,
+            type: 'redirect',
+            url: (string) $response->json('data.link'),
+            meta: ['provider' => 'flutterwave', 'payment_method' => $paymentMethod ?: 'card', 'template_purchase_id' => $purchase->id],
+        );
     }
 
     private function stripe(Order $order, string $amount, ?string $paymentMethod): PaymentIntentResult

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
+use App\Models\TemplatePurchase;
 use App\Models\WebhookEvent;
+use App\Support\ActivityLogger;
 use App\Services\CheckoutService;
 use App\Services\Payment\PaymentConfiguration;
 use App\Services\Payment\PaymentGateway;
@@ -118,6 +120,22 @@ class PaymentController extends Controller
                 $tx->update(['status' => PaymentTransaction::STATUS_FAILED, 'raw_webhook_id' => $result->eventId]);
                 $this->checkout->releaseReservation($tx->order);
             }
+        } else {
+            $purchase = TemplatePurchase::query()->where('payment_reference', $result->gatewayRef)->first();
+            if ($purchase && $result->status === 'succeeded' && $purchase->payment_status !== TemplatePurchase::STATUS_PAID) {
+                $purchase->update([
+                    'payment_status' => TemplatePurchase::STATUS_PAID,
+                    'purchased_at' => now(),
+                    'payment_meta' => array_merge($purchase->payment_meta ?? [], ['webhook_event_id' => $result->eventId]),
+                ]);
+                ActivityLogger::record('template.purchased', [
+                    'subject_type' => TemplatePurchase::class,
+                    'subject_id' => $purchase->id,
+                    'meta' => ['template_id' => $purchase->template_id, 'amount' => $purchase->amount, 'currency' => $purchase->currency],
+                ], tenantId: $purchase->tenant_id);
+            } elseif ($purchase && $result->status === 'failed') {
+                $purchase->update(['payment_status' => TemplatePurchase::STATUS_FAILED]);
+            }
         }
 
         $event->update(['processed_at' => now()]);
@@ -164,5 +182,34 @@ class PaymentController extends Controller
         }
 
         return response()->json(['data' => ['status' => 'paid', 'order_id' => $tx->order_id]]);
+    }
+
+    /** Test-only hosted checkout for premium page templates. */
+    public function mockTemplatePay(Request $request): JsonResponse
+    {
+        abort_unless($this->payments->provider() === 'mock', 404);
+
+        $purchase = TemplatePurchase::query()
+            ->whereKey($request->integer('purchase'))
+            ->where('payment_reference', $request->string('ref'))
+            ->firstOrFail();
+
+        if ($purchase->payment_status !== TemplatePurchase::STATUS_PAID) {
+            $purchase->update([
+                'payment_status' => TemplatePurchase::STATUS_PAID,
+                'purchased_at' => now(),
+            ]);
+            ActivityLogger::record('template.purchased', [
+                'subject_type' => TemplatePurchase::class,
+                'subject_id' => $purchase->id,
+                'meta' => ['template_id' => $purchase->template_id, 'amount' => $purchase->amount, 'currency' => $purchase->currency],
+            ], tenantId: $purchase->tenant_id);
+        }
+
+        return response()->json(['data' => [
+            'status' => 'paid',
+            'purchase_id' => $purchase->id,
+            'template_id' => $purchase->template_id,
+        ]]);
     }
 }

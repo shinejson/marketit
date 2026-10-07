@@ -638,6 +638,7 @@ export class AdminShellComponent {
     { key: 'stores', label: 'Stores', icon: 'store' },
     { key: 'users', label: 'Customers & users', icon: 'users' },
     { key: 'catalog', label: 'Catalog & Moderation', icon: 'catalog' },
+    { key: 'templates', label: 'Templates & categories', icon: 'catalog' },
     { key: 'orders', label: 'Orders', icon: 'orders' },
     { key: 'subscriptions', label: 'Plans & billing', icon: 'subscriptions' },
     { key: 'reviews', label: 'Reviews', icon: 'star' },

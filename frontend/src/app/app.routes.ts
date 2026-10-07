@@ -4,7 +4,9 @@ import { authGuard, marketingPortalGuard, roleGuard } from './core/auth.guard';
 const tenantConsoleChildren: Routes = [
   { path: '', loadComponent: () => import('./features/seller/dashboard.component').then((m) => m.SellerDashboardComponent) },
   { path: 'stores', loadComponent: () => import('./features/seller/stores.component').then((m) => m.SellerStoresComponent) },
+  { path: 'stores/:id/builder', loadComponent: () => import('./features/seller/page-builder.component').then((m) => m.PageBuilderComponent) },
   { path: 'stores/:id', loadComponent: () => import('./features/seller/store-editor.component').then((m) => m.StoreEditorComponent) },
+  { path: 'templates', loadComponent: () => import('./features/seller/template-marketplace.component').then((m) => m.TemplateMarketplaceComponent) },
   { path: 'products', loadComponent: () => import('./features/seller/products.component').then((m) => m.SellerProductsComponent) },
   { path: 'orders', loadComponent: () => import('./features/seller/orders.component').then((m) => m.SellerOrdersComponent) },
   { path: 'inventory', loadComponent: () => import('./features/seller/inventory.component').then((m) => m.SellerInventoryComponent) },
@@ -152,6 +154,7 @@ export const routes: Routes = [
       { path: 'disputes', loadComponent: () => import('./features/admin/disputes.component').then((m) => m.AdminDisputesComponent) },
       { path: 'refunds', redirectTo: 'disputes', pathMatch: 'full' },
       { path: 'catalog', loadComponent: () => import('./features/admin/catalog.component').then((m) => m.AdminCatalogComponent) },
+      { path: 'templates', loadComponent: () => import('./features/admin/templates.component').then((m) => m.AdminTemplatesComponent) },
       { path: 'categories', redirectTo: 'catalog', pathMatch: 'full' },
       { path: 'products', redirectTo: 'catalog', pathMatch: 'full' },
       { path: 'coupons', loadComponent: () => import('./features/admin/coupons.component').then((m) => m.AdminCouponsComponent) },

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Models\PageRevision;
 use App\Models\Tenant;
 use App\Models\TenantRole;
 use App\Models\UserRole;
@@ -237,10 +238,17 @@ class TenantController extends Controller
             'logo_path' => ['nullable', 'string', 'max:500'],
             'banner_path' => ['nullable', 'string', 'max:500'],
             'theme_config' => ['sometimes', 'array'],
-            'theme_config.primary_color' => ['nullable', 'string'],
-            'theme_config.accent_color' => ['nullable', 'string'],
-            'theme_config.surface_color' => ['nullable', 'string'],
-            'theme_config.font' => ['nullable', 'string'],
+            'theme_config.primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_config.secondary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_config.accent_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_config.surface_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_config.text_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_config.background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_config.font' => ['nullable', 'string', 'max:32'],
+            'theme_config.heading_font' => ['nullable', 'string', 'max:80'],
+            'theme_config.body_font' => ['nullable', 'string', 'max:80'],
+            'theme_config.button_font' => ['nullable', 'string', 'max:80'],
+
             'theme_config.hero_style' => ['nullable', 'string'],
             'theme_config.banner_image' => ['nullable', 'string', 'max:1000'],
             'theme_config.logo_image' => ['nullable', 'string', 'max:1000'],
@@ -249,6 +257,11 @@ class TenantController extends Controller
             'theme_config.hero_slides' => ['nullable', 'array'],
             'theme_config.pages' => ['nullable', 'array'],
             'page_sections' => ['sometimes', 'array', 'max:25'],
+            'page_sections.*' => ['array:id,type,title,subtitle,badge,image_url,button_text,button_link,content,layout,overlay_opacity,items,steps,enabled,columns,responsive,product_source,category_id,product_ids,limit'],
+            'page_sections.*.category_id' => ['nullable', 'integer'],
+            'page_sections.*.product_ids' => ['nullable', 'array', 'max:24'],
+            'page_sections.*.product_ids.*' => ['integer'],
+            'page_sections.*.limit' => ['nullable', 'integer', 'between:1,24'],
             'page_sections.*.id' => ['required_with:page_sections', 'string', 'max:64'],
             'page_sections.*.type' => ['required_with:page_sections', 'string', 'max:64'],
             'page_sections.*.title' => ['nullable', 'string', 'max:255'],
@@ -260,8 +273,15 @@ class TenantController extends Controller
             'page_sections.*.content' => ['nullable', 'string', 'max:10000'],
             'page_sections.*.layout' => ['nullable', 'string', 'max:64'],
             'page_sections.*.overlay_opacity' => ['nullable', 'numeric'],
-            'page_sections.*.items' => ['nullable', 'array'],
-            'page_sections.*.steps' => ['nullable', 'array'],
+            'page_sections.*.items' => ['nullable', 'array', 'max:30'],
+            'page_sections.*.steps' => ['nullable', 'array', 'max:20'],
+            'page_sections.*.columns' => ['nullable', 'integer', 'between:1,6'],
+            'page_sections.*.responsive' => ['nullable', 'array:desktop,tablet,mobile'],
+            'page_sections.*.responsive.*' => ['array:columns,padding,font_size'],
+            'page_sections.*.responsive.*.columns' => ['nullable', 'integer', 'between:1,6'],
+            'page_sections.*.responsive.*.padding' => ['nullable', 'integer', 'between:0,160'],
+            'page_sections.*.responsive.*.font_size' => ['nullable', 'integer', 'between:8,100'],
+            'page_sections.*.product_source' => ['nullable', Rule::in(['latest', 'featured', 'bestsellers', 'category', 'manual'])],
             'page_sections.*.enabled' => ['required_with:page_sections', 'boolean'],
             'seo_title' => ['nullable', 'string', 'max:70'],
             'seo_description' => ['nullable', 'string', 'max:170'],
@@ -291,7 +311,30 @@ class TenantController extends Controller
             }
         }
 
+        $beforeSections = $store->page_sections ?? [];
+        $beforeTheme = $store->theme_config ?? [];
         $store->update($data);
+
+        $sectionsChanged = array_key_exists('page_sections', $data) && $beforeSections !== ($store->page_sections ?? []);
+        $themeChanged = array_key_exists('theme_config', $data) && $beforeTheme !== ($store->theme_config ?? []);
+        if ($sectionsChanged || $themeChanged) {
+            $version = (int) PageRevision::query()
+                ->where('store_id', $store->id)
+                ->where('page_type', 'home')
+                ->max('version') + 1;
+            PageRevision::query()->create([
+                'tenant_id' => $store->tenant_id,
+                'store_id' => $store->id,
+                'page_id' => null,
+                'created_by' => $request->user()->id,
+                'page_type' => 'home',
+                'version' => $version,
+                'content' => [
+                    'sections' => $store->page_sections ?? [],
+                    'theme_config' => $store->theme_config ?? [],
+                ],
+            ]);
+        }
 
         return response()->json(['data' => $store->fresh()->loadCount('products')]);
     }

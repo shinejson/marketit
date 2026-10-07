@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\PlatformCategory;
 use App\Models\PlatformSetting;
+use App\Models\Page;
 use App\Models\Product;
+use Illuminate\Support\Facades\DB;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Services\Ads\AdAuctionService;
@@ -168,20 +170,38 @@ class MarketController extends Controller
                 abort_unless($store->tenant && $store->tenant->status === Tenant::STATUS_ACTIVE, 404, 'Store is not active.');
             }
 
-            $products = Product::query()
-                ->with(['images', 'variants.inventory'])
+            $productRows = Product::query()
+                ->with(['images', 'variants.inventory', 'category'])
                 ->where('store_id', $store->id)
                 ->where('status', Product::STATUS_ACTIVE)
                 ->whereIn('moderation_status', Product::PUBLIC_MODERATION_STATUSES)
                 ->orderByDesc('id')
                 ->limit(24)
-                ->get()
-                ->map(fn (Product $p) => $this->productCard($p));
+                ->get();
+            $soldCounts = DB::table('order_items')
+                ->join('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
+                ->join('seller_orders', 'seller_orders.id', '=', 'order_items.seller_order_id')
+                ->where('seller_orders.store_id', $store->id)
+                ->whereNotIn('seller_orders.status', ['cancelled', 'refunded'])
+                ->whereIn('product_variants.product_id', $productRows->modelKeys())
+                ->selectRaw('product_variants.product_id as product_id, SUM(order_items.qty) as sold_count')
+                ->groupBy('product_variants.product_id')
+                ->pluck('sold_count', 'product_id');
+            $products = $productRows->map(fn (Product $p) => [
+                ...$this->productCard($p),
+                'best_selling_count' => (int) ($soldCounts[$p->id] ?? 0),
+            ]);
+
+            $pages = $store->pages()
+                ->where('status', Page::STATUS_PUBLISHED)
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug', 'content', 'status', 'seo_title', 'seo_description']);
 
             return response()->json([
                 'data' => [
                     'store' => $store,
                     'products' => $products,
+                    'pages' => $pages,
                 ],
             ]);
         } finally {
@@ -319,6 +339,7 @@ class MarketController extends Controller
             'min_order_qty' => (int) ($p->min_order_qty ?? 1),
             'brand' => $p->brand,
             'status' => $p->status,
+            'is_featured' => (bool) $p->is_featured,
             // Prices are denominated in the owning store's currency; the client
             // converts into whatever the shopper is browsing in.
             'currency' => $p->store?->currency ?? config('markethub.currency', 'USD'),

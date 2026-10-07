@@ -8,7 +8,7 @@ import { StarRatingComponent } from '../../shared/star-rating.component';
 import { AuthService } from '../../core/auth.service';
 import { CurrencyService } from '../../core/currency.service';
 
-type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
+type StorePageTab = 'home' | 'shop' | 'about' | 'contact' | string;
 
 @Component({
   selector: 'app-store',
@@ -55,6 +55,9 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
               <button type="button" [class.active]="activePage() === 'contact'" (click)="setPage('contact')">
                 {{ contactConfig().nav_label || 'Contact' }}
               </button>
+            }
+            @for (page of publishedPages(); track page.id) {
+              <button type="button" [class.active]="activePage() === page.slug" (click)="setPage(page.slug)">{{ page.name }}</button>
             }
           </nav>
 
@@ -429,11 +432,12 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
                 <h1>All Products</h1>
                 <p class="sub">Browse all available goods from {{ s.name }}.</p>
               </div>
-              <span class="count-tag">{{ products().length }} product{{ products().length === 1 ? '' : 's' }}</span>
+              <span class="count-tag">{{ shopProducts().length }} product{{ shopProducts().length === 1 ? '' : 's' }}</span>
             </div>
+            @if (categoryFilter()) { <button type="button" class="clear-category" (click)="categoryFilter.set(null)">Showing {{ categoryName(categoryFilter()) }} · Clear filter ×</button> }
 
             <div class="grid cards">
-              @for (p of products(); track p.id) {
+              @for (p of shopProducts(); track p.id) {
                 <app-product-card [product]="p" />
               } @empty {
                 <div class="empty">
@@ -442,6 +446,51 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
                 </div>
               }
             </div>
+          </main>
+        }
+
+        @else if (customPage(); as page) {
+          <main class="page-view custom-view">
+            <section class="custom-page-heading wrap"><p class="overline">{{ s.name }} · STORE JOURNAL</p><h1>{{ page.name }}</h1></section>
+            @for (section of page.content.sections; track section.id) {
+              @if (section.enabled) {
+                @if (section.type === 'hero') {
+                  <section class="hero" [class.custom-hero-cover]="section.layout === 'full_banner'" [style.background-image]="section.layout === 'full_banner' ? 'linear-gradient(rgba(0,0,0,.46),rgba(0,0,0,.55)),url(' + (section.image_url || '') + ')' : ''">
+                    <div class="wrap hero-inner centered-hero"><p class="overline">{{ section.badge || page.name }}</p><h1>{{ section.title || page.name }}</h1><p class="lead">{{ section.subtitle || '' }}</p>@if (section.button_text) { <button class="shop-btn" (click)="handleBannerAction(section.button_link)">{{ section.button_text }} →</button> }</div>
+                  </section>
+                } @else if (section.type === 'featured_products' || section.type === 'product_grid') {
+                  <section class="catalogue wrap">
+                    <div class="section-head"><div><p class="overline">{{ section.badge || 'THE COLLECTION' }}</p><h2>{{ section.title || 'Products selected for you' }}</h2><p class="sub">{{ section.subtitle || '' }}</p></div><button class="view-all-link" (click)="setPage('shop')">Browse all products →</button></div>
+                    <div class="grid cards widget-grid" [style.--widget-cols]="section.columns || 4" [style.--tablet-cols]="section.responsive?.tablet?.columns || 3" [style.--mobile-cols]="section.responsive?.mobile?.columns || 2">
+                      @for (product of sectionProducts(section); track product.id) { <app-product-card [product]="product" /> }
+                      @empty { <div class="empty"><h3>Products coming soon</h3><p>Products from this store will appear here.</p></div> }
+                    </div>
+                  </section>
+                } @else if (section.type === 'category_grid') {
+                  <section class="wrap custom-categories"><div class="section-head"><div><p class="overline">{{ section.badge || 'BROWSE OUR RANGE' }}</p><h2>{{ section.title || 'Shop by category' }}</h2><p class="sub">{{ section.subtitle || '' }}</p></div></div><div class="custom-category-grid">@for (category of productCategories(); track category.id) { <button type="button" (click)="openCategory(category.id)"><strong>{{ category.name }}</strong><span>Explore collection →</span></button> } @empty { <p class="empty">Store categories will appear here as products are added.</p> }</div></section>
+                } @else if (section.type === 'banner') {
+                  <section class="promo-banner-wrap"><div class="promo-banner" [style.background-image]="'linear-gradient(rgba(0,0,0,0.48), rgba(0,0,0,0.64)), url(' + (section.image_url || '') + ')' "><div class="wrap banner-inner"><p class="overline-light">{{ section.badge }}</p><h2>{{ section.title }}</h2><p>{{ section.subtitle }}</p><button class="banner-btn" (click)="handleBannerAction(section.button_link)">{{ section.button_text || 'Explore now' }} →</button></div></div></section>
+                } @else if (section.type === 'rich_text') {
+                  <section class="story wrap"><p class="overline">{{ section.badge || page.name }}</p><h2>{{ section.title }}</h2><p class="story-body">{{ section.content || section.subtitle }}</p></section>
+                } @else if (section.type === 'image') {
+                  <section class="wrap custom-image-section">@if (section.image_url) { <img [src]="section.image_url" [alt]="section.title || page.name" /> }@if (section.title) { <p>{{ section.title }}</p> }</section>
+                } @else if (section.type === 'gallery') {
+                  <section class="gallery-section wrap"><div class="section-head-center"><p class="overline">{{ section.badge || 'GALLERY' }}</p><h2>{{ section.title || 'A closer look' }}</h2><p class="sub">{{ section.subtitle }}</p></div><div class="gallery-grid">@for (item of (section.items || []); track $index) { <div class="gallery-card"><img [src]="item.image || ''" [alt]="item.title" /><div class="gallery-overlay"><h4>{{ item.title }}</h4>@if(item.desc){<p>{{ item.desc }}</p>}</div></div> }</div></section>
+                } @else if (section.type === 'trust_bar') {
+                  <section class="trust"><div class="wrap"><span>✓ Secure & verified checkout</span><span>◇ Carefully curated products</span><span>↗ Reliable dispatch</span></div></section>
+                } @else if (section.type === 'faq') {
+                  <section class="wrap custom-faq"><p class="overline">HELP & DETAILS</p><h2>{{ section.title || 'Frequently asked questions' }}</h2>@for (item of (section.items || []); track $index) { <details><summary>{{ item.title }}</summary><p>{{ item.desc }}</p></details> }</section>
+                } @else if (section.type === 'testimonials') {
+                  <section class="wrap custom-testimonials"><p class="overline">KIND WORDS</p><h2>{{ section.title || 'Loved by customers' }}</h2><div>@for (item of (section.items || []); track $index) { <blockquote>“{{ item.desc || item.title }}”</blockquote> } @empty { <blockquote>“{{ section.subtitle || 'Thoughtful design and a lovely experience.' }}”</blockquote> }</div></section>
+                } @else if (section.type === 'reviews') {
+                  @if (reviews().length) { <section class="store-reviews wrap"><p class="overline">SHOPPER REVIEWS</p><h2>{{ section.title || 'Customer reviews' }}</h2><div class="review-grid">@for (review of reviews(); track review.id) { <article><app-stars [value]="review.rating" /><strong>{{ review.title || 'Verified review' }}</strong>@if(review.body){<p>{{ review.body }}</p>}<small>{{ review.author?.name || 'Customer' }}</small></article> }</div></section> }
+                } @else if (section.type === 'newsletter') {
+                  <section class="newsletter"><div class="wrap"><div><p class="overline-light">KEEP IN TOUCH</p><h2>{{ section.title || 'Stay in the loop' }}</h2><p>{{ section.subtitle }}</p></div><form (submit)="onNewsletterSubmit($event)"><input type="email" placeholder="Your email address" required /><button type="submit">{{ section.button_text || 'Subscribe →' }}</button></form></div></section>
+                } @else if (section.type === 'contact_card') {
+                  <section class="contact-card-section wrap"><div class="contact-card-box"><div><p class="overline">LET'S CONNECT</p><h2>{{ section.title || 'Connect with our team' }}</h2><p>{{ section.subtitle }}</p></div><div class="contact-card-meta"><span>✉ {{ s.contact_email || 'hello@markethub.test' }}</span><button class="shop-btn-sm" (click)="setPage('contact')">Contact us →</button></div></div></section>
+                } @else if (section.type === 'spacer') { <div class="custom-spacer" [style.height.px]="section.responsive?.desktop?.padding || 48"></div> }
+              }
+            } @empty { <section class="wrap empty"><h2>This page is being prepared</h2></section> }
           </main>
         }
 
@@ -534,7 +583,7 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
               }
 
               <!-- 3. FEATURED PRODUCTS CATALOGUE SECTION -->
-              @if (section.enabled && section.type === 'featured_products') {
+              @if (section.enabled && (section.type === 'featured_products' || section.type === 'product_grid')) {
                 <section class="catalogue wrap" id="catalogue">
                   <div class="section-head">
                     <div>
@@ -544,8 +593,8 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
                     </div>
                     <button class="view-all-link" (click)="setPage('shop')">View all {{ products().length }} products →</button>
                   </div>
-                  <div class="grid cards">
-                    @for (p of products(); track p.id) {
+                  <div class="grid cards widget-grid" [style.--widget-cols]="section.columns || 4" [style.--tablet-cols]="section.responsive?.tablet?.columns || 3" [style.--mobile-cols]="section.responsive?.mobile?.columns || 2">
+                    @for (p of sectionProducts(section); track p.id) {
                       <app-product-card [product]="p" />
                     } @empty {
                       <div class="empty">
@@ -554,6 +603,13 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
                       </div>
                     }
                   </div>
+                </section>
+              }
+
+              @if (section.enabled && section.type === 'category_grid') {
+                <section class="wrap custom-categories">
+                  <div class="section-head"><div><p class="overline">{{ section.badge || 'BROWSE OUR RANGE' }}</p><h2>{{ section.title || 'Shop by category' }}</h2><p class="sub">{{ section.subtitle || 'Explore collections from our store.' }}</p></div></div>
+                  <div class="custom-category-grid">@for (category of productCategories(); track category.id) { <button type="button" (click)="openCategory(category.id)"><strong>{{ category.name }}</strong><span>Explore collection →</span></button> } @empty { <p class="empty">Store categories will appear here as products are added.</p> }</div>
                 </section>
               }
 
@@ -684,6 +740,16 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
                   </div>
                 </section>
               }
+              @if (section.enabled && section.type === 'image') {
+                <section class="wrap custom-image-section">@if (section.image_url) { <img [src]="section.image_url" [alt]="section.title || 'Store image'" /> }@if (section.title) { <p>{{ section.title }}</p> }</section>
+              }
+              @if (section.enabled && section.type === 'faq') {
+                <section class="wrap custom-faq"><p class="overline">HELP & DETAILS</p><h2>{{ section.title || 'Frequently asked questions' }}</h2>@for (item of (section.items || []); track $index) { <details><summary>{{ item.title }}</summary><p>{{ item.desc }}</p></details> }</section>
+              }
+              @if (section.enabled && section.type === 'testimonials') {
+                <section class="wrap custom-testimonials"><p class="overline">KIND WORDS</p><h2>{{ section.title || 'Loved by customers' }}</h2><div>@for (item of (section.items || []); track $index) { <blockquote>“{{ item.desc || item.title }}”</blockquote> } @empty { <blockquote>“{{ section.subtitle || 'Thoughtful design and a lovely experience.' }}”</blockquote> }</div></section>
+              }
+              @if (section.enabled && section.type === 'spacer') { <div class="custom-spacer" [style.height.px]="section.responsive?.desktop?.padding || 48"></div> }
             }
 
             <!-- CUSTOMER REVIEWS (IF PRESENT) -->
@@ -751,6 +817,7 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
       </div>
     }
   `,
+<<<<<<< HEAD
   styles: [`
     :host { display: block; }
     .storefront {
@@ -2325,6 +2392,9 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
       }
     }
   `],
+=======
+  styles: [],
+>>>>>>> b68564f05334408b3282e23403181d0179c6a65b
 })
 export class StoreComponent implements OnInit {
   auth = inject(AuthService);
@@ -2338,6 +2408,13 @@ export class StoreComponent implements OnInit {
   reviews = signal<Review[]>([]);
   following = signal(false);
   activePage = signal<StorePageTab>('home');
+  categoryFilter = signal<number | null>(null);
+  publishedPages = computed(() => (this.store()?.pages || []).filter((page) => page.status === 'published'));
+  customPage = computed(() => this.publishedPages().find((page) => page.slug === this.activePage()) || null);
+  shopProducts = computed(() => {
+    const selected = this.categoryFilter();
+    return selected ? this.products().filter((product) => product.category?.id === selected) : this.products();
+  });
   currentYear = new Date().getFullYear();
 
   // Navigation, Profile & Currency UI states
@@ -2517,13 +2594,11 @@ export class StoreComponent implements OnInit {
     // Check query param for page
     this.route.queryParamMap.subscribe((qp) => {
       const page = qp.get('page');
-      if (page === 'about' || page === 'contact' || page === 'shop' || page === 'home') {
-        this.activePage.set(page as StorePageTab);
-      }
+      this.activePage.set(page || 'home');
     });
 
     this.api.marketStore(slug).subscribe((res) => {
-      this.store.set(res.data.store);
+      this.store.set({ ...res.data.store, pages: res.data.pages || [] });
       this.products.set(res.data.products);
       if (this.auth.isLoggedIn()) {
         this.api.wishlistIds().subscribe({
@@ -2600,6 +2675,43 @@ export class StoreComponent implements OnInit {
     } else {
       window.location.href = link;
     }
+  }
+
+  sectionProducts(section: StorePageSection): ProductCard[] {
+    let rows = [...this.products()];
+    switch (section.product_source) {
+      case 'featured':
+        rows = rows.filter((product) => product.is_featured);
+        break;
+      case 'bestsellers':
+        rows.sort((a, b) => (b.best_selling_count || 0) - (a.best_selling_count || 0));
+        break;
+      case 'category':
+        if (section.category_id) rows = rows.filter((product) => product.category?.id === section.category_id);
+        break;
+      case 'manual':
+        rows = (section.product_ids || []).map((id) => this.products().find((product) => product.id === id)).filter((product): product is ProductCard => !!product);
+        break;
+    }
+    return rows.slice(0, Math.max(1, Math.min(24, section.limit || 8)));
+  }
+
+  productCategories(): { id: number; name: string; image: string | null }[] {
+    const categories = new Map<number, { id: number; name: string; image: string | null }>();
+    for (const product of this.products()) {
+      const category = product.category;
+      if (category && !categories.has(category.id)) categories.set(category.id, { id: category.id, name: category.name, image: product.image || null });
+    }
+    return [...categories.values()];
+  }
+
+  categoryName(id: number | null): string {
+    return this.productCategories().find((category) => category.id === id)?.name || 'selected category';
+  }
+
+  openCategory(id: number) {
+    this.categoryFilter.set(id);
+    this.setPage('shop');
   }
 
   toggleFollow(storeId: number) {

@@ -942,7 +942,8 @@ export class SellerShellComponent {
   ];
 
   readonly commerceItems: NavEntry[] = [
-    { key: 'stores', label: 'Stores', icon: 'store' },
+    { key: 'stores', label: 'Stores & page builder', icon: 'store' },
+    { key: 'templates', label: 'Template marketplace', icon: 'store' },
     { key: 'orders', label: 'Orders', icon: 'orders' },
     { key: 'products', label: 'Products', icon: 'products' },
     { key: 'inventory', label: 'Inventory', icon: 'inventory' },

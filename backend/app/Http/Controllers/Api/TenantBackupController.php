@@ -17,6 +17,10 @@ class TenantBackupController extends Controller
 {
     public const TABLES = [
         'stores',
+        'pages',
+        'page_revisions',
+        'template_purchases',
+        'tenant_templates',
         'categories',
         'products',
         'product_variants',
