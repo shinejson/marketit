@@ -32,14 +32,15 @@ class AdminBackupController extends Controller
         'core' => [
             'Core records',
             'Settings plus tenants, stores, plans, subscriptions and roles.',
-            ['platform_settings', 'tenants', 'stores', 'plans', 'subscriptions', 'subscription_invoices', 'role_definitions', 'user_roles'],
+            ['platform_settings', 'tenants', 'stores', 'plans', 'subscriptions', 'subscription_invoices', 'role_definitions', 'user_roles', 'template_categories', 'page_templates'],
         ],
         'full' => [
             'Full snapshot',
             'Everything above plus the catalogue, orders and user accounts.',
             [
                 'platform_settings', 'tenants', 'stores', 'plans', 'subscriptions', 'subscription_invoices',
-                'role_definitions', 'user_roles', 'users', 'categories', 'products', 'product_variants',
+                'role_definitions', 'user_roles', 'template_categories', 'page_templates', 'template_purchases',
+                'tenant_templates', 'pages', 'page_revisions', 'users', 'categories', 'products', 'product_variants',
                 'product_images', 'inventories', 'orders', 'order_items', 'seller_orders', 'seller_settlements',
             ],
         ],

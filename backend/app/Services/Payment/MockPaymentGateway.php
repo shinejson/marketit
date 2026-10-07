@@ -3,7 +3,10 @@
 namespace App\Services\Payment;
 
 use App\Models\Order;
+use App\Models\PageTemplate;
 use App\Models\PaymentTransaction;
+use App\Models\TemplatePurchase;
+use App\Models\User;
 use Illuminate\Support\Str;
 
 class MockPaymentGateway implements PaymentGateway
@@ -17,6 +20,30 @@ class MockPaymentGateway implements PaymentGateway
             type: 'redirect',
             url: '/api/payments/mock/pay?ref='.$ref.'&order='.$order->id,
             meta: ['amount' => $amount, 'payment_method' => $paymentMethod ?: 'card'],
+        );
+    }
+
+    public function createTemplateIntent(
+        TemplatePurchase $purchase,
+        PageTemplate $template,
+        User $user,
+        string $amount,
+        string $currency,
+        ?string $paymentMethod = null,
+    ): PaymentIntentResult {
+        $ref = 'mock_template_'.Str::uuid()->toString();
+
+        return new PaymentIntentResult(
+            gatewayRef: $ref,
+            type: 'mock',
+            url: '/api/payments/mock/template-pay?ref='.$ref.'&purchase='.$purchase->id,
+            meta: [
+                'amount' => $amount,
+                'currency' => strtoupper($currency),
+                'payment_method' => $paymentMethod ?: 'card',
+                'template_id' => $template->id,
+                'user_id' => $user->id,
+            ],
         );
     }
 

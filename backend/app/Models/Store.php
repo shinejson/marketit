@@ -61,6 +61,21 @@ class Store extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function pages(): HasMany
+    {
+        return $this->hasMany(Page::class);
+    }
+
+    public function templateInstallations(): HasMany
+    {
+        return $this->hasMany(TenantTemplate::class);
+    }
+
+    public function pageRevisions(): HasMany
+    {
+        return $this->hasMany(PageRevision::class);
+    }
+
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);

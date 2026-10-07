@@ -117,6 +117,7 @@ import {
   SocialAccount,
   SocialPost,
   Storefront,
+  StorefrontPage,
   Subscription,
   SubscriptionStats,
   TenantApplication,
@@ -136,6 +137,12 @@ import {
   SupportTicket,
   SupportTicketSummary,
   TenantSupportOverview,
+  TemplateCategory,
+  PageTemplate,
+  TemplatePurchase,
+  TenantPage,
+  PageRevision,
+  StorePageSection,
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -155,7 +162,7 @@ export class ApiService {
   }
 
   marketStore(slug: string) {
-    return this.http.get<{ data: { store: Storefront; products: ProductCard[] } }>(`/api/market/stores/${slug}`);
+    return this.http.get<{ data: { store: Storefront; products: ProductCard[]; pages: StorefrontPage[] } }>(`/api/market/stores/${slug}`);
   }
 
   contactStore(slug: string, payload: { name: string; email: string; subject?: string; message: string }) {
@@ -700,7 +707,65 @@ export class ApiService {
   }
 
   updateStore(id: number, payload: any) {
-    return this.http.patch<{ data: any }>(`/api/tenant/stores/${id}`, payload);
+    return this.http.patch<{ data: Storefront }>(`/api/tenant/stores/${id}`, payload);
+  }
+
+  templateCatalog(params: Record<string, string | number> = {}) {
+    return this.http.get<{ data: PageTemplate[]; categories: TemplateCategory[]; meta: PageMeta; currency: string }>(
+      '/api/tenant/templates', { params },
+    );
+  }
+
+  templateLibrary() {
+    return this.http.get<{ data: TemplatePurchase[] }>('/api/tenant/templates/mine');
+  }
+
+  purchaseTemplate(id: number, paymentMethod?: string) {
+    return this.http.post<{ data: { purchase: TemplatePurchase; already_owned: boolean; checkout: null | { type: string; url: string; reference: string } } }>(
+      `/api/tenant/templates/${id}/purchase`, paymentMethod ? { payment_method: paymentMethod } : {},
+    );
+  }
+
+  installTemplate(id: number, storeId: number) {
+    return this.http.post<{ data: { installation: unknown; store: Storefront } }>(
+      `/api/tenant/templates/${id}/install`, { store_id: storeId },
+    );
+  }
+
+  tenantPages(storeId: number) {
+    return this.http.get<{ data: TenantPage[] }>(`/api/tenant/stores/${storeId}/pages`);
+  }
+
+  createTenantPage(storeId: number, payload: Partial<TenantPage> & { name: string; content: { schema_version: number; sections: StorePageSection[] } }) {
+    return this.http.post<{ data: TenantPage }>(`/api/tenant/stores/${storeId}/pages`, payload);
+  }
+
+  updateTenantPage(storeId: number, pageId: number, payload: Partial<TenantPage>) {
+    return this.http.patch<{ data: TenantPage }>(`/api/tenant/stores/${storeId}/pages/${pageId}`, payload);
+  }
+
+  deleteTenantPage(storeId: number, pageId: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/stores/${storeId}/pages/${pageId}`);
+  }
+
+  tenantHomeRevisions(storeId: number) {
+    return this.http.get<{ data: PageRevision[] }>(`/api/tenant/stores/${storeId}/page-revisions`);
+  }
+
+  tenantPageRevisions(storeId: number, pageId: number) {
+    return this.http.get<{ data: PageRevision[] }>(`/api/tenant/stores/${storeId}/pages/${pageId}/revisions`);
+  }
+
+  restoreTenantHomeRevision(storeId: number, revisionId: number) {
+    return this.http.post<{ data: Storefront; restored_version: number }>(
+      `/api/tenant/stores/${storeId}/page-revisions/${revisionId}/restore`, {},
+    );
+  }
+
+  restoreTenantPageRevision(storeId: number, pageId: number, revisionId: number) {
+    return this.http.post<{ data: TenantPage; restored_version: number }>(
+      `/api/tenant/stores/${storeId}/pages/${pageId}/revisions/${revisionId}/restore`, {},
+    );
   }
 
   deleteStore(id: number) {
@@ -1008,6 +1073,46 @@ export class ApiService {
     return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/marketing/posts/${id}`);
   }
   // ---------------------------------------------------------- super admin
+
+  adminTemplateCategories() {
+    return this.http.get<{ data: TemplateCategory[] }>('/api/admin/template-categories');
+  }
+
+  createAdminTemplateCategory(payload: Partial<TemplateCategory> & { name: string }) {
+    return this.http.post<{ data: TemplateCategory }>('/api/admin/template-categories', payload);
+  }
+
+  updateAdminTemplateCategory(id: number, payload: Partial<TemplateCategory>) {
+    return this.http.patch<{ data: TemplateCategory }>(`/api/admin/template-categories/${id}`, payload);
+  }
+
+  deleteAdminTemplateCategory(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/template-categories/${id}`);
+  }
+
+  adminTemplates(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<PageTemplate[]>>('/api/admin/templates', { params });
+  }
+
+  createAdminTemplate(payload: Partial<PageTemplate>) {
+    return this.http.post<{ data: PageTemplate }>('/api/admin/templates', payload);
+  }
+
+  updateAdminTemplate(id: number, payload: Partial<PageTemplate>) {
+    return this.http.patch<{ data: PageTemplate }>(`/api/admin/templates/${id}`, payload);
+  }
+
+  publishAdminTemplate(id: number) {
+    return this.http.post<{ data: PageTemplate }>(`/api/admin/templates/${id}/publish`, {});
+  }
+
+  deleteAdminTemplate(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/admin/templates/${id}`);
+  }
+
+  adminTemplatePurchases(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<TemplatePurchase[]>>('/api/admin/template-purchases', { params });
+  }
 
   adminOverview(days = 30) {
     return this.http.get<{ data: AdminOverview }>('/api/admin/overview', { params: { days } });

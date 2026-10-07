@@ -49,6 +49,8 @@ type PreviewPage = 'home' | 'about' | 'contact';
           </div>
 
           <div class="top-actions">
+            <a class="btn ghost" [routerLink]="['/tenant/stores', s.id, 'builder']">Page Builder ↗</a>
+            <a class="btn ghost" routerLink="/tenant/templates">Templates ✦</a>
             <a class="btn ghost" [href]="'/stores/' + s.slug" target="_blank">Open storefront ↗</a>
             <button class="btn publish" type="button" (click)="togglePublish()" [disabled]="saving()">
               {{ s.status === 'active' ? 'Unpublish' : 'Publish store' }}

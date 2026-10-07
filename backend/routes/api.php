@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\AdminReviewController;
 use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AdminSettingController;
 use App\Http\Controllers\Api\AdminSubscriptionController;
+use App\Http\Controllers\Api\AdminTemplateController;
 use App\Http\Controllers\Api\AdminSupportController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\AiController;
@@ -58,6 +59,8 @@ use App\Http\Controllers\Api\SellerOrderController;
 use App\Http\Controllers\Api\SellerPublicApiController;
 use App\Http\Controllers\Api\TenantAuditController;
 use App\Http\Controllers\Api\TenantController;
+use App\Http\Controllers\Api\TenantPageController;
+use App\Http\Controllers\Api\TenantTemplateController;
 use App\Http\Controllers\Api\TenantReviewController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\WishlistController;
@@ -101,6 +104,7 @@ Route::middleware('throttle:60,1')->group(function () {
 Route::post('/payments/webhook/{gateway}', [PaymentController::class, 'webhook'])->middleware('throttle:120,1');
 Route::get('/payments/methods', [PaymentController::class, 'methods'])->middleware('throttle:60,1');
 Route::get('/payments/mock/pay', [PaymentController::class, 'mockPay']);
+Route::get('/payments/mock/template-pay', [PaymentController::class, 'mockTemplatePay']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -211,6 +215,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/stores/{store}', [TenantController::class, 'updateStore']);
         Route::delete('/stores/{store}', [TenantController::class, 'destroyStore']);
         Route::post('/stores/{store}/media', [TenantController::class, 'uploadMedia']);
+
+        // Visual storefront builder: independent page templates, reusable copies,
+        // custom pages and immutable revision history.
+        Route::get('/templates', [TenantTemplateController::class, 'catalog']);
+        Route::get('/templates/mine', [TenantTemplateController::class, 'mine']);
+        Route::post('/templates/{template}/purchase', [TenantTemplateController::class, 'purchase']);
+        Route::post('/templates/{template}/install', [TenantTemplateController::class, 'install']);
+
+        Route::get('/stores/{store}/pages', [TenantPageController::class, 'index']);
+        Route::post('/stores/{store}/pages', [TenantPageController::class, 'store']);
+        Route::get('/stores/{store}/pages/{page}/revisions', [TenantPageController::class, 'pageRevisions']);
+        Route::post('/stores/{store}/pages/{page}/revisions/{revision}/restore', [TenantPageController::class, 'restorePageRevision']);
+        Route::patch('/stores/{store}/pages/{page}', [TenantPageController::class, 'update']);
+        Route::delete('/stores/{store}/pages/{page}', [TenantPageController::class, 'destroy']);
+        Route::get('/stores/{store}/page-revisions', [TenantPageController::class, 'homeRevisions']);
+        Route::post('/stores/{store}/page-revisions/{revision}/restore', [TenantPageController::class, 'restoreHomeRevision']);
 
         // Workspace currency: active code, catalog, and a dry-run of what a
         // switch would do to stored prices.
@@ -459,6 +479,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/tenants/{tenant}', [AdminController::class, 'updateTenant']);
         Route::get('/stores', [AdminController::class, 'stores']);
         Route::patch('/stores/{store}', [AdminController::class, 'updateStore']);
+        Route::get('/template-categories', [AdminTemplateController::class, 'categories']);
+        Route::post('/template-categories', [AdminTemplateController::class, 'storeCategory']);
+        Route::patch('/template-categories/{category}', [AdminTemplateController::class, 'updateCategory']);
+        Route::delete('/template-categories/{category}', [AdminTemplateController::class, 'destroyCategory']);
+        Route::get('/templates', [AdminTemplateController::class, 'index']);
+        Route::post('/templates', [AdminTemplateController::class, 'store']);
+        Route::get('/template-purchases', [AdminTemplateController::class, 'purchases']);
+        Route::patch('/templates/{template}', [AdminTemplateController::class, 'update']);
+        Route::post('/templates/{template}/publish', [AdminTemplateController::class, 'publish']);
+        Route::delete('/templates/{template}', [AdminTemplateController::class, 'destroy']);
         Route::get('/orders', [AdminController::class, 'orders']);
         Route::get('/metrics', [AdminController::class, 'metrics']);
         Route::get('/overview', AdminOverviewController::class);
