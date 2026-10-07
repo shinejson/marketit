@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, OnInit } from '@angular/core';
+import { Component, HostListener, computed, inject, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
@@ -6,6 +6,7 @@ import { ProductCard, Storefront, StorePageSection, Review } from '../../core/mo
 import { ProductCardComponent } from '../../shared/product-card.component';
 import { StarRatingComponent } from '../../shared/star-rating.component';
 import { AuthService } from '../../core/auth.service';
+import { CurrencyService } from '../../core/currency.service';
 
 type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
 
@@ -22,9 +23,15 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
         [class.editorial]="theme().font === 'editorial' || theme().font === 'classic'"
         [class.friendly]="theme().font === 'friendly'"
       >
-        <!-- Store Navigation Header -->
+        <!-- DEDICATED STORE TOPNAV -->
         <header class="store-nav wrap">
+          <!-- Left: Back to MarketHub + Store Brand -->
           <div class="nav-brand-group">
+            <a routerLink="/" class="back-market-link" title="Return to MarketHub Marketplace">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+              <span>MarketHub</span>
+            </a>
+            <span class="nav-sep">/</span>
             <a class="brand" (click)="setPage('home')">
               @if (s.logo_path || theme().logo_image) {
                 <img [src]="s.logo_path || theme().logo_image" [alt]="s.name" class="brand-logo" />
@@ -35,6 +42,7 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
             </a>
           </div>
 
+          <!-- Center: Store Navigation Links -->
           <nav class="nav-links">
             <button type="button" [class.active]="activePage() === 'home'" (click)="setPage('home')">Home</button>
             <button type="button" [class.active]="activePage() === 'shop'" (click)="setPage('shop')">Shop</button>
@@ -50,18 +58,152 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
             }
           </nav>
 
+          <!-- Right: Currency Converter, Cart Bag, Follow, Login / Profile -->
           <div class="nav-actions">
+            <!-- Currency Converter Picker -->
+            <label class="currency-picker" title="Show prices in">
+              <span class="curr-sym">{{ currency.displayMeta().symbol }}</span>
+              <select [value]="currency.display()" (change)="onCurrencyChange($event)" aria-label="Display currency">
+                @for (c of currency.currencies(); track c.code) {
+                  <option [value]="c.code">{{ c.code }}</option>
+                }
+              </select>
+            </label>
+
+            <!-- Follow Store Button -->
             @if (auth.isLoggedIn()) {
-              <button type="button" class="btn-follow" [class.on]="following()" (click)="toggleFollow(s.id)">
+              <button type="button" class="btn-follow" [class.on]="following()" (click)="toggleFollow(s.id)" title="Follow store">
                 {{ following() ? '♥ Following' : '♡ Follow' }}
               </button>
             }
-            <a routerLink="/cart" class="btn-bag">
+
+            <!-- Bag / Cart Shortcut -->
+            <a routerLink="/cart" class="btn-bag" title="View Cart Bag">
               <span>Bag</span>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             </a>
+
+            <!-- Auth Actions / User Profile -->
+            @if (!auth.isLoggedIn()) {
+              <div class="auth-btns">
+                <a [routerLink]="['/login']" [queryParams]="{ returnUrl: '/stores/' + s.slug }" class="btn-auth ghost">Log in</a>
+                <a [routerLink]="['/register']" [queryParams]="{ returnUrl: '/stores/' + s.slug }" class="btn-auth solid">Join</a>
+              </div>
+            } @else {
+              <div class="dropdown-wrap" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="profile-btn"
+                  (click)="toggleProfile($event)"
+                  [attr.aria-expanded]="profileOpen()"
+                  title="Account menu"
+                >
+                  @if (auth.user()?.avatar_url) {
+                    <img [src]="auth.user()?.avatar_url" [alt]="auth.user()?.name" class="avatar-img" />
+                  } @else {
+                    <span class="avatar-initials">{{ userInitials() }}</span>
+                  }
+                  <span class="who-meta">
+                    <span class="who-name">{{ auth.user()?.name }}</span>
+                    <span class="who-role">{{ roleLabel() }}</span>
+                  </span>
+                  <svg class="chevron-icon" [class.open]="profileOpen()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                @if (profileOpen()) {
+                  <div class="profile-dropdown-menu">
+                    <div class="drop-user-info">
+                      <p class="drop-user-name">{{ auth.user()?.name }}</p>
+                      <p class="drop-user-email">{{ auth.user()?.email }}</p>
+                    </div>
+                    <div class="drop-menu-links">
+                      <a routerLink="/profile" (click)="closeProfile()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span>My profile</span>
+                      </a>
+                      <a routerLink="/orders" (click)="closeProfile()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <span>My orders</span>
+                      </a>
+                      <a routerLink="/quotes" (click)="closeProfile()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 1 1 16.1-3.8z"/><path d="M8.5 10.5h7M8.5 13.5h4"/></svg>
+                        <span>My quotes</span>
+                      </a>
+                      <a routerLink="/wishlist" (click)="closeProfile()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1l1.7 1.7L12 21.2l7.1-6.8 1.7-1.7a5 5 0 0 0 0-7.1z"/></svg>
+                        <span>Wishlist</span>
+                      </a>
+                      @if (hasTenantRole()) {
+                        <a routerLink="/tenant" (click)="closeProfile()">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                          <span>Tenant console</span>
+                        </a>
+                      }
+                      @if (hasAdminRole()) {
+                        <a routerLink="/admin" (click)="closeProfile()">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          <span>Admin console</span>
+                        </a>
+                      }
+                    </div>
+                    <button type="button" class="drop-logout-btn" (click)="onLogout()">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                      <span>Log out</span>
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Mobile Hamburger Toggle -->
+            <button type="button" class="mobile-toggle" (click)="toggleMobileMenu()" aria-label="Toggle navigation">
+              <span></span><span></span><span></span>
+            </button>
           </div>
         </header>
+
+        <!-- Mobile Drawer Menu -->
+        @if (mobileMenuOpen()) {
+          <div class="mobile-drawer-backdrop" (click)="closeMobileMenu()">
+            <div class="mobile-drawer" (click)="$event.stopPropagation()">
+              <div class="drawer-head">
+                <b>{{ s.name }}</b>
+                <button type="button" class="drawer-close" (click)="closeMobileMenu()">×</button>
+              </div>
+              <div class="drawer-nav">
+                <button type="button" (click)="setPage('home'); closeMobileMenu()">Home</button>
+                <button type="button" (click)="setPage('shop'); closeMobileMenu()">Shop catalogue</button>
+                @if (aboutConfig().enabled !== false) {
+                  <button type="button" (click)="setPage('about'); closeMobileMenu()">Our story</button>
+                }
+                @if (contactConfig().enabled !== false) {
+                  <button type="button" (click)="setPage('contact'); closeMobileMenu()">Contact</button>
+                }
+              </div>
+              <div class="drawer-actions">
+                <label class="drawer-curr">
+                  <span>Display currency:</span>
+                  <select [value]="currency.display()" (change)="onCurrencyChange($event)">
+                    @for (c of currency.currencies(); track c.code) {
+                      <option [value]="c.code">{{ c.code }} ({{ c.symbol }})</option>
+                    }
+                  </select>
+                </label>
+                @if (!auth.isLoggedIn()) {
+                  <a [routerLink]="['/login']" [queryParams]="{ returnUrl: '/stores/' + s.slug }" class="drawer-btn" (click)="closeMobileMenu()">Log in</a>
+                  <a [routerLink]="['/register']" [queryParams]="{ returnUrl: '/stores/' + s.slug }" class="drawer-btn solid" (click)="closeMobileMenu()">Join</a>
+                } @else {
+                  <a routerLink="/profile" class="drawer-btn" (click)="closeMobileMenu()">My Profile ({{ auth.user()?.name }})</a>
+                  <a routerLink="/orders" class="drawer-btn" (click)="closeMobileMenu()">My Orders</a>
+                  <button type="button" class="drawer-btn ghost" (click)="onLogout()">Log out</button>
+                }
+                <a routerLink="/" class="drawer-market-back" (click)="closeMobileMenu()">← Back to MarketHub</a>
+              </div>
+            </div>
+          </div>
+        }
 
         <!-- SUB-PAGE: ABOUT / OUR STORY -->
         @if (activePage() === 'about') {
@@ -564,14 +706,16 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
           </main>
         }
 
-        <!-- STORE FOOTER -->
+        <!-- DEDICATED STORE FOOTER -->
         <footer id="contact">
           <div class="wrap">
             <div class="foot-col-brand">
               <b>{{ s.name }}</b>
               <p>{{ s.description || 'Independent artisan storefront on MarketHub.' }}</p>
-              <div class="foot-socials">
-                <span>MarketHub Certified Storefront</span>
+              <div class="foot-badge-wrap">
+                <a routerLink="/" class="market-pill-badge">
+                  <span>✦ Certified MarketHub Storefront</span>
+                </a>
               </div>
             </div>
 
@@ -596,7 +740,7 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
           </div>
           <div class="foot-bottom wrap">
             <small>© {{ currentYear }} {{ s.name }}. All rights reserved.</small>
-            <a routerLink="/" class="market-brand-link">Powered by MarketHub</a>
+            <a routerLink="/" class="market-brand-link">Back to MarketHub Marketplace →</a>
           </div>
         </footer>
       </div>
@@ -616,6 +760,9 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
       background: var(--store-surface);
       color: #191b18;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
     .storefront.editorial {
       font-family: 'Fraunces', Georgia, serif;
@@ -624,53 +771,86 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
       font-family: 'Trebuchet MS', 'Nunito', sans-serif;
     }
 
-    /* Navigation */
+    /* Wrap utility */
+    .wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+      box-sizing: border-box;
+    }
+
+    /* Dedicated Store Navigation Header */
     .store-nav {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 20px;
-      height: 78px;
+      height: 76px;
       border-bottom: 1px solid #ebe8e1;
       position: sticky;
       top: 0;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      z-index: 40;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(12px);
+      z-index: 50;
+      width: 100%;
     }
     .nav-brand-group {
       display: flex;
       align-items: center;
       gap: 12px;
+      flex-shrink: 0;
+    }
+    .back-market-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 20px;
+      background: #f4f2ec;
+      color: #5d665d;
+      font-size: 11px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .back-market-link:hover {
+      background: #eae6dd;
+      color: #191b18;
+    }
+    .nav-sep {
+      color: #d2cdc4;
+      font-size: 14px;
     }
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       cursor: pointer;
       text-decoration: none;
     }
     .brand-logo {
-      height: 38px;
-      max-width: 140px;
+      height: 36px;
+      max-width: 130px;
       object-fit: contain;
       border-radius: 6px;
     }
     .brand-initials {
       display: grid;
       place-items: center;
-      width: 38px;
-      height: 38px;
+      width: 36px;
+      height: 36px;
       border-radius: 10px;
       background: var(--store-primary);
       color: white;
       font: 700 15px Georgia, serif;
     }
     .brand-name {
-      font: 700 21px 'Fraunces', Georgia, serif;
+      font: 700 20px 'Fraunces', Georgia, serif;
       color: var(--store-primary);
       letter-spacing: -0.02em;
     }
+
+    /* Nav Links */
     .nav-links {
       display: flex;
       align-items: center;
@@ -704,15 +884,51 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
       background: var(--store-accent);
       border-radius: 2px;
     }
+
+    /* Actions */
     .nav-actions {
       display: flex;
       align-items: center;
       gap: 12px;
     }
+
+    /* Currency Converter Picker */
+    .currency-picker {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      border: 1px solid #dcd8cf;
+      border-radius: 20px;
+      background: #faf8f5;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .currency-picker:hover {
+      border-color: var(--store-primary);
+    }
+    .curr-sym {
+      color: var(--store-accent);
+      font-size: 12px;
+    }
+    .currency-picker select {
+      border: 0;
+      background: transparent;
+      font-size: 11px;
+      font-weight: 700;
+      color: #2b312b;
+      cursor: pointer;
+      outline: 0;
+      padding: 0;
+    }
+
+    /* Follow & Bag */
     .btn-follow {
-      padding: 7px 15px;
+      padding: 6px 14px;
       border: 1px solid var(--store-primary);
-      border-radius: 30px;
+      border-radius: 20px;
       background: transparent;
       color: var(--store-primary);
       font-size: 12px;
@@ -728,8 +944,8 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 7px 14px;
-      border-radius: 30px;
+      padding: 6px 14px;
+      border-radius: 20px;
       background: #f4f2ec;
       color: #242924;
       font-size: 12px;
@@ -737,7 +953,289 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
       text-decoration: none;
     }
 
-    /* Common Typography & Overlines */
+    /* Auth Buttons (Logged Out) */
+    .auth-btns {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-auth {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-auth.ghost {
+      border: 1px solid #dcd8cf;
+      background: transparent;
+      color: #2b312b;
+    }
+    .btn-auth.ghost:hover {
+      border-color: var(--store-primary);
+      color: var(--store-primary);
+    }
+    .btn-auth.solid {
+      background: var(--store-primary);
+      color: white;
+      border: 1px solid var(--store-primary);
+    }
+
+    /* User Profile Dropdown (Logged In) */
+    .dropdown-wrap {
+      position: relative;
+    }
+    .profile-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px 4px 4px;
+      border: 1px solid #dcd8cf;
+      border-radius: 30px;
+      background: #faf8f5;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .profile-btn:hover {
+      border-color: var(--store-primary);
+    }
+    .avatar-img {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .avatar-initials {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--store-primary);
+      color: white;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .who-meta {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      line-height: 1.1;
+    }
+    .who-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #191b18;
+      max-width: 100px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .who-role {
+      font-size: 9px;
+      color: #727a72;
+      text-transform: capitalize;
+    }
+    .chevron-icon {
+      width: 12px;
+      height: 12px;
+      color: #727a72;
+      transition: transform 0.2s;
+    }
+    .chevron-icon.open {
+      transform: rotate(180deg);
+    }
+
+    .profile-dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: 44px;
+      z-index: 100;
+      width: 210px;
+      background: white;
+      border: 1px solid #ebe8e1;
+      border-radius: 14px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
+      padding: 8px;
+      animation: fadeIn 0.15s ease;
+    }
+    .drop-user-info {
+      padding: 8px 10px 10px;
+      border-bottom: 1px solid #f1ede4;
+      margin-bottom: 6px;
+    }
+    .drop-user-name {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: #191b18;
+    }
+    .drop-user-email {
+      margin: 2px 0 0;
+      font-size: 11px;
+      color: #727a72;
+      word-break: break-all;
+    }
+    .drop-menu-links {
+      display: grid;
+      gap: 2px;
+    }
+    .drop-menu-links a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #3b423b;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .drop-menu-links a:hover {
+      background: #f4f2ec;
+      color: var(--store-primary);
+    }
+    .drop-menu-links svg {
+      width: 15px;
+      height: 15px;
+      color: #727a72;
+    }
+    .drop-logout-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px 10px;
+      border: 0;
+      border-top: 1px solid #f1ede4;
+      margin-top: 6px;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 600;
+      color: #dc2626;
+      cursor: pointer;
+      text-align: left;
+      border-radius: 0 0 8px 8px;
+    }
+    .drop-logout-btn svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    /* Mobile Drawer */
+    .mobile-toggle {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      width: 32px;
+      height: 32px;
+      border: 1px solid #dcd8cf;
+      border-radius: 8px;
+      background: white;
+      padding: 6px;
+      cursor: pointer;
+    }
+    .mobile-toggle span {
+      display: block;
+      height: 2px;
+      background: #222822;
+      border-radius: 2px;
+    }
+    .mobile-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .mobile-drawer {
+      width: 300px;
+      background: white;
+      height: 100%;
+      box-shadow: -10px 0 30px rgba(0,0,0,0.2);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .drawer-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #ebe8e1;
+      padding-bottom: 14px;
+    }
+    .drawer-head b { font-size: 18px; color: var(--store-primary); }
+    .drawer-close {
+      background: none;
+      border: 0;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .drawer-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .drawer-nav button {
+      background: none;
+      border: 0;
+      text-align: left;
+      font-size: 16px;
+      font-weight: 600;
+      color: #2b312b;
+      cursor: pointer;
+    }
+    .drawer-actions {
+      border-top: 1px solid #ebe8e1;
+      padding-top: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .drawer-curr {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    .drawer-curr select {
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid #dcd8cf;
+    }
+    .drawer-btn {
+      display: block;
+      padding: 10px;
+      text-align: center;
+      border: 1px solid #dcd8cf;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #2b312b;
+      text-decoration: none;
+    }
+    .drawer-btn.solid {
+      background: var(--store-primary);
+      color: white;
+      border-color: var(--store-primary);
+    }
+    .drawer-btn.ghost {
+      color: #dc2626;
+      border-color: #fca5a5;
+    }
+    .drawer-market-back {
+      font-size: 12px;
+      color: #727a72;
+      text-align: center;
+      margin-top: 10px;
+      text-decoration: underline;
+    }
+
+    /* Overlines & Tags */
     .overline {
       color: var(--store-accent);
       font-size: 11px !important;
@@ -1695,6 +2193,7 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
       color: white;
       padding-top: 65px;
       border-top: 1px solid #232723;
+      margin-top: auto;
     }
     footer .wrap {
       display: grid;
@@ -1728,10 +2227,23 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
     footer a:hover {
       color: white;
     }
-    .foot-socials {
+    .foot-badge-wrap {
       margin-top: 18px;
+    }
+    .market-pill-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.75) !important;
       font-size: 11px;
-      color: rgba(255, 255, 255, 0.4);
+      font-weight: 600;
+      text-decoration: none !important;
+      transition: background 0.15s;
+    }
+    .market-pill-badge:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: white !important;
     }
     .foot-bottom {
       border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -1791,9 +2303,12 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
         gap: 30px;
       }
     }
-    @media (max-width: 650px) {
-      .store-nav nav {
+    @media (max-width: 768px) {
+      .store-nav nav.nav-links, .nav-actions .auth-btns, .nav-actions .who-meta {
         display: none;
+      }
+      .mobile-toggle {
+        display: flex;
       }
       .gallery-grid, .values-grid {
         grid-template-columns: 1fr;
@@ -1813,6 +2328,7 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
 })
 export class StoreComponent implements OnInit {
   auth = inject(AuthService);
+  currency = inject(CurrencyService);
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -1823,6 +2339,29 @@ export class StoreComponent implements OnInit {
   following = signal(false);
   activePage = signal<StorePageTab>('home');
   currentYear = new Date().getFullYear();
+
+  // Navigation, Profile & Currency UI states
+  profileOpen = signal(false);
+  mobileMenuOpen = signal(false);
+
+  userInitials = computed(() => {
+    const name = this.auth.user()?.name ?? '';
+    const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+    return parts.map((p) => p[0]?.toUpperCase()).join('') || 'U';
+  });
+
+  roleLabel = computed(() => {
+    const user = this.auth.user();
+    if (!user) return '';
+    if (user.role === 'super_admin') return 'Admin';
+    if (user.role === 'tenant_owner') return 'Seller';
+    if (user.role === 'store_staff') return user.department ? `${user.department} staff` : 'Staff';
+    if (user.role === 'customer') return 'Customer';
+    return user.role;
+  });
+
+  hasTenantRole = computed(() => this.auth.hasRole('tenant_owner', 'store_staff'));
+  hasAdminRole = computed(() => this.auth.hasRole('super_admin'));
 
   // Contact form state
   contactForm = { name: '', email: '', subject: '', message: '' };
@@ -1998,6 +2537,44 @@ export class StoreComponent implements OnInit {
       next: (res) => this.reviews.set(res.data || []),
       error: () => undefined,
     });
+  }
+
+  onCurrencyChange(event: Event): void {
+    this.currency.setDisplay((event.target as HTMLSelectElement).value);
+  }
+
+  toggleProfile(e?: Event) {
+    if (e) e.stopPropagation();
+    this.profileOpen.update((v) => !v);
+  }
+
+  closeProfile() {
+    this.profileOpen.set(false);
+  }
+
+  toggleMobileMenu() {
+    this.mobileMenuOpen.update((v) => !v);
+  }
+
+  closeMobileMenu() {
+    this.mobileMenuOpen.set(false);
+  }
+
+  onLogout() {
+    this.closeProfile();
+    this.closeMobileMenu();
+    this.auth.logout();
+  }
+
+  @HostListener('document:click')
+  onDocClick() {
+    this.closeProfile();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    this.closeProfile();
+    this.closeMobileMenu();
   }
 
   setPage(page: StorePageTab) {

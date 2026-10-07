@@ -78,6 +78,11 @@ export const routes: Routes = [
   { path: 'seller/login', redirectTo: 'tenant/login' },
   { path: 'tenants/login', redirectTo: 'tenant/login' },
   {
+    path: 'stores/:slug',
+    canActivate: [marketingPortalGuard],
+    loadComponent: () => import('./features/marketplace/store.component').then((m) => m.StoreComponent),
+  },
+  {
     path: '',
     canActivate: [marketingPortalGuard],
     loadComponent: () => import('./layout/shell.component').then((m) => m.ShellComponent),
@@ -86,7 +91,6 @@ export const routes: Routes = [
       { path: 'products', loadComponent: () => import('./features/marketplace/catalog.component').then((m) => m.CatalogComponent) },
       { path: 'products/:slug', loadComponent: () => import('./features/marketplace/product.component').then((m) => m.ProductComponent) },
       { path: 'stores', loadComponent: () => import('./features/marketplace/stores.component').then((m) => m.StoresComponent) },
-      { path: 'stores/:slug', loadComponent: () => import('./features/marketplace/store.component').then((m) => m.StoreComponent) },
       { path: 'login', loadComponent: () => import('./features/auth/login.component').then((m) => m.LoginComponent) },
       { path: 'register', loadComponent: () => import('./features/auth/register.component').then((m) => m.RegisterComponent) },
       {
