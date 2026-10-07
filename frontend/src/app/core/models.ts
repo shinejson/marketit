@@ -532,6 +532,15 @@ export interface Storefront {
   rating_avg?: number;
   rating_count?: number;
   products_count?: number;
+  category_name?: string | null;
+  badge?: string | null;
+  sample_products?: {
+    id: number;
+    name: string;
+    slug?: string;
+    price: string | number;
+    image_url?: string | null;
+  }[];
 }
 
 export interface TemplateCategory {

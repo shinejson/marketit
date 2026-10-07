@@ -39,6 +39,8 @@ class Store extends Model
         'city',
         'country',
         'is_featured',
+        'rating_avg',
+        'rating_count',
     ];
 
     protected function casts(): array
