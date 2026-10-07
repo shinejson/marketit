@@ -5,10 +5,11 @@ import { AuthService } from '../../core/auth.service';
 import { ApiService } from '../../core/api.service';
 import { Category, HeroSlide, ProductCard, Storefront } from '../../core/models';
 import { ProductCardComponent } from '../../shared/product-card.component';
+import { SellerStudioPromoComponent } from './seller-studio-promo.component';
 
 @Component({
   selector: 'app-home',
-  imports: [FormsModule, RouterLink, ProductCardComponent],
+  imports: [FormsModule, RouterLink, ProductCardComponent, SellerStudioPromoComponent],
   template: `
     <!-- Hero: search + CTAs + live counts (§9 Marketplace and Storefront) -->
     <section class="hero">
@@ -180,6 +181,9 @@ import { ProductCardComponent } from '../../shared/product-card.component';
         <span class="pill">Public seller profiles</span>
       </div>
     </section>
+
+    <!-- Seller SaaS capabilities from landingPage.md, added without replacing shopper discovery. -->
+    <app-seller-studio-promo />
 
     <!-- Seller CTA with commission example (§13, §14 Platform Revenue Model) -->
     <section class="sellband">
@@ -478,6 +482,7 @@ export class HomeComponent implements OnDestroy {
   }
 
   sellTarget() {
+    if (this.auth.hasRole('tenant_owner', 'store_staff')) return '/tenant';
     return this.auth.isLoggedIn() ? '/sell' : '/register';
   }
 }
