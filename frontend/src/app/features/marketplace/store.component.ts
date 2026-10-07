@@ -7,7 +7,7 @@ import { ProductCardComponent } from '../../shared/product-card.component';
 import { StarRatingComponent } from '../../shared/star-rating.component';
 import { AuthService } from '../../core/auth.service';
 
-type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
+type StorePageTab = 'home' | 'shop' | 'about' | 'contact' | string;
 
 @Component({
   selector: 'app-store',
@@ -47,6 +47,9 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
               <button type="button" [class.active]="activePage() === 'contact'" (click)="setPage('contact')">
                 {{ contactConfig().nav_label || 'Contact' }}
               </button>
+            }
+            @for (page of publishedPages(); track page.id) {
+              <button type="button" [class.active]="activePage() === page.slug" (click)="setPage(page.slug)">{{ page.name }}</button>
             }
           </nav>
 
@@ -287,11 +290,12 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
                 <h1>All Products</h1>
                 <p class="sub">Browse all available goods from {{ s.name }}.</p>
               </div>
-              <span class="count-tag">{{ products().length }} product{{ products().length === 1 ? '' : 's' }}</span>
+              <span class="count-tag">{{ shopProducts().length }} product{{ shopProducts().length === 1 ? '' : 's' }}</span>
             </div>
+            @if (categoryFilter()) { <button type="button" class="clear-category" (click)="categoryFilter.set(null)">Showing {{ categoryName(categoryFilter()) }} · Clear filter ×</button> }
 
             <div class="grid cards">
-              @for (p of products(); track p.id) {
+              @for (p of shopProducts(); track p.id) {
                 <app-product-card [product]="p" />
               } @empty {
                 <div class="empty">
@@ -300,6 +304,51 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
                 </div>
               }
             </div>
+          </main>
+        }
+
+        @else if (customPage(); as page) {
+          <main class="page-view custom-view">
+            <section class="custom-page-heading wrap"><p class="overline">{{ s.name }} · STORE JOURNAL</p><h1>{{ page.name }}</h1></section>
+            @for (section of page.content.sections; track section.id) {
+              @if (section.enabled) {
+                @if (section.type === 'hero') {
+                  <section class="hero" [class.custom-hero-cover]="section.layout === 'full_banner'" [style.background-image]="section.layout === 'full_banner' ? 'linear-gradient(rgba(0,0,0,.46),rgba(0,0,0,.55)),url(' + (section.image_url || '') + ')' : ''">
+                    <div class="wrap hero-inner centered-hero"><p class="overline">{{ section.badge || page.name }}</p><h1>{{ section.title || page.name }}</h1><p class="lead">{{ section.subtitle || '' }}</p>@if (section.button_text) { <button class="shop-btn" (click)="handleBannerAction(section.button_link)">{{ section.button_text }} →</button> }</div>
+                  </section>
+                } @else if (section.type === 'featured_products' || section.type === 'product_grid') {
+                  <section class="catalogue wrap">
+                    <div class="section-head"><div><p class="overline">{{ section.badge || 'THE COLLECTION' }}</p><h2>{{ section.title || 'Products selected for you' }}</h2><p class="sub">{{ section.subtitle || '' }}</p></div><button class="view-all-link" (click)="setPage('shop')">Browse all products →</button></div>
+                    <div class="grid cards widget-grid" [style.--widget-cols]="section.columns || 4" [style.--tablet-cols]="section.responsive?.tablet?.columns || 3" [style.--mobile-cols]="section.responsive?.mobile?.columns || 2">
+                      @for (product of sectionProducts(section); track product.id) { <app-product-card [product]="product" /> }
+                      @empty { <div class="empty"><h3>Products coming soon</h3><p>Products from this store will appear here.</p></div> }
+                    </div>
+                  </section>
+                } @else if (section.type === 'category_grid') {
+                  <section class="wrap custom-categories"><div class="section-head"><div><p class="overline">{{ section.badge || 'BROWSE OUR RANGE' }}</p><h2>{{ section.title || 'Shop by category' }}</h2><p class="sub">{{ section.subtitle || '' }}</p></div></div><div class="custom-category-grid">@for (category of productCategories(); track category.id) { <button type="button" (click)="openCategory(category.id)"><strong>{{ category.name }}</strong><span>Explore collection →</span></button> } @empty { <p class="empty">Store categories will appear here as products are added.</p> }</div></section>
+                } @else if (section.type === 'banner') {
+                  <section class="promo-banner-wrap"><div class="promo-banner" [style.background-image]="'linear-gradient(rgba(0,0,0,0.48), rgba(0,0,0,0.64)), url(' + (section.image_url || '') + ')' "><div class="wrap banner-inner"><p class="overline-light">{{ section.badge }}</p><h2>{{ section.title }}</h2><p>{{ section.subtitle }}</p><button class="banner-btn" (click)="handleBannerAction(section.button_link)">{{ section.button_text || 'Explore now' }} →</button></div></div></section>
+                } @else if (section.type === 'rich_text') {
+                  <section class="story wrap"><p class="overline">{{ section.badge || page.name }}</p><h2>{{ section.title }}</h2><p class="story-body">{{ section.content || section.subtitle }}</p></section>
+                } @else if (section.type === 'image') {
+                  <section class="wrap custom-image-section">@if (section.image_url) { <img [src]="section.image_url" [alt]="section.title || page.name" /> }@if (section.title) { <p>{{ section.title }}</p> }</section>
+                } @else if (section.type === 'gallery') {
+                  <section class="gallery-section wrap"><div class="section-head-center"><p class="overline">{{ section.badge || 'GALLERY' }}</p><h2>{{ section.title || 'A closer look' }}</h2><p class="sub">{{ section.subtitle }}</p></div><div class="gallery-grid">@for (item of (section.items || []); track $index) { <div class="gallery-card"><img [src]="item.image || ''" [alt]="item.title" /><div class="gallery-overlay"><h4>{{ item.title }}</h4>@if(item.desc){<p>{{ item.desc }}</p>}</div></div> }</div></section>
+                } @else if (section.type === 'trust_bar') {
+                  <section class="trust"><div class="wrap"><span>✓ Secure & verified checkout</span><span>◇ Carefully curated products</span><span>↗ Reliable dispatch</span></div></section>
+                } @else if (section.type === 'faq') {
+                  <section class="wrap custom-faq"><p class="overline">HELP & DETAILS</p><h2>{{ section.title || 'Frequently asked questions' }}</h2>@for (item of (section.items || []); track $index) { <details><summary>{{ item.title }}</summary><p>{{ item.desc }}</p></details> }</section>
+                } @else if (section.type === 'testimonials') {
+                  <section class="wrap custom-testimonials"><p class="overline">KIND WORDS</p><h2>{{ section.title || 'Loved by customers' }}</h2><div>@for (item of (section.items || []); track $index) { <blockquote>“{{ item.desc || item.title }}”</blockquote> } @empty { <blockquote>“{{ section.subtitle || 'Thoughtful design and a lovely experience.' }}”</blockquote> }</div></section>
+                } @else if (section.type === 'reviews') {
+                  @if (reviews().length) { <section class="store-reviews wrap"><p class="overline">SHOPPER REVIEWS</p><h2>{{ section.title || 'Customer reviews' }}</h2><div class="review-grid">@for (review of reviews(); track review.id) { <article><app-stars [value]="review.rating" /><strong>{{ review.title || 'Verified review' }}</strong>@if(review.body){<p>{{ review.body }}</p>}<small>{{ review.author?.name || 'Customer' }}</small></article> }</div></section> }
+                } @else if (section.type === 'newsletter') {
+                  <section class="newsletter"><div class="wrap"><div><p class="overline-light">KEEP IN TOUCH</p><h2>{{ section.title || 'Stay in the loop' }}</h2><p>{{ section.subtitle }}</p></div><form (submit)="onNewsletterSubmit($event)"><input type="email" placeholder="Your email address" required /><button type="submit">{{ section.button_text || 'Subscribe →' }}</button></form></div></section>
+                } @else if (section.type === 'contact_card') {
+                  <section class="contact-card-section wrap"><div class="contact-card-box"><div><p class="overline">LET'S CONNECT</p><h2>{{ section.title || 'Connect with our team' }}</h2><p>{{ section.subtitle }}</p></div><div class="contact-card-meta"><span>✉ {{ s.contact_email || 'hello@markethub.test' }}</span><button class="shop-btn-sm" (click)="setPage('contact')">Contact us →</button></div></div></section>
+                } @else if (section.type === 'spacer') { <div class="custom-spacer" [style.height.px]="section.responsive?.desktop?.padding || 48"></div> }
+              }
+            } @empty { <section class="wrap empty"><h2>This page is being prepared</h2></section> }
           </main>
         }
 
@@ -392,7 +441,7 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
               }
 
               <!-- 3. FEATURED PRODUCTS CATALOGUE SECTION -->
-              @if (section.enabled && section.type === 'featured_products') {
+              @if (section.enabled && (section.type === 'featured_products' || section.type === 'product_grid')) {
                 <section class="catalogue wrap" id="catalogue">
                   <div class="section-head">
                     <div>
@@ -402,8 +451,8 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
                     </div>
                     <button class="view-all-link" (click)="setPage('shop')">View all {{ products().length }} products →</button>
                   </div>
-                  <div class="grid cards">
-                    @for (p of products(); track p.id) {
+                  <div class="grid cards widget-grid" [style.--widget-cols]="section.columns || 4" [style.--tablet-cols]="section.responsive?.tablet?.columns || 3" [style.--mobile-cols]="section.responsive?.mobile?.columns || 2">
+                    @for (p of sectionProducts(section); track p.id) {
                       <app-product-card [product]="p" />
                     } @empty {
                       <div class="empty">
@@ -412,6 +461,13 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
                       </div>
                     }
                   </div>
+                </section>
+              }
+
+              @if (section.enabled && section.type === 'category_grid') {
+                <section class="wrap custom-categories">
+                  <div class="section-head"><div><p class="overline">{{ section.badge || 'BROWSE OUR RANGE' }}</p><h2>{{ section.title || 'Shop by category' }}</h2><p class="sub">{{ section.subtitle || 'Explore collections from our store.' }}</p></div></div>
+                  <div class="custom-category-grid">@for (category of productCategories(); track category.id) { <button type="button" (click)="openCategory(category.id)"><strong>{{ category.name }}</strong><span>Explore collection →</span></button> } @empty { <p class="empty">Store categories will appear here as products are added.</p> }</div>
                 </section>
               }
 
@@ -542,6 +598,16 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
                   </div>
                 </section>
               }
+              @if (section.enabled && section.type === 'image') {
+                <section class="wrap custom-image-section">@if (section.image_url) { <img [src]="section.image_url" [alt]="section.title || 'Store image'" /> }@if (section.title) { <p>{{ section.title }}</p> }</section>
+              }
+              @if (section.enabled && section.type === 'faq') {
+                <section class="wrap custom-faq"><p class="overline">HELP & DETAILS</p><h2>{{ section.title || 'Frequently asked questions' }}</h2>@for (item of (section.items || []); track $index) { <details><summary>{{ item.title }}</summary><p>{{ item.desc }}</p></details> }</section>
+              }
+              @if (section.enabled && section.type === 'testimonials') {
+                <section class="wrap custom-testimonials"><p class="overline">KIND WORDS</p><h2>{{ section.title || 'Loved by customers' }}</h2><div>@for (item of (section.items || []); track $index) { <blockquote>“{{ item.desc || item.title }}”</blockquote> } @empty { <blockquote>“{{ section.subtitle || 'Thoughtful design and a lovely experience.' }}”</blockquote> }</div></section>
+              }
+              @if (section.enabled && section.type === 'spacer') { <div class="custom-spacer" [style.height.px]="section.responsive?.desktop?.padding || 48"></div> }
             }
 
             <!-- CUSTOMER REVIEWS (IF PRESENT) -->
@@ -607,1209 +673,7 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact';
       </div>
     }
   `,
-  styles: [`
-    :host { display: block; }
-    .storefront {
-      --store-primary: #1f4b3a;
-      --store-accent: #c45c26;
-      --store-surface: #ffffff;
-      background: var(--store-surface);
-      color: #191b18;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .storefront.editorial {
-      font-family: 'Fraunces', Georgia, serif;
-    }
-    .storefront.friendly {
-      font-family: 'Trebuchet MS', 'Nunito', sans-serif;
-    }
-
-    /* Navigation */
-    .store-nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      height: 78px;
-      border-bottom: 1px solid #ebe8e1;
-      position: sticky;
-      top: 0;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      z-index: 40;
-    }
-    .nav-brand-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
-      text-decoration: none;
-    }
-    .brand-logo {
-      height: 38px;
-      max-width: 140px;
-      object-fit: contain;
-      border-radius: 6px;
-    }
-    .brand-initials {
-      display: grid;
-      place-items: center;
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      background: var(--store-primary);
-      color: white;
-      font: 700 15px Georgia, serif;
-    }
-    .brand-name {
-      font: 700 21px 'Fraunces', Georgia, serif;
-      color: var(--store-primary);
-      letter-spacing: -0.02em;
-    }
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-    .nav-links button {
-      background: none;
-      border: 0;
-      padding: 8px 4px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #555d55;
-      cursor: pointer;
-      position: relative;
-      transition: color 0.15s;
-    }
-    .nav-links button:hover {
-      color: var(--store-primary);
-    }
-    .nav-links button.active {
-      color: var(--store-primary);
-      font-weight: 700;
-    }
-    .nav-links button.active::after {
-      content: '';
-      position: absolute;
-      bottom: -4px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--store-accent);
-      border-radius: 2px;
-    }
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .btn-follow {
-      padding: 7px 15px;
-      border: 1px solid var(--store-primary);
-      border-radius: 30px;
-      background: transparent;
-      color: var(--store-primary);
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-follow.on {
-      background: var(--store-primary);
-      color: white;
-    }
-    .btn-bag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 14px;
-      border-radius: 30px;
-      background: #f4f2ec;
-      color: #242924;
-      font-size: 12px;
-      font-weight: 600;
-      text-decoration: none;
-    }
-
-    /* Common Typography & Overlines */
-    .overline {
-      color: var(--store-accent);
-      font-size: 11px !important;
-      font-weight: 800;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      margin: 0 0 12px !important;
-    }
-    .overline-light {
-      color: #f7d2aa;
-      font-size: 11px !important;
-      font-weight: 800;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      margin: 0 0 12px !important;
-    }
-
-    /* Hero Variations */
-    .hero {
-      background: color-mix(in srgb, var(--store-primary) 7%, #ffffff);
-      position: relative;
-    }
-    .hero-inner {
-      padding: 75px 0;
-    }
-    .split-hero {
-      display: grid;
-      grid-template-columns: 1.15fr 1fr;
-      align-items: center;
-      gap: 50px;
-      min-height: 520px;
-    }
-    .hero-content h1 {
-      margin: 0;
-      color: var(--store-primary);
-      font: 700 clamp(38px, 5.5vw, 68px)/1.04 'Fraunces', Georgia, serif;
-      letter-spacing: -0.035em;
-    }
-    .lead {
-      max-width: 540px;
-      margin: 22px 0 28px !important;
-      color: #555d55;
-      font-size: 17px;
-      line-height: 1.65;
-    }
-    .hero-actions {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .shop-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      padding: 13px 26px;
-      border-radius: 30px;
-      border: 0;
-      background: var(--store-primary);
-      color: white;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .shop-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-    }
-    .ghost-btn {
-      display: inline-flex;
-      align-items: center;
-      padding: 12px 22px;
-      border-radius: 30px;
-      border: 1px solid var(--store-primary);
-      background: transparent;
-      color: var(--store-primary);
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .ghost-btn-light {
-      display: inline-flex;
-      align-items: center;
-      padding: 12px 22px;
-      border-radius: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      background: transparent;
-      color: white;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .hero-visual {
-      position: relative;
-    }
-    .hero-frame {
-      position: relative;
-      border-radius: 24px;
-      overflow: hidden;
-      aspect-ratio: 4 / 3.2;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
-      border: 6px solid #ffffff;
-    }
-    .hero-frame img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    .hero-tag {
-      position: absolute;
-      bottom: 16px;
-      left: 16px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(18, 22, 18, 0.85);
-      backdrop-filter: blur(8px);
-      padding: 7px 14px;
-      border-radius: 30px;
-      color: white;
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .pulse-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #4ade80;
-      box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.35);
-    }
-
-    /* Centered Hero */
-    .centered-hero {
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      max-width: 860px;
-      margin: auto;
-    }
-    .centered-hero h1 {
-      margin: 0;
-      color: var(--store-primary);
-      font: 700 clamp(40px, 6vw, 72px)/1.04 'Fraunces', Georgia, serif;
-    }
-    .hero-full-backdrop {
-      background-size: cover;
-      background-position: center;
-      padding: 100px 0;
-      color: white;
-    }
-    .hero-full-backdrop h1 {
-      color: white !important;
-    }
-    .lead-light {
-      max-width: 600px;
-      margin: 20px auto 30px !important;
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 18px;
-      line-height: 1.7;
-    }
-
-    /* Trust Bar */
-    .trust {
-      border-top: 1px solid #ebe8e1;
-      border-bottom: 1px solid #ebe8e1;
-      background: #fbfaf8;
-    }
-    .trust .wrap {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 18px;
-      padding-top: 16px;
-      padding-bottom: 16px;
-      color: #636b63;
-      font-size: 12px;
-      font-weight: 500;
-      flex-wrap: wrap;
-    }
-
-    /* Catalogue */
-    .catalogue {
-      padding-top: 75px;
-      padding-bottom: 85px;
-    }
-    .section-head {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      margin-bottom: 34px;
-      gap: 20px;
-    }
-    .section-head h2 {
-      margin: 0;
-      color: var(--store-primary);
-      font: 700 36px 'Fraunces', Georgia, serif;
-    }
-    .section-head .sub {
-      margin: 6px 0 0;
-      color: #666e66;
-      font-size: 15px;
-    }
-    .view-all-link {
-      background: none;
-      border: 0;
-      color: var(--store-primary);
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-    .cards {
-      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-      gap: 24px;
-    }
-    .empty {
-      grid-column: 1/-1;
-      padding: 60px 20px;
-      text-align: center;
-      background: #f7f6f2;
-      border-radius: 18px;
-    }
-
-    /* Promo Banner Section */
-    .promo-banner-wrap {
-      padding: 30px 0;
-    }
-    .promo-banner {
-      background-size: cover;
-      background-position: center;
-      border-radius: 24px;
-      overflow: hidden;
-      margin: 0 auto;
-      max-width: 1280px;
-      color: white;
-    }
-    .banner-inner {
-      padding: 85px 30px;
-      max-width: 720px;
-    }
-    .banner-badge {
-      display: inline-block;
-      padding: 5px 12px;
-      background: var(--store-accent);
-      color: white;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
-    .banner-inner h2 {
-      margin: 0 0 14px;
-      font: 700 clamp(30px, 4.5vw, 48px)/1.1 'Fraunces', Georgia, serif;
-      color: white;
-    }
-    .banner-inner p {
-      margin: 0 0 28px;
-      color: rgba(255, 255, 255, 0.88);
-      font-size: 16px;
-      line-height: 1.6;
-    }
-    .banner-btn {
-      padding: 13px 26px;
-      border-radius: 30px;
-      border: 0;
-      background: white;
-      color: #191b18;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    /* Production / Workshop Showcase */
-    .production-showcase {
-      padding: 80px 0;
-    }
-    .showcase-head {
-      margin-bottom: 40px;
-      max-width: 760px;
-    }
-    .showcase-head h2 {
-      margin: 0 0 10px;
-      color: var(--store-primary);
-      font: 700 36px 'Fraunces', Georgia, serif;
-    }
-    .showcase-head .sub {
-      color: #636b63;
-      font-size: 16px;
-      line-height: 1.6;
-      margin: 0;
-    }
-    .production-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      align-items: center;
-    }
-    .prod-image-col {
-      position: relative;
-    }
-    .prod-main-img {
-      width: 100%;
-      height: 440px;
-      object-fit: cover;
-      border-radius: 22px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1);
-    }
-    .artisan-badge {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(25, 28, 25, 0.85);
-      backdrop-filter: blur(8px);
-      padding: 8px 16px;
-      border-radius: 30px;
-      color: white;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .artisan-badge .pulse {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #4ade80;
-    }
-    .prod-steps-col {
-      display: grid;
-      gap: 16px;
-    }
-    .step-card {
-      display: flex;
-      align-items: flex-start;
-      gap: 18px;
-      padding: 20px;
-      border: 1px solid #ebe8e1;
-      border-radius: 16px;
-      background: #faf8f5;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .step-card:hover {
-      transform: translateX(4px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-    }
-    .step-num {
-      display: grid;
-      place-items: center;
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      background: var(--store-primary);
-      color: white;
-      font-size: 13px;
-      font-weight: 800;
-      flex-shrink: 0;
-    }
-    .step-card h4 {
-      margin: 0 0 5px;
-      font-size: 16px;
-      color: var(--store-primary);
-    }
-    .step-card p {
-      margin: 0;
-      font-size: 13px;
-      color: #616861;
-      line-height: 1.55;
-    }
-
-    /* Gallery Section */
-    .gallery-section {
-      padding: 80px 0;
-    }
-    .section-head-center {
-      text-align: center;
-      margin-bottom: 40px;
-      max-width: 680px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .section-head-center h2 {
-      margin: 0 0 10px;
-      color: var(--store-primary);
-      font: 700 36px 'Fraunces', Georgia, serif;
-    }
-    .section-head-center .sub {
-      color: #636b63;
-      font-size: 15px;
-      margin: 0;
-    }
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-    }
-    .gallery-card {
-      position: relative;
-      border-radius: 18px;
-      overflow: hidden;
-      aspect-ratio: 4 / 3;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-    }
-    .gallery-card img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      transition: transform 0.35s;
-    }
-    .gallery-card:hover img {
-      transform: scale(1.05);
-    }
-    .gallery-overlay {
-      position: absolute;
-      inset: auto 0 0 0;
-      padding: 24px 16px 14px;
-      background: linear-gradient(transparent, rgba(0,0,0,0.75));
-      color: white;
-    }
-    .gallery-overlay h4 {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 700;
-    }
-    .gallery-overlay p {
-      margin: 4px 0 0;
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.85);
-    }
-
-    /* Rich Story Block */
-    .story {
-      max-width: 780px;
-      text-align: center;
-      padding: 90px 20px;
-      margin: auto;
-    }
-    .story h2 {
-      margin: 0 0 18px;
-      color: var(--store-primary);
-      font: 700 36px 'Fraunces', Georgia, serif;
-    }
-    .story-body {
-      font-size: 18px;
-      line-height: 1.8;
-      color: #555d55;
-    }
-    .text-link-btn {
-      margin-top: 18px;
-      background: none;
-      border: 0;
-      color: var(--store-accent);
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    /* Contact Card Banner */
-    .contact-card-section {
-      padding: 40px 0;
-    }
-    .contact-card-box {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #fbfaf8;
-      border: 1px solid #ebe8e1;
-      border-radius: 20px;
-      padding: 38px 45px;
-      gap: 30px;
-    }
-    .contact-card-box h2 {
-      margin: 0 0 6px;
-      color: var(--store-primary);
-      font: 700 28px 'Fraunces', Georgia, serif;
-    }
-    .contact-card-box p {
-      margin: 0;
-      color: #636b63;
-      font-size: 14px;
-    }
-    .contact-card-meta {
-      display: flex;
-      align-items: center;
-      gap: 22px;
-      font-size: 13px;
-      color: #444a44;
-      flex-wrap: wrap;
-    }
-    .shop-btn-sm {
-      padding: 10px 20px;
-      border-radius: 20px;
-      border: 0;
-      background: var(--store-primary);
-      color: white;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    /* Newsletter */
-    .newsletter {
-      padding: 70px 0;
-      background: var(--store-primary);
-      color: white;
-    }
-    .newsletter .wrap {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 30px;
-      flex-wrap: wrap;
-    }
-    .newsletter h2 {
-      margin: 0 0 6px;
-      color: white;
-      font: 700 32px 'Fraunces', Georgia, serif;
-    }
-    .newsletter p {
-      margin: 0;
-      color: rgba(255, 255, 255, 0.78);
-      font-size: 14px;
-    }
-    .newsletter form {
-      display: flex;
-      min-width: 360px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-    }
-    .newsletter input {
-      flex: 1;
-      border: 0;
-      background: transparent;
-      color: white;
-      padding: 12px 4px;
-      outline: 0;
-      font-size: 14px;
-    }
-    .newsletter input::placeholder {
-      color: rgba(255, 255, 255, 0.55);
-    }
-    .newsletter button {
-      border: 0;
-      background: transparent;
-      color: white;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    /* Reviews */
-    .store-reviews {
-      padding: 75px 0;
-    }
-    .store-reviews h2 {
-      margin: 0 0 26px;
-      color: var(--store-primary);
-      font: 700 34px 'Fraunces', Georgia, serif;
-    }
-    .review-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 20px;
-    }
-    .review-grid article {
-      padding: 22px;
-      border: 1px solid #ebe8e1;
-      border-radius: 16px;
-      background: #faf8f5;
-    }
-    .review-grid strong {
-      display: block;
-      margin: 10px 0 6px;
-      font-size: 14px;
-    }
-    .review-grid p {
-      margin: 0;
-      color: #5d635c;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-    .review-grid small {
-      display: block;
-      margin-top: 12px;
-      color: #8a8f88;
-      font-size: 11px;
-    }
-
-    /* ABOUT SUBPAGE STYLES */
-    .about-hero {
-      background-size: cover;
-      background-position: center;
-      background-color: var(--store-primary);
-      color: white;
-      padding: 80px 0;
-      text-align: center;
-    }
-    .about-hero-inner {
-      max-width: 820px;
-      margin: auto;
-    }
-    .about-hero h1 {
-      margin: 0 0 16px;
-      font: 700 clamp(36px, 5.5vw, 62px)/1.08 'Fraunces', Georgia, serif;
-      color: white;
-    }
-    .about-hero .hero-sub {
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 18px;
-      line-height: 1.65;
-      margin: 0;
-    }
-    .story-block {
-      padding: 85px 0 60px;
-    }
-    .story-grid {
-      display: grid;
-      grid-template-columns: 1.15fr 1fr;
-      gap: 50px;
-      align-items: center;
-    }
-    .section-tag {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 800;
-      color: var(--store-accent);
-      letter-spacing: 0.16em;
-      margin-bottom: 8px;
-    }
-    .story-copy h2 {
-      margin: 0 0 20px;
-      color: var(--store-primary);
-      font: 700 36px 'Fraunces', Georgia, serif;
-    }
-    .story-text p {
-      font-size: 16px;
-      line-height: 1.8;
-      color: #555d55;
-      margin: 0 0 16px;
-    }
-    .location-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      border-radius: 30px;
-      background: #f7f5ef;
-      font-size: 13px;
-      color: #3b423b;
-      margin-top: 10px;
-    }
-    .story-media {
-      position: relative;
-    }
-    .story-img {
-      width: 100%;
-      height: 420px;
-      object-fit: cover;
-      border-radius: 20px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
-    }
-    .quote-card {
-      position: absolute;
-      bottom: -25px;
-      right: 20px;
-      max-width: 320px;
-      background: white;
-      padding: 18px 22px;
-      border-radius: 16px;
-      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.14);
-      border-left: 4px solid var(--store-accent);
-    }
-    .quote-card p {
-      margin: 0 0 6px;
-      font-size: 13px;
-      font-style: italic;
-      color: #333a33;
-      line-height: 1.5;
-    }
-    .quote-card small {
-      font-size: 11px;
-      font-weight: 700;
-      color: #777e77;
-    }
-    .values-section {
-      background: #fbfaf8;
-      border-top: 1px solid #ebe8e1;
-      border-bottom: 1px solid #ebe8e1;
-      padding: 70px 0;
-    }
-    .values-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 30px;
-    }
-    .value-item {
-      text-align: center;
-      padding: 24px;
-    }
-    .value-icon {
-      font-size: 32px;
-      display: block;
-      margin-bottom: 14px;
-    }
-    .value-item h3 {
-      margin: 0 0 10px;
-      color: var(--store-primary);
-      font-size: 20px;
-    }
-    .value-item p {
-      margin: 0;
-      color: #636b63;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-    .cta-banner {
-      text-align: center;
-      padding: 85px 20px;
-      max-width: 700px;
-      margin: auto;
-    }
-    .cta-banner h2 {
-      margin: 0 0 12px;
-      color: var(--store-primary);
-      font: 700 36px 'Fraunces', Georgia, serif;
-    }
-    .cta-banner p {
-      margin: 0 0 26px;
-      color: #636b63;
-      font-size: 16px;
-    }
-
-    /* CONTACT SUBPAGE STYLES */
-    .contact-hero {
-      padding: 65px 0 40px;
-      text-align: center;
-      background: #fbfaf8;
-      border-bottom: 1px solid #ebe8e1;
-    }
-    .contact-hero h1 {
-      margin: 0 0 12px;
-      color: var(--store-primary);
-      font: 700 44px 'Fraunces', Georgia, serif;
-    }
-    .contact-hero .hero-sub {
-      color: #636b63;
-      font-size: 16px;
-      max-width: 620px;
-      margin: auto;
-    }
-    .contact-container {
-      padding: 65px 0 90px;
-    }
-    .contact-grid {
-      display: grid;
-      grid-template-columns: 1fr 1.25fr;
-      gap: 50px;
-    }
-    .contact-info-col h3 {
-      margin: 0 0 10px;
-      font: 700 24px 'Fraunces', Georgia, serif;
-      color: var(--store-primary);
-    }
-    .col-lead {
-      color: #636b63;
-      font-size: 14px;
-      line-height: 1.6;
-      margin: 0 0 30px;
-    }
-    .info-list {
-      display: grid;
-      gap: 22px;
-    }
-    .info-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-    }
-    .info-item .icon {
-      display: grid;
-      place-items: center;
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: #f4f2ec;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-    .info-item strong {
-      display: block;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #7a827a;
-      margin-bottom: 4px;
-    }
-    .info-item p, .info-item a {
-      margin: 0;
-      color: #222822;
-      font-size: 14px;
-      text-decoration: none;
-    }
-    .info-item a:hover {
-      color: var(--store-primary);
-      text-decoration: underline;
-    }
-    .trust-pill-box {
-      margin-top: 35px;
-      padding: 18px;
-      background: #f8f6f0;
-      border-radius: 16px;
-      display: grid;
-      gap: 8px;
-      font-size: 12px;
-      color: #4a524a;
-      font-weight: 600;
-    }
-    .form-card {
-      background: white;
-      border: 1px solid #ebe8e1;
-      border-radius: 20px;
-      padding: 35px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-    }
-    .form-card h3 {
-      margin: 0 0 6px;
-      color: var(--store-primary);
-      font: 700 24px 'Fraunces', Georgia, serif;
-    }
-    .form-card p {
-      margin: 0 0 24px;
-      color: #636b63;
-      font-size: 13px;
-    }
-    .form-field {
-      margin-bottom: 18px;
-    }
-    .form-field label {
-      display: block;
-      font-size: 12px;
-      font-weight: 700;
-      color: #3b423b;
-      margin-bottom: 6px;
-    }
-    .form-field input, .form-field textarea {
-      width: 100%;
-      border: 1px solid #dcd8cf;
-      border-radius: 10px;
-      padding: 11px 14px;
-      font-size: 14px;
-      background: #fcfbf9;
-      color: #191b18;
-      box-sizing: border-box;
-      font-family: inherit;
-    }
-    .form-field input:focus, .form-field textarea:focus {
-      outline: 0;
-      border-color: var(--store-primary);
-      background: white;
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--store-primary) 15%, transparent);
-    }
-    .submit-btn {
-      width: 100%;
-      padding: 13px;
-      border-radius: 12px;
-      border: 0;
-      background: var(--store-primary);
-      color: white;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .submit-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    .contact-success {
-      text-align: center;
-      padding: 40px 10px;
-    }
-    .contact-success .check {
-      display: grid;
-      place-items: center;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: #dcfce7;
-      color: #15803d;
-      font-size: 22px;
-      margin: 0 auto 16px;
-      font-weight: 800;
-    }
-    .contact-success h4 {
-      margin: 0 0 8px;
-      font-size: 18px;
-      color: var(--store-primary);
-    }
-    .contact-success p {
-      color: #636b63;
-      font-size: 14px;
-      margin-bottom: 20px;
-    }
-    .btn-resend {
-      background: none;
-      border: 1px solid #dcd8cf;
-      padding: 8px 18px;
-      border-radius: 20px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .form-error {
-      color: #dc2626;
-      font-size: 12px;
-      margin-bottom: 14px;
-    }
-
-    /* SHOP SUBPAGE STYLES */
-    .shop-view {
-      padding: 55px 0 90px;
-    }
-    .shop-head {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      margin-bottom: 35px;
-      border-bottom: 1px solid #ebe8e1;
-      padding-bottom: 24px;
-    }
-    .shop-head h1 {
-      margin: 0 0 6px;
-      color: var(--store-primary);
-      font: 700 38px 'Fraunces', Georgia, serif;
-    }
-    .shop-head .sub {
-      margin: 0;
-      color: #636b63;
-      font-size: 15px;
-    }
-    .count-tag {
-      font-size: 13px;
-      color: #777e77;
-      font-weight: 600;
-    }
-
-    /* FOOTER */
-    footer {
-      background: #141714;
-      color: white;
-      padding-top: 65px;
-      border-top: 1px solid #232723;
-    }
-    footer .wrap {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
-      gap: 45px;
-    }
-    footer b {
-      font: 700 22px 'Fraunces', Georgia, serif;
-      color: white;
-      display: block;
-      margin-bottom: 10px;
-    }
-    footer strong {
-      display: block;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      margin-bottom: 14px;
-      color: rgba(255, 255, 255, 0.45);
-    }
-    footer p, footer a {
-      display: block;
-      max-width: 360px;
-      margin: 8px 0;
-      color: rgba(255, 255, 255, 0.65);
-      font-size: 13px;
-      line-height: 1.6;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    footer a:hover {
-      color: white;
-    }
-    .foot-socials {
-      margin-top: 18px;
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.4);
-    }
-    .foot-bottom {
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      margin-top: 50px;
-      padding-top: 20px;
-      padding-bottom: 25px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.45);
-    }
-    .market-brand-link {
-      color: rgba(255, 255, 255, 0.65) !important;
-      text-decoration: underline !important;
-    }
-
-    /* Loading */
-    .loading {
-      display: grid;
-      place-items: center;
-      min-height: 480px;
-      gap: 12px;
-      color: #666;
-    }
-    .loading span {
-      width: 38px;
-      height: 38px;
-      border: 3px solid #ddd;
-      border-top-color: #1f4b3a;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-      .split-hero {
-        grid-template-columns: 1fr;
-        padding: 50px 0;
-        gap: 30px;
-      }
-      .production-grid, .story-grid, .contact-grid {
-        grid-template-columns: 1fr;
-      }
-      .gallery-grid, .values-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-      .contact-card-box {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      footer .wrap {
-        grid-template-columns: 1fr;
-        gap: 30px;
-      }
-    }
-    @media (max-width: 650px) {
-      .store-nav nav {
-        display: none;
-      }
-      .gallery-grid, .values-grid {
-        grid-template-columns: 1fr;
-      }
-      .newsletter form {
-        min-width: 100%;
-      }
-      .section-head {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .banner-inner {
-        padding: 50px 20px;
-      }
-    }
-  `],
+  styles: [],
 })
 export class StoreComponent implements OnInit {
   auth = inject(AuthService);
@@ -1822,6 +686,13 @@ export class StoreComponent implements OnInit {
   reviews = signal<Review[]>([]);
   following = signal(false);
   activePage = signal<StorePageTab>('home');
+  categoryFilter = signal<number | null>(null);
+  publishedPages = computed(() => (this.store()?.pages || []).filter((page) => page.status === 'published'));
+  customPage = computed(() => this.publishedPages().find((page) => page.slug === this.activePage()) || null);
+  shopProducts = computed(() => {
+    const selected = this.categoryFilter();
+    return selected ? this.products().filter((product) => product.category?.id === selected) : this.products();
+  });
   currentYear = new Date().getFullYear();
 
   // Contact form state
@@ -1978,13 +849,11 @@ export class StoreComponent implements OnInit {
     // Check query param for page
     this.route.queryParamMap.subscribe((qp) => {
       const page = qp.get('page');
-      if (page === 'about' || page === 'contact' || page === 'shop' || page === 'home') {
-        this.activePage.set(page as StorePageTab);
-      }
+      this.activePage.set(page || 'home');
     });
 
     this.api.marketStore(slug).subscribe((res) => {
-      this.store.set(res.data.store);
+      this.store.set({ ...res.data.store, pages: res.data.pages || [] });
       this.products.set(res.data.products);
       if (this.auth.isLoggedIn()) {
         this.api.wishlistIds().subscribe({
@@ -2023,6 +892,43 @@ export class StoreComponent implements OnInit {
     } else {
       window.location.href = link;
     }
+  }
+
+  sectionProducts(section: StorePageSection): ProductCard[] {
+    let rows = [...this.products()];
+    switch (section.product_source) {
+      case 'featured':
+        rows = rows.filter((product) => product.is_featured);
+        break;
+      case 'bestsellers':
+        rows.sort((a, b) => (b.best_selling_count || 0) - (a.best_selling_count || 0));
+        break;
+      case 'category':
+        if (section.category_id) rows = rows.filter((product) => product.category?.id === section.category_id);
+        break;
+      case 'manual':
+        rows = (section.product_ids || []).map((id) => this.products().find((product) => product.id === id)).filter((product): product is ProductCard => !!product);
+        break;
+    }
+    return rows.slice(0, Math.max(1, Math.min(24, section.limit || 8)));
+  }
+
+  productCategories(): { id: number; name: string; image: string | null }[] {
+    const categories = new Map<number, { id: number; name: string; image: string | null }>();
+    for (const product of this.products()) {
+      const category = product.category;
+      if (category && !categories.has(category.id)) categories.set(category.id, { id: category.id, name: category.name, image: product.image || null });
+    }
+    return [...categories.values()];
+  }
+
+  categoryName(id: number | null): string {
+    return this.productCategories().find((category) => category.id === id)?.name || 'selected category';
+  }
+
+  openCategory(id: number) {
+    this.categoryFilter.set(id);
+    this.setPage('shop');
   }
 
   toggleFollow(storeId: number) {

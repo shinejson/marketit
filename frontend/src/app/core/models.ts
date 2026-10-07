@@ -406,6 +406,8 @@ export interface ProductCard {
   impression_id?: number;
   rating_avg?: number;
   rating_count?: number;
+  is_featured?: boolean;
+  best_selling_count?: number;
 }
 
 export interface StorePageSectionItem {
@@ -436,6 +438,12 @@ export interface StorePageSection {
   layout?: 'split' | 'centered' | 'full' | 'cards' | 'grid' | 'carousel' | string;
   overlay_opacity?: number;
   enabled: boolean;
+  columns?: number;
+  product_source?: 'latest' | 'featured' | 'bestsellers' | 'category' | 'manual' | string;
+  category_id?: number | null;
+  product_ids?: number[];
+  limit?: number;
+  responsive?: Partial<Record<'desktop' | 'tablet' | 'mobile', { columns?: number; padding?: number; font_size?: number }>>;
   items?: StorePageSectionItem[];
   steps?: StoreProductionStep[];
 }
@@ -485,6 +493,17 @@ export interface StoreThemeConfig {
   pages?: StoreThemePagesConfig;
 }
 
+export interface StorefrontPage {
+  id: number;
+  name: string;
+  slug: string;
+  page_type: 'custom' | string;
+  status: 'draft' | 'published' | string;
+  content: { schema_version?: number; sections: StorePageSection[] };
+  seo_title?: string | null;
+  seo_description?: string | null;
+}
+
 export interface Storefront {
   id: number;
   tenant_id?: number;
@@ -502,6 +521,7 @@ export interface Storefront {
   banner_path?: string | null;
   theme_config?: StoreThemeConfig | null;
   page_sections?: StorePageSection[] | null;
+  pages?: StorefrontPage[];
   seo_title?: string | null;
   seo_description?: string | null;
   contact_email?: string | null;
@@ -512,6 +532,90 @@ export interface Storefront {
   rating_avg?: number;
   rating_count?: number;
   products_count?: number;
+}
+
+export interface TemplateCategory {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  icon?: string | null;
+  is_active?: boolean;
+  templates_count?: number;
+}
+
+export interface TemplateDefinition {
+  schema_version: number;
+  theme: StoreThemeConfig;
+  pages: {
+    home: StorePageSection[];
+    about?: Record<string, unknown>;
+    contact?: Record<string, unknown>;
+    custom?: { name: string; slug?: string; sections: StorePageSection[] }[];
+  };
+}
+
+export interface PageTemplate {
+  id: number;
+  category_id?: number | null;
+  name: string;
+  slug: string;
+  description?: string | null;
+  thumbnail?: string | null;
+  designer_name: string;
+  price: string | number;
+  currency: string;
+  status: 'draft' | 'pending_review' | 'published' | 'rejected' | string;
+  version: string;
+  definition: TemplateDefinition;
+  is_featured: boolean;
+  rating_avg: string | number;
+  rating_count: number;
+  is_owned?: boolean;
+  purchases_count?: number;
+  installations_count?: number;
+  category?: Pick<TemplateCategory, 'id' | 'name' | 'slug'> | null;
+  published_at?: string | null;
+  updated_at?: string;
+}
+
+export interface TemplatePurchase {
+  id: number;
+  tenant_id: number;
+  template_id: number;
+  amount: string | number;
+  currency: string;
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded' | string;
+  payment_provider?: string | null;
+  purchased_at?: string | null;
+  template: PageTemplate;
+  tenant?: { id: number; name: string; slug: string };
+  installations?: { id: number; store_id: number; status: string; store?: { id: number; name: string; slug: string } }[];
+}
+
+export interface TenantPage {
+  id: number;
+  tenant_id: number;
+  store_id: number;
+  name: string;
+  slug: string;
+  page_type: 'custom' | string;
+  content: { schema_version: number; sections: StorePageSection[] };
+  status: 'draft' | 'published' | string;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  published_at?: string | null;
+}
+
+export interface PageRevision {
+  id: number;
+  page_id?: number | null;
+  page_type: string;
+  version: number;
+  created_at: string;
+  creator?: { id: number; name: string } | null;
 }
 
 export interface PageMeta {
