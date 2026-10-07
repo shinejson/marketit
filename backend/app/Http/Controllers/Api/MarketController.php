@@ -189,22 +189,30 @@ class MarketController extends Controller
         TenantContext::bypass(true);
         try {
             // §7 — the curated marketplace tree is the shopper-facing taxonomy.
-            $platform = PlatformCategory::query()
-                ->with(['children' => fn ($q) => $q->where('is_active', true)])
-                ->where('is_active', true)
-                ->whereNull('parent_id')
-                ->orderBy('position')
-                ->orderBy('name')
-                ->get();
+            try {
+                $platform = PlatformCategory::query()
+                    ->with(['children' => fn ($q) => $q->where('is_active', true)])
+                    ->where('is_active', true)
+                    ->whereNull('parent_id')
+                    ->orderBy('position')
+                    ->orderBy('name')
+                    ->get();
 
-            if ($platform->isNotEmpty()) {
-                return response()->json(['data' => $platform]);
+                if ($platform->isNotEmpty()) {
+                    return response()->json(['data' => $platform]);
+                }
+            } catch (\Throwable $e) {
+                // Table might be unmigrated, empty, or unseeded; fall back to tenant categories.
             }
 
             // Nothing curated yet: fall back to the tenant-defined categories.
-            $cats = Category::query()->with('children')->whereNull('parent_id')->orderBy('position')->get();
+            try {
+                $cats = Category::query()->with('children')->whereNull('parent_id')->orderBy('position')->get();
 
-            return response()->json(['data' => $cats]);
+                return response()->json(['data' => $cats]);
+            } catch (\Throwable $e) {
+                return response()->json(['data' => []]);
+            }
         } finally {
             TenantContext::bypass(false);
         }

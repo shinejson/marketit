@@ -33,6 +33,9 @@ interface ActionLink {
             <a [routerLink]="item.path" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: item.exact }" (click)="closeMenu()">
               <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
               <span>{{ item.label }}</span>
+              @if (item.icon === 'heart' && wishlistCount() > 0) {
+                <span class="nav-badge">{{ wishlistCount() }}</span>
+              }
             </a>
           }
         </nav>
@@ -51,6 +54,14 @@ interface ActionLink {
             <a [routerLink]="a.path" class="btn" [class.ghost]="a.ghost" (click)="closeMenu()">{{ a.label }}</a>
           }
           @if (auth.isLoggedIn()) {
+            <a routerLink="/wishlist" class="wishlist-btn" title="Saved Wishlist" aria-label="View Wishlist" (click)="closeMenu()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="wishlist-icon" aria-hidden="true">
+                <path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1l1.7 1.7L12 21.2l7.1-6.8 1.7-1.7a5 5 0 0 0 0-7.1z" />
+              </svg>
+              @if (wishlistCount() > 0) {
+                <span class="wishlist-badge">{{ wishlistCount() }}</span>
+              }
+            </a>
             <div class="dropdown-wrap" (click)="$event.stopPropagation()">
               <button
                 type="button"
@@ -98,6 +109,7 @@ interface ActionLink {
                   <a routerLink="/wishlist" (click)="closeProfile()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1l1.7 1.7L12 21.2l7.1-6.8 1.7-1.7a5 5 0 0 0 0-7.1z"/></svg>
                     <span>My wishlist</span>
+                    @if (wishlistCount() > 0) { <span class="notif-count">{{ wishlistCount() }}</span> }
                   </a>
                   <a routerLink="/reviews" (click)="closeProfile()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="panel-icon"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.8-5.2-2.75L6.8 19.6l1-5.8-4.2-4.1 5.8-.85z"/></svg>
@@ -134,6 +146,17 @@ interface ActionLink {
           }
         </div>
 
+        @if (auth.isLoggedIn()) {
+          <a routerLink="/wishlist" class="wishlist-btn mobile-wishlist-btn" title="Saved Wishlist" aria-label="View Wishlist" (click)="closeMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="wishlist-icon" aria-hidden="true">
+              <path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1l1.7 1.7L12 21.2l7.1-6.8 1.7-1.7a5 5 0 0 0 0-7.1z" />
+            </svg>
+            @if (wishlistCount() > 0) {
+              <span class="wishlist-badge">{{ wishlistCount() }}</span>
+            }
+          </a>
+        }
+
         <!-- Hamburger (small screens) -->
         <button
           type="button"
@@ -163,6 +186,9 @@ interface ActionLink {
               <a [routerLink]="item.path" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: item.exact }" (click)="closeMenu()">
                 <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
                 <span>{{ item.label }}</span>
+                @if (item.icon === 'heart' && wishlistCount() > 0) {
+                  <span class="nav-badge">{{ wishlistCount() }}</span>
+                }
               </a>
             }
           </nav>
@@ -355,10 +381,59 @@ interface ActionLink {
       .mobile-nav svg { width: 18px; height: 18px; flex: none; }
       .panel-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
       .panel-actions .btn { flex: 1 1 auto; }
+      .mobile-wishlist-btn { display: inline-flex; margin-left: auto; margin-right: 4px; }
     }
 
     /* Dropdown wrapper & Profile button */
     .dropdown-wrap { position: relative; }
+    .wishlist-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: background .15s ease, border-color .15s ease, color .15s ease;
+      text-decoration: none;
+      flex: none;
+    }
+    .wishlist-btn:hover { background: var(--paper-2); border-color: var(--ink-soft); color: var(--accent); }
+    .wishlist-btn svg { width: 19px; height: 19px; }
+    .wishlist-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 18px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,.15);
+    }
+    .nav-badge {
+      margin-left: 4px;
+      min-width: 17px;
+      padding: 1px 5px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .mobile-wishlist-btn { display: none; }
     .notif-count { margin-left: auto; min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 800; text-align: center; }
     .profile-btn {
       display: inline-flex;
@@ -442,6 +517,7 @@ export class ShellComponent {
 
   /** §20 — unread badge on the account menu's notification entry. */
   unreadNotifications = signal(0);
+  wishlistCount = signal(0);
   private router = inject(Router);
   menuOpen = signal(false);
   profileOpen = signal(false);
@@ -502,14 +578,27 @@ export class ShellComponent {
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
       this.closeMenu();
       this.closeProfile();
+      this.loadWishlistCount();
     });
 
     if (this.auth.isLoggedIn()) {
+      this.loadWishlistCount();
       this.api.notificationSummary('customer').subscribe({
         next: (res) => this.unreadNotifications.set(res.data?.unread ?? 0),
         error: () => undefined,
       });
     }
+  }
+
+  loadWishlistCount(): void {
+    if (!this.auth.isLoggedIn()) {
+      this.wishlistCount.set(0);
+      return;
+    }
+    this.api.wishlist().subscribe({
+      next: (res) => this.wishlistCount.set(res.data?.counts?.items ?? res.data?.items?.length ?? 0),
+      error: () => undefined,
+    });
   }
 
   toggleMenu() {
@@ -531,6 +620,7 @@ export class ShellComponent {
   onLogout() {
     this.closeProfile();
     this.closeMenu();
+    this.wishlistCount.set(0);
     this.auth.logout();
   }
 

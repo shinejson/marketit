@@ -529,6 +529,7 @@ class DatabaseSeeder extends Seeder
                 $settlement->forceFill(['created_at' => $at, 'updated_at' => $at])->save();
             }
         }
-    }
 
+        $this->call(CommerceSeeder::class);
+    }
 }

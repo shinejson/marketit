@@ -454,6 +454,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/tenants/{tenant}', [AdminController::class, 'showTenant']);
         Route::get('/tenants/{tenant}/documents/{document}', [AdminController::class, 'tenantDocument']);
         Route::patch('/tenants/{tenant}', [AdminController::class, 'updateTenant']);
+        Route::get('/stores', [AdminController::class, 'stores']);
+        Route::patch('/stores/{store}', [AdminController::class, 'updateStore']);
         Route::get('/orders', [AdminController::class, 'orders']);
         Route::get('/metrics', [AdminController::class, 'metrics']);
         Route::get('/overview', AdminOverviewController::class);

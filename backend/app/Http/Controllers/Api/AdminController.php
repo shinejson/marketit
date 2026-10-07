@@ -111,6 +111,59 @@ class AdminController extends Controller
         return response()->json(['data' => $this->tenantSummary($tenant->fresh(['owner']))]);
     }
 
+    public function stores(Request $request): JsonResponse
+    {
+        TenantContext::bypass(true);
+        try {
+            $q = Store::query()->with('tenant');
+            if ($request->filled('status')) {
+                $q->where('status', $request->string('status'));
+            }
+            if ($request->filled('tenant_id')) {
+                $q->where('tenant_id', $request->integer('tenant_id'));
+            }
+            if ($request->filled('q')) {
+                $term = '%'.$request->string('q').'%';
+                $q->where(function ($inner) use ($term) {
+                    $inner->where('name', 'like', $term)
+                        ->orWhere('slug', 'like', $term)
+                        ->orWhere('city', 'like', $term)
+                        ->orWhereHas('tenant', fn ($t) => $t->where('name', 'like', $term));
+                });
+            }
+            $page = $q->withCount('products')->orderByDesc('id')->paginate($request->integer('per_page', 15));
+
+            return response()->json([
+                'data' => $page->items(),
+                'meta' => [
+                    'page' => $page->currentPage(),
+                    'per_page' => $page->perPage(),
+                    'total' => $page->total(),
+                    'last_page' => $page->lastPage(),
+                ],
+            ]);
+        } finally {
+            TenantContext::bypass(false);
+        }
+    }
+
+    public function updateStore(Request $request, int $storeId): JsonResponse
+    {
+        TenantContext::bypass(true);
+        try {
+            $store = Store::query()->findOrFail($storeId);
+            $data = $request->validate([
+                'status' => ['sometimes', Rule::in([Store::STATUS_DRAFT, Store::STATUS_ACTIVE, Store::STATUS_SUSPENDED])],
+                'is_featured' => ['sometimes', 'boolean'],
+            ]);
+            $store->update($data);
+
+            return response()->json(['data' => $store->fresh('tenant')]);
+        } finally {
+            TenantContext::bypass(false);
+        }
+    }
+
     protected function tenantSummary(Tenant $tenant): array
     {
         $data = $tenant->toArray();

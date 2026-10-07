@@ -136,6 +136,7 @@ export const routes: Routes = [
     children: [
       { path: '', loadComponent: () => import('./features/admin/dashboard.component').then((m) => m.AdminDashboardComponent) },
       { path: 'tenants', loadComponent: () => import('./features/admin/tenants.component').then((m) => m.AdminTenantsComponent) },
+      { path: 'stores', loadComponent: () => import('./features/admin/stores.component').then((m) => m.AdminStoresComponent) },
       { path: 'users', loadComponent: () => import('./features/admin/users.component').then((m) => m.AdminUsersComponent) },
       { path: 'subscriptions', loadComponent: () => import('./features/admin/subscriptions.component').then((m) => m.AdminSubscriptionsComponent) },
       { path: 'settings', loadComponent: () => import('./features/admin/settings.component').then((m) => m.AdminSettingsComponent) },

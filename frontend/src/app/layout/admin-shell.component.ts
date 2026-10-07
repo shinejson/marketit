@@ -8,7 +8,7 @@ import { CurrencyService } from '../core/currency.service';
 import { ThemeService } from '../core/theme.service';
 
 type IconName =
-  | 'dashboard' | 'analytics' | 'tenants' | 'users' | 'subscriptions' | 'orders'
+  | 'dashboard' | 'analytics' | 'tenants' | 'stores' | 'store' | 'users' | 'subscriptions' | 'orders'
   | 'domains' | 'ads' | 'audit' | 'settings' | 'shield' | 'logout' | 'search' | 'bell'
   | 'sun' | 'moon' | 'chevron' | 'menu'
   | 'lifebuoy' | 'ticket' | 'chat' | 'tasks' | 'guides'
@@ -71,12 +71,14 @@ const MOBILE_BREAKPOINT = 900;
             </a>
           }
 
-          <p class="section-label label-text">Commerce</p>
-          @for (c of commerceItems; track c.key) {
-            <a [routerLink]="adminLink(c.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? c.label : ''">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: c.icon }" />
-              <span class="label-text">{{ c.label }}</span>
-            </a>
+          @if (commerceItems.length) {
+            <p class="section-label label-text">Commerce</p>
+            @for (c of commerceItems; track c.key) {
+              <a [routerLink]="adminLink(c.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? c.label : ''">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: c.icon }" />
+                <span class="label-text">{{ c.label }}</span>
+              </a>
+            }
           }
 
           <p class="section-label label-text">Service desk</p>
@@ -226,6 +228,12 @@ const MOBILE_BREAKPOINT = 900;
             <line x1="4" y1="20" x2="20" y2="20" /><rect x="6" y="11" width="3" height="7" /><rect x="13" y="7" width="3" height="11" /><rect x="17.5" y="13" width="3" height="5" />
           }
           @case ('tenants') {
+            <path d="M3 9l1.5-5h15L21 9" /><path d="M5 9v11h14V9" /><path d="M9.5 20v-5.5h5V20" />
+          }
+          @case ('store') {
+            <path d="M3 9l1.5-5h15L21 9" /><path d="M5 9v11h14V9" /><path d="M9.5 20v-5.5h5V20" />
+          }
+          @case ('stores') {
             <path d="M3 9l1.5-5h15L21 9" /><path d="M5 9v11h14V9" /><path d="M9.5 20v-5.5h5V20" />
           }
           @case ('users') {
@@ -627,19 +635,19 @@ export class AdminShellComponent {
 
   readonly manageItems: NavEntry[] = [
     { key: 'tenants', label: 'Tenants', icon: 'tenants' },
+    { key: 'stores', label: 'Stores', icon: 'store' },
     { key: 'users', label: 'Customers & users', icon: 'users' },
-    { key: 'catalog', label: 'Catalogue', icon: 'catalog' },
+    { key: 'catalog', label: 'Catalog & Moderation', icon: 'catalog' },
     { key: 'orders', label: 'Orders', icon: 'orders' },
     { key: 'subscriptions', label: 'Plans & billing', icon: 'subscriptions' },
-  ];
-
-  readonly commerceItems: NavEntry[] = [
+    { key: 'reviews', label: 'Reviews', icon: 'star' },
     { key: 'commissions', label: 'Commissions', icon: 'percent' },
     { key: 'payouts', label: 'Payouts', icon: 'payout' },
+    { key: 'disputes', label: 'Disputes & Refunds', icon: 'gavel' },
     { key: 'coupons', label: 'Coupons', icon: 'tag' },
-    { key: 'reviews', label: 'Reviews', icon: 'star' },
-    { key: 'disputes', label: 'Disputes & refunds', icon: 'gavel' },
   ];
+
+  readonly commerceItems: NavEntry[] = [];
 
   readonly supportItems: NavEntry[] = [
     { key: 'support', label: 'Support overview', icon: 'lifebuoy', exact: true },
@@ -683,6 +691,12 @@ export class AdminShellComponent {
     for (const p of this.platformItems) {
       items.push({ label: p.label, path: this.adminLink(p.key), icon: p.icon, section: 'Platform' });
     }
+    // Search aliases for instant discovery of nested sub-features
+    items.push(
+      { label: 'Moderation', path: this.adminLink('catalog'), icon: 'catalog', section: 'Manage' },
+      { label: 'Disputes', path: this.adminLink('disputes'), icon: 'gavel', section: 'Manage' },
+      { label: 'Refunds', path: this.adminLink('disputes'), icon: 'gavel', section: 'Manage' }
+    );
     return items;
   });
 

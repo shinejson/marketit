@@ -6,13 +6,14 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { CurrencyService } from '../../core/currency.service';
 import {
+  Address,
   ProfileActivityEntry,
   ProfileActivityStats,
   ProfilePayload,
   ProfileSession,
 } from '../../core/models';
 
-type ProfileTab = 'overview' | 'activity' | 'security';
+type ProfileTab = 'overview' | 'activity' | 'security' | 'addresses';
 
 /**
  * "My account" for whoever signed into the tenant console — the person who
@@ -85,6 +86,7 @@ type ProfileTab = 'overview' | 'activity' | 'security';
 
         <nav class="tabs card" aria-label="Profile sections">
           <button type="button" [class.active]="tab() === 'overview'" (click)="tab.set('overview')">Profile details</button>
+          <button type="button" [class.active]="tab() === 'addresses'" (click)="switchToAddresses()">Saved addresses</button>
           <button type="button" [class.active]="tab() === 'activity'" (click)="switchToActivity()">Activity</button>
           <button type="button" [class.active]="tab() === 'security'" (click)="switchToSecurity()">Security &amp; sessions</button>
         </nav>
@@ -218,6 +220,113 @@ type ProfileTab = 'overview' | 'activity' | 'security';
             }
           </section>
         }
+
+        @if (tab() === 'addresses') {
+          <section class="card panel">
+            <div class="panel-title">
+              <div>
+                <p class="eyebrow">Shipping &amp; Delivery</p>
+                <h2>Saved addresses</h2>
+                <p>Saved shipping and delivery destinations for quick checkout.</p>
+              </div>
+              <button class="btn primary" type="button" (click)="openAddressForm()" [disabled]="addressBusy()">
+                ＋ Add new address
+              </button>
+            </div>
+
+            @if (showAddressForm()) {
+              <div class="address-form card">
+                <h3>{{ editingAddressId() ? 'Edit address' : 'New shipping address' }}</h3>
+                <div class="form-grid">
+                  <label class="field">
+                    <span>Label (e.g. Home, Office)</span>
+                    <input [(ngModel)]="addressForm.label" name="addr_label" placeholder="Home" />
+                  </label>
+                  <label class="field">
+                    <span>Recipient full name *</span>
+                    <input [(ngModel)]="addressForm.full_name" name="addr_full_name" required placeholder="Jane Doe" />
+                  </label>
+                  <label class="field">
+                    <span>Phone number</span>
+                    <input [(ngModel)]="addressForm.phone" name="addr_phone" placeholder="+233 24 000 0000" />
+                  </label>
+                  <label class="field">
+                    <span>Country code (2 letters) *</span>
+                    <input [(ngModel)]="addressForm.country" name="addr_country" maxlength="2" placeholder="GH" />
+                  </label>
+                  <label class="field wide">
+                    <span>Address line 1 *</span>
+                    <input [(ngModel)]="addressForm.line1" name="addr_line1" required placeholder="Street address, apartment, or P.O. box" />
+                  </label>
+                  <label class="field wide">
+                    <span>Address line 2</span>
+                    <input [(ngModel)]="addressForm.line2" name="addr_line2" placeholder="Suite, unit, floor, building (optional)" />
+                  </label>
+                  <label class="field">
+                    <span>City *</span>
+                    <input [(ngModel)]="addressForm.city" name="addr_city" required placeholder="Accra" />
+                  </label>
+                  <label class="field">
+                    <span>State / Region</span>
+                    <input [(ngModel)]="addressForm.state" name="addr_state" placeholder="Greater Accra" />
+                  </label>
+                  <label class="field">
+                    <span>Postal code</span>
+                    <input [(ngModel)]="addressForm.postal_code" name="addr_postal_code" placeholder="00233" />
+                  </label>
+                  <div class="field wide checkbox-field">
+                    <label class="check-label">
+                      <input type="checkbox" [(ngModel)]="addressForm.is_default" name="addr_default" />
+                      <span>Set as default shipping address</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button class="btn ghost" type="button" (click)="cancelAddressForm()" [disabled]="addressBusy()">Cancel</button>
+                  <button class="btn primary" type="button" (click)="saveAddress()" [disabled]="addressBusy() || !addressForm.full_name || !addressForm.line1 || !addressForm.city || !addressForm.country">
+                    {{ addressBusy() ? 'Saving…' : (editingAddressId() ? 'Update address' : 'Save address') }}
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (addressLoading()) {
+              <p class="pad muted">Loading your saved addresses…</p>
+            } @else if (!addresses().length) {
+              <div class="empty-addr">
+                <p class="muted">No saved addresses yet. Click "Add new address" to create your first delivery location.</p>
+              </div>
+            } @else {
+              <div class="address-grid">
+                @for (addr of addresses(); track addr.id) {
+                  <article class="addr-card card" [class.is-default]="addr.is_default">
+                    <div class="addr-head">
+                      <div class="addr-badges">
+                        <strong>{{ addr.label || 'Delivery Address' }}</strong>
+                        @if (addr.is_default) {
+                          <span class="tag default-tag">Default</span>
+                        }
+                      </div>
+                      <div class="addr-actions">
+                        <button type="button" class="link" (click)="editAddress(addr)" [disabled]="addressBusy()">Edit</button>
+                        <button type="button" class="link danger" (click)="deleteAddress(addr.id)" [disabled]="addressBusy()">Delete</button>
+                      </div>
+                    </div>
+                    <p class="addr-recipient"><b>{{ addr.full_name }}</b>@if (addr.phone) { <span class="muted"> · {{ addr.phone }}</span> }</p>
+                    <p class="addr-lines">
+                      {{ addr.line1 }}@if (addr.line2) { <br />{{ addr.line2 }} }<br />
+                      {{ addr.city }}@if (addr.state) { , {{ addr.state }} }@if (addr.postal_code) {  {{ addr.postal_code }} }<br />
+                      {{ addr.country }}
+                    </p>
+                    @if (!addr.is_default) {
+                      <button type="button" class="link set-default" (click)="setDefault(addr)" [disabled]="addressBusy()">Make default</button>
+                    }
+                  </article>
+                }
+              </div>
+            }
+          </section>
+        }
       } @else {
         <div class="card loading">{{ error() ? 'Could not load your profile.' : 'Loading your profile…' }}</div>
       }
@@ -303,6 +412,23 @@ type ProfileTab = 'overview' | 'activity' | 'security';
     .pad{padding:12px 0;font-size:12.5px}
     .more{margin-top:12px}
     .loading{padding:40px;text-align:center;color:var(--ink-soft)}
+    .address-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px}
+    .addr-card{padding:16px;border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;gap:8px;background:var(--card)}
+    .addr-card.is-default{border-color:color-mix(in srgb,var(--accent) 60%,transparent);background:color-mix(in srgb,var(--accent) 4%,var(--card))}
+    .addr-head{display:flex;justify-content:space-between;align-items:center}
+    .addr-badges{display:flex;align-items:center;gap:8px}
+    .default-tag{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);font-size:10px}
+    .addr-recipient{margin:0;font-size:13.5px}
+    .addr-lines{margin:0;font-size:12.5px;line-height:1.45;color:var(--ink-soft)}
+    .addr-actions{display:flex;gap:8px}
+    .set-default{margin-top:auto;text-align:left;color:var(--ink-soft)}
+    .set-default:hover{color:var(--accent)}
+    .address-form{margin:14px 0 20px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--paper-2)}
+    .address-form h3{margin:0 0 14px;font-size:16px}
+    .checkbox-field{margin-top:4px}
+    .check-label{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600}
+    .form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}
+    .empty-addr{padding:30px;text-align:center;border:1.5px dashed var(--line);border-radius:12px;margin-top:14px}
     @media(max-width:760px){.form-grid,.filters{grid-template-columns:1fr}.page-head{flex-direction:column;align-items:flex-start}.facts{grid-template-columns:1fr 1fr}}
   `],
 })
@@ -319,6 +445,24 @@ export class SellerProfileComponent {
   uploading = signal(false);
   notice = signal('');
   error = signal('');
+
+  addresses = signal<Address[]>([]);
+  addressLoading = signal(false);
+  addressBusy = signal(false);
+  showAddressForm = signal(false);
+  editingAddressId = signal<number | null>(null);
+  addressForm: Partial<Address> = {
+    label: '',
+    full_name: '',
+    phone: '',
+    line1: '',
+    line2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: 'GH',
+    is_default: false,
+  };
 
   activity = signal<ProfileActivityEntry[]>([]);
   activityStats = signal<ProfileActivityStats | null>(null);
@@ -555,6 +699,118 @@ export class SellerProfileComponent {
       },
       error: () => this.error.set('Could not sign out other sessions.'),
     });
+  }
+
+  /* ----------------------------------------------------------- addresses */
+
+  switchToAddresses(): void {
+    this.tab.set('addresses');
+    if (!this.addresses().length) {
+      this.loadAddresses();
+    }
+  }
+
+  loadAddresses(): void {
+    this.addressLoading.set(true);
+    this.api
+      .addresses()
+      .pipe(finalize(() => this.addressLoading.set(false)))
+      .subscribe({
+        next: (res) => this.addresses.set(res.data || []),
+        error: () => this.error.set('Could not load your saved addresses.'),
+      });
+  }
+
+  openAddressForm(): void {
+    this.editingAddressId.set(null);
+    this.addressForm = {
+      label: '',
+      full_name: this.profile()?.user.name ?? '',
+      phone: this.profile()?.user.phone ?? '',
+      line1: '',
+      line2: '',
+      city: '',
+      state: '',
+      postal_code: '',
+      country: 'GH',
+      is_default: this.addresses().length === 0,
+    };
+    this.showAddressForm.set(true);
+  }
+
+  editAddress(addr: Address): void {
+    this.editingAddressId.set(addr.id);
+    this.addressForm = { ...addr };
+    this.showAddressForm.set(true);
+  }
+
+  cancelAddressForm(): void {
+    this.showAddressForm.set(false);
+    this.editingAddressId.set(null);
+  }
+
+  saveAddress(): void {
+    if (!this.addressForm.full_name || !this.addressForm.line1 || !this.addressForm.city || !this.addressForm.country) {
+      this.error.set('Please fill in all required address fields.');
+      return;
+    }
+    this.addressBusy.set(true);
+    this.notice.set('');
+    this.error.set('');
+
+    const payload: Partial<Address> = {
+      label: this.addressForm.label || null,
+      full_name: this.addressForm.full_name,
+      phone: this.addressForm.phone || null,
+      line1: this.addressForm.line1,
+      line2: this.addressForm.line2 || null,
+      city: this.addressForm.city,
+      state: this.addressForm.state || null,
+      postal_code: this.addressForm.postal_code || null,
+      country: this.addressForm.country.toUpperCase(),
+      is_default: !!this.addressForm.is_default,
+    };
+
+    const id = this.editingAddressId();
+    const req$ = id ? this.api.updateAddress(id, payload) : this.api.createAddress(payload);
+
+    req$.pipe(finalize(() => this.addressBusy.set(false))).subscribe({
+      next: () => {
+        this.notice.set(id ? 'Address updated.' : 'New address saved.');
+        this.showAddressForm.set(false);
+        this.editingAddressId.set(null);
+        this.loadAddresses();
+      },
+      error: (e) => this.error.set(e.error?.error?.message || 'Could not save address.'),
+    });
+  }
+
+  deleteAddress(id: number): void {
+    this.addressBusy.set(true);
+    this.api
+      .deleteAddress(id)
+      .pipe(finalize(() => this.addressBusy.set(false)))
+      .subscribe({
+        next: () => {
+          this.notice.set('Address deleted.');
+          this.addresses.update((list) => list.filter((a) => a.id !== id));
+        },
+        error: (e) => this.error.set(e.error?.error?.message || 'Could not delete address.'),
+      });
+  }
+
+  setDefault(addr: Address): void {
+    this.addressBusy.set(true);
+    this.api
+      .updateAddress(addr.id, { is_default: true })
+      .pipe(finalize(() => this.addressBusy.set(false)))
+      .subscribe({
+        next: () => {
+          this.notice.set('Default address updated.');
+          this.loadAddresses();
+        },
+        error: (e) => this.error.set(e.error?.error?.message || 'Could not set default address.'),
+      });
   }
 
   /* -------------------------------------------------------------- shared */

@@ -218,6 +218,14 @@ export class ApiService {
     return this.http.post<{ data: Address }>('/api/addresses', payload);
   }
 
+  updateAddress(id: number, payload: Partial<Address>) {
+    return this.http.patch<{ data: Address }>(`/api/addresses/${id}`, payload);
+  }
+
+  deleteAddress(id: number) {
+    return this.http.delete<{ data: { ok: boolean } }>(`/api/addresses/${id}`);
+  }
+
   checkoutQuote(addressId?: number | null, deliveryChoices: Record<string, number> = {}) {
     return this.http.post<{ data: CartPayload }>('/api/checkout/quote', {
       address_id: addressId ?? null,
@@ -751,6 +759,14 @@ export class ApiService {
 
   updateTenantStatus(id: number, status: string, extra: { review_notes?: string; rejection_reason?: string } = {}) {
     return this.http.patch<{ data: TenantApplication }>(`/api/admin/tenants/${id}`, { status, ...extra });
+  }
+
+  adminStores(params: Record<string, string | number> = {}) {
+    return this.http.get<Paginated<any[]>>('/api/admin/stores', { params });
+  }
+
+  adminUpdateStore(id: number, payload: { status?: string; is_featured?: boolean }) {
+    return this.http.patch<{ data: any }>(`/api/admin/stores/${id}`, payload);
   }
 
   adminOrders() {
