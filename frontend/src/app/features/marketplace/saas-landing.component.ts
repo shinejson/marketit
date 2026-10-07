@@ -17,31 +17,138 @@ interface FaqItem {
     <div class="saas-page">
       <!-- 21-SECTION SAAS PLATFORM LANDING PAGE (landingPage.md) -->
 
-      <!-- TOPNAV: Dedicated SaaS Platform Navigation -->
+      <!-- TOPNAV: Dedicated SaaS Platform Navigation (dropdown-based) -->
       <header class="saas-nav wrap">
         <div class="nav-left">
           <a routerLink="/platform" class="brand serif">
             MarketHub <span class="brand-badge">SaaS Platform</span>
           </a>
-          <span class="nav-tagline">Build. Customize. Sell. Grow.</span>
         </div>
-        <nav class="nav-links">
-          <a href="#overview">Overview</a>
-          <a href="#how-it-works">How It Works</a>
-          <a href="#builder">Page Builder</a>
-          <a href="#templates">Templates</a>
-          <a href="#features">Features</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#faq">FAQ</a>
+
+        <nav class="nav-links" aria-label="Platform navigation">
+          <!-- Product dropdown -->
+          <div class="nav-item" [class.open]="openMenu() === 'product'">
+            <button
+              type="button"
+              class="nav-trigger"
+              (click)="toggleMenu('product', $event)"
+              aria-haspopup="true"
+              [attr.aria-expanded]="openMenu() === 'product'"
+            >
+              Product
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+            </button>
+            <div class="nav-dropdown" role="menu">
+              @for (item of productLinks; track item.href) {
+                <a class="dd-item" [href]="item.href" role="menuitem" (click)="closeMenus()">
+                  <span class="dd-icon" aria-hidden="true">{{ item.icon }}</span>
+                  <span class="dd-copy">
+                    <strong>{{ item.title }}</strong>
+                    <small>{{ item.desc }}</small>
+                  </span>
+                </a>
+              }
+            </div>
+          </div>
+
+          <!-- Solutions dropdown -->
+          <div class="nav-item" [class.open]="openMenu() === 'solutions'">
+            <button
+              type="button"
+              class="nav-trigger"
+              (click)="toggleMenu('solutions', $event)"
+              aria-haspopup="true"
+              [attr.aria-expanded]="openMenu() === 'solutions'"
+            >
+              Solutions
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+            </button>
+            <div class="nav-dropdown" role="menu">
+              @for (item of solutionLinks; track item.href) {
+                <a class="dd-item" [href]="item.href" role="menuitem" (click)="closeMenus()">
+                  <span class="dd-icon" aria-hidden="true">{{ item.icon }}</span>
+                  <span class="dd-copy">
+                    <strong>{{ item.title }}</strong>
+                    <small>{{ item.desc }}</small>
+                  </span>
+                </a>
+              }
+            </div>
+          </div>
+
+          <a href="#pricing" class="nav-link">Pricing</a>
+          <a href="#faq" class="nav-link">FAQ</a>
         </nav>
+
         <div class="nav-actions">
-          <a routerLink="/" class="btn-ghost-sm" title="Browse customer market square">← Market Square</a>
+          <a routerLink="/" class="btn-ghost-sm nav-market-square" title="Browse customer market square">← Market Square</a>
           @if (!auth.isLoggedIn()) {
             <a routerLink="/login" [queryParams]="{ returnUrl: '/platform' }" class="btn-ghost-sm">Log in</a>
             <a [routerLink]="createStoreTarget()" class="btn-primary-sm">Create Store →</a>
           } @else {
             <a [routerLink]="createStoreTarget()" class="btn-primary-sm">Open Workspace →</a>
           }
+          <!-- Hamburger (small screens) -->
+          <button
+            type="button"
+            class="burger"
+            (click)="toggleMobile($event)"
+            [attr.aria-expanded]="mobileOpen()"
+            aria-controls="saas-mobile-menu"
+            [attr.aria-label]="mobileOpen() ? 'Close menu' : 'Open menu'"
+          >
+            @if (mobileOpen()) {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            } @else {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            }
+          </button>
+        </div>
+
+        <!-- Mobile menu panel with accordion dropdowns -->
+        <div class="mobile-panel" id="saas-mobile-menu" [class.open]="mobileOpen()" (click)="$event.stopPropagation()">
+          <div class="m-inner">
+            <div class="m-group" [class.open]="mobileGroup() === 'product'">
+              <button type="button" class="m-trigger" (click)="toggleMobileGroup('product', $event)" [attr.aria-expanded]="mobileGroup() === 'product'">
+                Product
+                <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+              </button>
+              <div class="m-items">
+                @for (item of productLinks; track item.href) {
+                  <a [href]="item.href" (click)="closeMobile()"><span class="m-icon" aria-hidden="true">{{ item.icon }}</span> {{ item.title }}</a>
+                }
+              </div>
+            </div>
+
+            <div class="m-group" [class.open]="mobileGroup() === 'solutions'">
+              <button type="button" class="m-trigger" (click)="toggleMobileGroup('solutions', $event)" [attr.aria-expanded]="mobileGroup() === 'solutions'">
+                Solutions
+                <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+              </button>
+              <div class="m-items">
+                @for (item of solutionLinks; track item.href) {
+                  <a [href]="item.href" (click)="closeMobile()"><span class="m-icon" aria-hidden="true">{{ item.icon }}</span> {{ item.title }}</a>
+                }
+              </div>
+            </div>
+
+            <a href="#pricing" class="m-direct" (click)="closeMobile()">Pricing</a>
+            <a href="#faq" class="m-direct" (click)="closeMobile()">FAQ</a>
+
+            <div class="m-actions">
+              <a routerLink="/" class="btn-ghost-sm" (click)="closeMobile()">← Market Square</a>
+              @if (!auth.isLoggedIn()) {
+                <a routerLink="/login" [queryParams]="{ returnUrl: '/platform' }" class="btn-ghost-sm" (click)="closeMobile()">Log in</a>
+                <a [routerLink]="createStoreTarget()" class="btn-primary-sm" (click)="closeMobile()">Create Store →</a>
+              } @else {
+                <a [routerLink]="createStoreTarget()" class="btn-primary-sm" (click)="closeMobile()">Open Workspace →</a>
+              }
+            </div>
+          </div>
         </div>
       </header>
 
@@ -916,15 +1023,52 @@ interface FaqItem {
     .btn-accent { background: #c45c26; color: white; padding: 12px 24px; border-radius: 999px; font-size: 14px; font-weight: 700; text-decoration: none; }
 
     /* SAAS TOPNAV */
-    .saas-nav { height: 78px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e9eee9; background: #fafaf7; position: sticky; top: 0; z-index: 60; backdrop-filter: blur(8px); }
-    .nav-left { display: flex; align-items: center; gap: 14px; }
+    .saas-nav { height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid #e9eee9; background: #fafaf7; position: sticky; top: 0; z-index: 60; backdrop-filter: blur(8px); }
+    .nav-left { display: flex; align-items: center; gap: 14px; flex: none; }
     .brand { font-size: 22px; font-weight: 800; color: #183329; text-decoration: none; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
     .brand-badge { font-family: 'Inter', sans-serif; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; background: #e6f0ea; color: #1f4b3a; padding: 3px 8px; border-radius: 12px; }
-    .nav-tagline { font-size: 12px; color: #738278; font-weight: 500; }
-    .nav-links { display: flex; gap: 18px; }
-    .nav-links a { color: #536257; font-size: 13.5px; font-weight: 600; text-decoration: none; transition: color 0.15s; }
-    .nav-links a:hover { color: #1f4b3a; }
-    .nav-actions { display: flex; align-items: center; gap: 10px; }
+
+    /* Top-level nav: dropdown triggers + direct links */
+    .nav-links { display: flex; align-items: center; gap: 2px; }
+    .nav-trigger, .nav-link { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border: 0; border-radius: 999px; background: transparent; color: #536257; font-size: 13.5px; font-weight: 600; text-decoration: none; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .nav-trigger:hover, .nav-link:hover { color: #1f4b3a; background: #edf2ee; }
+    .nav-item { position: relative; }
+    .nav-item.open .nav-trigger { color: #1f4b3a; background: #e6f0ea; }
+    .chev { width: 14px; height: 14px; flex: none; transition: transform 0.2s ease; }
+    .nav-item.open .nav-trigger .chev { transform: rotate(180deg); }
+
+    /* Dropdown panels */
+    .nav-dropdown { position: absolute; top: calc(100% + 12px); left: 50%; transform: translate(-50%, 8px); width: 330px; background: white; border: 1px solid #e4eae4; border-radius: 16px; box-shadow: 0 18px 44px rgba(20, 48, 32, 0.16); padding: 8px; display: flex; flex-direction: column; gap: 2px; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s; }
+    .nav-item.open .nav-dropdown { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); }
+    .dd-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 12px; text-decoration: none; }
+    .dd-item:hover { background: #f2f6f3; }
+    .dd-icon { width: 36px; height: 36px; flex: none; display: grid; place-items: center; font-size: 16px; background: #e6f0ea; border-radius: 10px; }
+    .dd-copy { min-width: 0; }
+    .dd-copy strong { display: block; font-size: 13.5px; font-weight: 700; color: #183329; }
+    .dd-copy small { display: block; margin-top: 2px; font-size: 12px; line-height: 1.4; color: #6b7a70; }
+
+    .nav-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+
+    /* Hamburger + mobile panel */
+    .burger { display: none; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #e0e7e1; border-radius: 12px; background: white; color: #1f4b3a; cursor: pointer; transition: background 0.15s; }
+    .burger:hover { background: #edf2ee; }
+    .burger svg { width: 18px; height: 18px; }
+
+    .mobile-panel { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fafaf7; box-shadow: 0 24px 48px rgba(20, 48, 32, 0.14); max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+    .mobile-panel.open { max-height: calc(100vh - 80px); overflow-y: auto; border: 1px solid #e9eee9; border-top: 0; border-radius: 0 0 18px 18px; }
+    .m-inner { padding: 12px 14px 18px; display: flex; flex-direction: column; gap: 4px; }
+    .m-trigger { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 10px; border: 0; background: transparent; font-size: 14px; font-weight: 700; color: #183329; cursor: pointer; border-radius: 12px; }
+    .m-trigger:hover { background: #eef3ef; }
+    .m-trigger .chev { color: #6b7a70; }
+    .m-group.open .m-trigger .chev { transform: rotate(180deg); }
+    .m-items { display: flex; flex-direction: column; max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+    .m-group.open .m-items { max-height: 340px; }
+    .m-items a { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 18px; font-size: 13.5px; font-weight: 600; color: #536257; text-decoration: none; border-radius: 10px; }
+    .m-items a:hover { background: #eef3ef; color: #1f4b3a; }
+    .m-icon { width: 22px; text-align: center; }
+    .m-direct { display: block; padding: 12px 10px; font-size: 14px; font-weight: 700; color: #183329; text-decoration: none; border-radius: 12px; }
+    .m-direct:hover { background: #eef3ef; }
+    .m-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 14px; border-top: 1px solid #e9eee9; }
 
     /* HERO */
     .hero-section { padding: 65px 0 85px; background: radial-gradient(1000px 480px at 20% 0%, #f3ebe0 0%, transparent 80%); }
@@ -1179,15 +1323,26 @@ interface FaqItem {
       .tmpl-pricing-card { flex-direction: column; align-items: flex-start; }
       .tp-options { grid-template-columns: 1fr; }
     }
-    @media (max-width: 768px) {
+    @media (max-width: 992px) {
       .saas-nav .nav-links { display: none; }
-      .saas-nav .nav-tagline { display: none; }
+      .saas-nav .nav-market-square { display: none; }
+      .saas-nav .burger { display: inline-flex; }
+      .mobile-panel { display: block; }
+    }
+    @media (max-width: 768px) {
       .pillar-grid, .steps-grid, .builder-feature-grid, .template-categories-grid, .industries-grid, .ops-grid, .checklist-grid, .pricing-grid, .why-grid, .brand-tokens-grid, .audiences-grid { grid-template-columns: 1fr; }
       .builder-banner-cta { flex-direction: column; align-items: flex-start; }
       .footer-grid { grid-template-columns: 1fr; gap: 30px; }
       .footer-bottom { flex-direction: column; gap: 10px; text-align: center; }
     }
+
+    /* Anchor targets clear the sticky topnav when jumping in-page */
+    .saas-page section[id] { scroll-margin-top: 88px; }
   `],
+  host: {
+    '(document:click)': 'onDocClick()',
+    '(document:keydown.escape)': 'onEscape()',
+  },
 })
 export class SaasLandingComponent {
   auth = inject(AuthService);
@@ -1195,6 +1350,57 @@ export class SaasLandingComponent {
   previewDevice = signal<DevicePreview>('desktop');
   screenTab = signal<'desktop' | 'tablet' | 'mobile'>('desktop');
   selectedPaletteName = signal('Forest & Terracotta');
+
+  /* TOPNAV DROPDOWNS */
+  openMenu = signal<'product' | 'solutions' | null>(null);
+  mobileOpen = signal(false);
+  mobileGroup = signal<string | null>('product');
+
+  productLinks = [
+    { href: '#builder', icon: '🎨', title: 'Page Builder', desc: 'Drag-and-drop visual editor — no code required' },
+    { href: '#templates', icon: '🧩', title: 'Templates', desc: 'Ready-made designs for every kind of business' },
+    { href: '#features', icon: '⚡', title: 'Store Features', desc: '20+ built-in ecommerce tools out of the box' },
+    { href: '#operations', icon: '🗂️', title: 'Operations Suite', desc: 'Orders, inventory and analytics in one dashboard' },
+  ];
+
+  solutionLinks = [
+    { href: '#how-it-works', icon: '🚀', title: 'How It Works', desc: 'From idea to live store in six simple steps' },
+    { href: '#industries', icon: '🏬', title: 'Industries', desc: 'Fashion, food, electronics, beauty and more' },
+    { href: '#overview', icon: '✦', title: 'Platform Overview', desc: 'See everything MarketHub does at a glance' },
+  ];
+
+  toggleMenu(menu: 'product' | 'solutions', event: Event): void {
+    event.stopPropagation();
+    this.openMenu.set(this.openMenu() === menu ? null : menu);
+  }
+
+  closeMenus(): void {
+    this.openMenu.set(null);
+  }
+
+  toggleMobile(event: Event): void {
+    event.stopPropagation();
+    this.mobileOpen.update((open) => !open);
+  }
+
+  toggleMobileGroup(group: string, event: Event): void {
+    event.stopPropagation();
+    this.mobileGroup.set(this.mobileGroup() === group ? null : group);
+  }
+
+  closeMobile(): void {
+    this.mobileOpen.set(false);
+  }
+
+  onDocClick(): void {
+    this.openMenu.set(null);
+    this.mobileOpen.set(false);
+  }
+
+  onEscape(): void {
+    this.openMenu.set(null);
+    this.mobileOpen.set(false);
+  }
 
   palettes = [
     { name: 'Forest & Terracotta', primary: '#1f4b3a', accent: '#c45c26' },
