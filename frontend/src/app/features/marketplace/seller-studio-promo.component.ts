@@ -20,6 +20,7 @@ import { AuthService } from '../../core/auth.service';
               <a class="btn accent" [routerLink]="sellerTarget()">
                 {{ sellerActionLabel() }} <span aria-hidden="true">→</span>
               </a>
+              <a routerLink="/platform" class="btn">SaaS Features &amp; Pricing →</a>
               <a class="scroll-link" href="#seller-tools">Explore the tools <span aria-hidden="true">↓</span></a>
             </div>
             <p class="approval-note"><span aria-hidden="true">✓</span> No coding needed. Business approval is required before a store can go live.</p>

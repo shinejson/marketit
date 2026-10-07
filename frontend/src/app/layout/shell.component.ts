@@ -637,13 +637,14 @@ export class ShellComponent {
     { path: '/', label: 'Home', icon: 'home', exact: true },
     { path: '/products', label: 'Products', icon: 'bag', exact: false },
     { path: '/stores', label: 'Stores', icon: 'store', exact: false },
+    { path: '/platform', label: 'Store Builder', icon: 'store', exact: false },
     { path: '/wishlist', label: 'Wishlist', icon: 'heart', exact: false },
     { path: '/cart', label: 'Cart', icon: 'cart', exact: false },
     { path: '/orders', label: 'Orders', icon: 'orders', exact: false },
   ];
 
   /** Wishlist, Cart and Orders only make sense for a signed-in customer. */
-  navItems = computed(() => (this.auth.isLoggedIn() ? this.baseNav : this.baseNav.slice(0, 3)));
+  navItems = computed(() => (this.auth.isLoggedIn() ? this.baseNav : this.baseNav.slice(0, 4)));
 
   /** Guest: Log in / Join. Signed in: role entry points. */
   actionLinks = computed<ActionLink[]>(() => {

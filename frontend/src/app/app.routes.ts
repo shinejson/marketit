@@ -85,6 +85,13 @@ export const routes: Routes = [
     loadComponent: () => import('./features/marketplace/store.component').then((m) => m.StoreComponent),
   },
   {
+    path: 'platform',
+    canActivate: [marketingPortalGuard],
+    loadComponent: () => import('./features/marketplace/saas-landing.component').then((m) => m.SaasLandingComponent),
+  },
+  { path: 'saas', redirectTo: 'platform' },
+  { path: 'store-builder', redirectTo: 'platform' },
+  {
     path: '',
     canActivate: [marketingPortalGuard],
     loadComponent: () => import('./layout/shell.component').then((m) => m.ShellComponent),

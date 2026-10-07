@@ -24,6 +24,7 @@ import { SellerStudioPromoComponent } from './seller-studio-promo.component';
           </form>
           <div class="cta">
             <a routerLink="/products" class="btn">Shop the square</a>
+            <a routerLink="/platform" class="btn accent">Store Builder SaaS</a>
             <a [routerLink]="sellTarget()" class="btn ghost">Open your store</a>
           </div>
           @if (statsReady()) {
