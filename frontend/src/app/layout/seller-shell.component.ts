@@ -953,7 +953,7 @@ export class SellerShellComponent {
     { key: 'returns', label: 'Refunds & disputes', icon: 'gavel' },
     { key: 'payouts', label: 'Payouts', icon: 'payout' },
     { key: 'ads', label: 'Ads', icon: 'ads' },
-    { key: 'analytics', label: 'Analytics', icon: 'analytics' },
+    { key: 'reports', label: 'Tenant report', icon: 'analytics' },
   ];
 
   readonly adminItems: NavEntry[] = [

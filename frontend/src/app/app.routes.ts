@@ -15,7 +15,9 @@ const tenantConsoleChildren: Routes = [
   { path: 'api-keys', loadComponent: () => import('./features/seller/api-keys.component').then((m) => m.SellerApiKeysComponent) },
   { path: 'webhooks', loadComponent: () => import('./features/seller/webhooks.component').then((m) => m.SellerWebhooksComponent) },
   { path: 'ai', loadComponent: () => import('./features/seller/ai.component').then((m) => m.SellerAiComponent) },
-  { path: 'analytics', loadComponent: () => import('./features/seller/analytics.component').then((m) => m.SellerAnalyticsComponent) },
+  { path: 'reports', loadComponent: () => import('./features/seller/analytics.component').then((m) => m.SellerAnalyticsComponent) },
+  // Backwards-compatible route for saved links to the earlier Analytics page.
+  { path: 'analytics', redirectTo: 'reports', pathMatch: 'full' },
   { path: 'departments/finance', loadComponent: () => import('./features/seller/accounting.component').then((m) => m.SellerAccountingComponent), data: { page: 'overview' } },
   { path: 'accounting', redirectTo: 'departments/finance', pathMatch: 'full' },
   { path: 'accounting/invoices', loadComponent: () => import('./features/seller/accounting.component').then((m) => m.SellerAccountingComponent), data: { page: 'invoices' } },

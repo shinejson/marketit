@@ -53,7 +53,7 @@ const DEPT_META: Record<string, { blurb: string; icon: string; color: string }> 
             <svg viewBox="0 0 24 24" class="ic"><path d="M20 11a8 8 0 1 0-2.3 6.3M20 5v6h-6" /></svg>
             Refresh
           </button>
-          <a class="solid-btn" routerLink="/tenant/analytics">Full analytics</a>
+          <a class="solid-btn" routerLink="/tenant/reports">View tenant report</a>
         </div>
       </header>
 
