@@ -6,11 +6,21 @@ import { ApiService } from '../core/api.service';
 import { AuthService } from '../core/auth.service';
 import { CurrencyService } from '../core/currency.service';
 
-interface NavItem {
+interface NavSubItem {
   path: string;
   label: string;
-  icon: 'home' | 'bag' | 'store' | 'cart' | 'orders' | 'quote' | 'heart';
-  exact: boolean;
+  description?: string;
+  icon: 'home' | 'bag' | 'store' | 'cart' | 'orders' | 'quote' | 'heart' | 'builder' | 'star';
+  exact?: boolean;
+  badge?: () => number;
+}
+
+interface NavItem {
+  path?: string;
+  label: string;
+  icon: 'home' | 'bag' | 'store' | 'cart' | 'orders' | 'quote' | 'heart' | 'builder' | 'star';
+  exact?: boolean;
+  children?: NavSubItem[];
 }
 
 interface ActionLink {
@@ -28,15 +38,60 @@ interface ActionLink {
         <a routerLink="/" class="brand serif" (click)="closeMenu()">MarketHub</a>
 
         <!-- Desktop nav: centered, icons + labels (hidden on small screens) -->
+        <!-- Desktop nav: centered, icons + labels (hidden on small screens) -->
         <nav class="desktop-nav">
-          @for (item of navItems(); track item.path) {
-            <a [routerLink]="item.path" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: item.exact }" (click)="closeMenu()">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
-              <span>{{ item.label }}</span>
-              @if (item.icon === 'heart' && wishlistCount() > 0) {
-                <span class="nav-badge">{{ wishlistCount() }}</span>
-              }
-            </a>
+          @for (item of navItems(); track (item.path || item.label)) {
+            @if (item.children) {
+              <div class="nav-dropdown" [class.open]="openDropdown() === item.label" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="nav-dropdown-trigger"
+                  [class.on]="isDropdownActive(item)"
+                  [class.open]="openDropdown() === item.label"
+                  (click)="toggleDropdown(item.label, $event)"
+                  [attr.aria-expanded]="openDropdown() === item.label"
+                  [attr.aria-label]="item.label + ' menu'"
+                >
+                  <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
+                  <span>{{ item.label }}</span>
+                  <svg class="dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                <div class="nav-dropdown-menu">
+                  @for (sub of item.children; track sub.path) {
+                    <a
+                      [routerLink]="sub.path"
+                      class="nav-dropdown-item"
+                      routerLinkActive="on"
+                      [routerLinkActiveOptions]="{ exact: sub.exact ?? false }"
+                      (click)="closeDropdowns(); closeMenu()"
+                    >
+                      <span class="nav-dropdown-item-icon">
+                        <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: sub.icon }" />
+                      </span>
+                      <span class="nav-dropdown-item-text">
+                        <span class="nav-dropdown-item-title">
+                          {{ sub.label }}
+                          @if (sub.badge && sub.badge() > 0) {
+                            <span class="nav-badge">{{ sub.badge() }}</span>
+                          }
+                        </span>
+                        @if (sub.description) {
+                          <span class="nav-dropdown-item-desc">{{ sub.description }}</span>
+                        }
+                      </span>
+                    </a>
+                  }
+                </div>
+              </div>
+            } @else {
+              <a [routerLink]="item.path" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: item.exact ?? false }" (click)="closeMenu()">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
+                <span>{{ item.label }}</span>
+              </a>
+            }
           }
         </nav>
 
@@ -182,14 +237,44 @@ interface ActionLink {
       <div class="mobile-panel" id="mobile-menu" [class.open]="menuOpen()">
         <div class="wrap panel-inner">
           <nav class="mobile-nav">
-            @for (item of navItems(); track item.path) {
-              <a [routerLink]="item.path" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: item.exact }" (click)="closeMenu()">
-                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
-                <span>{{ item.label }}</span>
-                @if (item.icon === 'heart' && wishlistCount() > 0) {
-                  <span class="nav-badge">{{ wishlistCount() }}</span>
-                }
-              </a>
+            @for (item of navItems(); track (item.path || item.label)) {
+              @if (item.children) {
+                <div class="mobile-nav-group">
+                  <button
+                    type="button"
+                    class="mobile-group-trigger"
+                    [class.on]="isDropdownActive(item)"
+                    (click)="toggleMobileGroup(item.label)"
+                    [attr.aria-expanded]="isMobileGroupOpen(item.label)"
+                  >
+                    <div class="mobile-group-title">
+                      <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
+                      <span>{{ item.label }}</span>
+                    </div>
+                    <svg class="chevron-icon" [class.open]="isMobileGroupOpen(item.label)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  @if (isMobileGroupOpen(item.label)) {
+                    <div class="mobile-sub-nav">
+                      @for (sub of item.children; track sub.path) {
+                        <a [routerLink]="sub.path" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: sub.exact ?? false }" (click)="closeMenu()">
+                          <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: sub.icon }" />
+                          <span>{{ sub.label }}</span>
+                          @if (sub.badge && sub.badge() > 0) {
+                            <span class="nav-badge">{{ sub.badge() }}</span>
+                          }
+                        </a>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <a [routerLink]="item.path" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: item.exact ?? false }" (click)="closeMenu()">
+                  <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
+                  <span>{{ item.label }}</span>
+                </a>
+              }
             }
           </nav>
           <div class="panel-actions">
@@ -344,6 +429,12 @@ interface ActionLink {
           }
           @case ('quote') {
             <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 1 1 16.1-3.8z" /><path d="M8.5 10.5h7M8.5 13.5h4" />
+          }
+          @case ('builder') {
+            <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M9 21V9" />
+          }
+          @case ('star') {
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
           }
         }
       </svg>
@@ -647,19 +738,83 @@ export class ShellComponent {
 
   hasTenantRole = computed(() => this.auth.hasRole('tenant_owner', 'store_staff'));
   hasAdminRole = computed(() => this.auth.hasRole('super_admin'));
+  openDropdown = signal<string | null>(null);
+  mobileOpenGroups = signal<Set<string>>(new Set(['Stores', 'Orders']));
+
+  toggleDropdown(label: string, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.openDropdown.update((cur) => (cur === label ? null : label));
+  }
+
+  closeDropdowns(): void {
+    this.openDropdown.set(null);
+  }
+
+  toggleMobileGroup(label: string): void {
+    this.mobileOpenGroups.update((set) => {
+      const next = new Set(set);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
+  }
+
+  isMobileGroupOpen(label: string): boolean {
+    return this.mobileOpenGroups().has(label);
+  }
+
+  isDropdownActive(item: NavItem): boolean {
+    if (!item.children) return false;
+    const url = this.router.url;
+    return item.children.some((child) => {
+      if (!child.path) return false;
+      if (child.exact) return url === child.path;
+      return url === child.path || url.startsWith(child.path + '/') || url.startsWith(child.path + '?');
+    });
+  }
 
   private readonly baseNav: NavItem[] = [
     { path: '/', label: 'Home', icon: 'home', exact: true },
     { path: '/products', label: 'Products', icon: 'bag', exact: false },
-    { path: '/stores', label: 'Stores', icon: 'store', exact: false },
-    { path: '/platform', label: 'Store Builder', icon: 'store', exact: false },
-    { path: '/wishlist', label: 'Wishlist', icon: 'heart', exact: false },
+    {
+      label: 'Stores',
+      icon: 'store',
+      children: [
+        { path: '/stores', label: 'Browse Stores', description: 'Explore independent merchant stalls', icon: 'store', exact: false },
+        { path: '/platform', label: 'Store Builder', description: 'Launch & customize your SaaS store', icon: 'builder', exact: false },
+      ],
+    },
     { path: '/cart', label: 'Cart', icon: 'cart', exact: false },
-    { path: '/orders', label: 'Orders', icon: 'orders', exact: false },
   ];
 
-  /** Wishlist, Cart and Orders only make sense for a signed-in customer. */
-  navItems = computed(() => (this.auth.isLoggedIn() ? this.baseNav : this.baseNav.slice(0, 4)));
+  private readonly loggedInCustomerNav: NavItem[] = [
+    { path: '/', label: 'Home', icon: 'home', exact: true },
+    { path: '/products', label: 'Products', icon: 'bag', exact: false },
+    {
+      label: 'Stores',
+      icon: 'store',
+      children: [
+        { path: '/stores', label: 'Browse Stores', description: 'Explore independent merchant stalls', icon: 'store', exact: false },
+        { path: '/platform', label: 'Store Builder', description: 'Launch & customize your SaaS store', icon: 'builder', exact: false },
+      ],
+    },
+    {
+      label: 'Orders',
+      icon: 'orders',
+      children: [
+        { path: '/orders', label: 'My Orders', description: 'Track order status & delivery receipts', icon: 'orders', exact: false },
+        { path: '/quotes', label: 'My Quotes', description: 'View custom B2B quotes & pricing', icon: 'quote', exact: false },
+        { path: '/wishlist', label: 'Wishlist', description: 'Saved products & favorites', icon: 'heart', exact: false, badge: () => this.wishlistCount() },
+        { path: '/reviews', label: 'Reviews', description: 'Your product ratings & seller reviews', icon: 'star', exact: false },
+      ],
+    },
+    { path: '/cart', label: 'Cart', icon: 'cart', exact: false },
+  ];
+
+  navItems = computed(() => (this.auth.isLoggedIn() ? this.loggedInCustomerNav : this.baseNav));
 
   /** Guest: Log in / Join. Signed in: role entry points. */
   actionLinks = computed<ActionLink[]>(() => {
@@ -681,6 +836,7 @@ export class ShellComponent {
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
       this.closeMenu();
       this.closeProfile();
+      this.closeDropdowns();
       this.loadWishlistCount();
     });
 
@@ -740,6 +896,7 @@ export class ShellComponent {
   onLogout() {
     this.closeProfile();
     this.closeMenu();
+    this.closeDropdowns();
     this.wishlistCount.set(0);
     this.auth.logout();
   }
@@ -747,11 +904,13 @@ export class ShellComponent {
   @HostListener('document:click')
   onDocClick() {
     this.closeProfile();
+    this.closeDropdowns();
   }
 
   @HostListener('document:keydown.escape')
   onEscape() {
     this.closeMenu();
     this.closeProfile();
+    this.closeDropdowns();
   }
 }
