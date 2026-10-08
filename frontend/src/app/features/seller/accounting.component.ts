@@ -162,7 +162,7 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
                 <thead><tr><th>Invoice</th><th>Customer</th><th>Issued</th><th>Due</th><th>Status</th><th class="right">Total</th><th class="right">Balance</th><th></th></tr></thead>
                 <tbody>
                   @for (invoice of invoices(); track invoice.id) {
-                    <tr>
+                    <tr [class.highlighted-row]="invoice.id === highlightedId()">
                       <td><strong class="mono">{{ invoice.number }}</strong></td>
                       <td><strong>{{ invoice.customer_name }}</strong><small>{{ invoice.customer_email || 'No email' }}</small></td>
                       <td>{{ invoice.issue_date | date:'MMM d, y' }}</td><td>{{ invoice.due_date | date:'MMM d, y' }}</td>
@@ -202,7 +202,7 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
               <div class="table-toolbar"><div class="search-box"><span>⌕</span><input placeholder="Search reference or method" [(ngModel)]="search" (keyup.enter)="resetPaymentPageAndLoad()" /></div><select [(ngModel)]="statusFilter" (change)="resetPaymentPageAndLoad()"><option value="">All movements</option><option value="incoming">Money in</option><option value="outgoing">Money out</option></select><button class="filter-go" type="button" (click)="resetPaymentPageAndLoad()">Filter</button></div>
               <div class="table-wrap compact-scroll-table"><table><thead><tr><th>Date</th><th>Reference</th><th>Related record</th><th>Method</th><th>Direction</th><th class="right">Amount</th><th></th></tr></thead><tbody>
                 @for (payment of payments(); track payment.id) {
-                  <tr><td>{{ payment.paid_on | date:'MMM d, y' }}</td><td><strong class="mono">{{ payment.reference }}</strong></td><td><strong>{{ relatedPayment(payment) }}</strong><small>{{ payment.invoice ? payment.invoice.customer_name : payment.expense?.vendor_name || '' }}</small></td><td>{{ pretty(payment.method) }}</td><td><span [class]="'movement ' + payment.direction">{{ payment.direction === 'incoming' ? '↙ Money in' : '↗ Money out' }}</span></td><td class="right movement-amount" [class.outgoing]="payment.direction === 'outgoing'">{{ payment.direction === 'outgoing' ? '−' : '+' }}{{ payment.amount | money:payment.currency }}</td><td class="actions"><button type="button" (click)="openViewPayment(payment)">View</button></td></tr>
+                  <tr [class.highlighted-row]="payment.id === highlightedId()"><td>{{ payment.paid_on | date:'MMM d, y' }}</td><td><strong class="mono">{{ payment.reference }}</strong></td><td><strong>{{ relatedPayment(payment) }}</strong><small>{{ payment.invoice ? payment.invoice.customer_name : payment.expense?.vendor_name || '' }}</small></td><td>{{ pretty(payment.method) }}</td><td><span [class]="'movement ' + payment.direction">{{ payment.direction === 'incoming' ? '↙ Money in' : '↗ Money out' }}</span></td><td class="right movement-amount" [class.outgoing]="payment.direction === 'outgoing'">{{ payment.direction === 'outgoing' ? '−' : '+' }}{{ payment.amount | money:payment.currency }}</td><td class="actions"><button type="button" (click)="openViewPayment(payment)">View</button></td></tr>
                 } @empty { <tr><td colspan="7"><div class="empty-state">No payment activity found.</div></td></tr> }
               </tbody></table></div>
               <div class="table-foot">
@@ -221,7 +221,7 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
               <div class="table-toolbar"><div class="search-box"><span>⌕</span><input placeholder="Search bill, vendor or category" [(ngModel)]="search" (keyup.enter)="resetExpensePageAndLoad()" /></div><select [(ngModel)]="statusFilter" (change)="resetExpensePageAndLoad()"><option value="">All statuses</option><option value="pending">Pending</option><option value="overdue">Overdue</option><option value="paid">Paid</option><option value="draft">Draft</option></select><button class="filter-go" (click)="resetExpensePageAndLoad()">Filter</button></div>
               <div class="table-wrap compact-scroll-table"><table><thead><tr><th>Bill</th><th>Vendor / description</th><th>Category</th><th>Date</th><th>Due</th><th>Status</th><th class="right">Total</th><th></th></tr></thead><tbody>
                 @for (expense of expenses(); track expense.id) {
-                  <tr><td><strong class="mono">{{ expense.number }}</strong></td><td><strong>{{ expense.vendor_name || 'Unassigned vendor' }}</strong><small>{{ expense.description }}</small></td><td><span class="category-chip">{{ expense.category }}</span></td><td>{{ expense.expense_date | date:'MMM d, y' }}</td><td>{{ expense.due_date ? (expense.due_date | date:'MMM d, y') : '—' }}</td><td><span [class]="'status ' + expense.status">{{ pretty(expense.status) }}</span></td><td class="right"><strong>{{ expense.total | money:expense.currency }}</strong></td><td class="actions">
+                  <tr [class.highlighted-row]="expense.id === highlightedId()"><td><strong class="mono">{{ expense.number }}</strong></td><td><strong>{{ expense.vendor_name || 'Unassigned vendor' }}</strong><small>{{ expense.description }}</small></td><td><span class="category-chip">{{ expense.category }}</span></td><td>{{ expense.expense_date | date:'MMM d, y' }}</td><td>{{ expense.due_date ? (expense.due_date | date:'MMM d, y') : '—' }}</td><td><span [class]="'status ' + expense.status">{{ pretty(expense.status) }}</span></td><td class="right"><strong>{{ expense.total | money:expense.currency }}</strong></td><td class="actions">
                     @if (expense.status === 'draft') { <button type="button" (click)="openEditExpense(expense)">Edit</button><button type="button" (click)="submitExpense(expense)">Submit</button><button type="button" class="danger-action" (click)="deleteExpense(expense)">Delete</button> }
                     @else if (!['paid','void'].includes(expense.status)) { <button type="button" (click)="openExpensePayment(expense)">Mark paid</button> }
                     @else if (expense.status === 'paid') { <span class="paid-check">✓</span> }
@@ -247,7 +247,7 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
               <div class="table-toolbar"><div class="search-box"><span>⌕</span><input placeholder="Search PO or vendor" [(ngModel)]="search" (keyup.enter)="resetProcurementPageAndLoad()" /></div><select [(ngModel)]="statusFilter" (change)="resetProcurementPageAndLoad()"><option value="">All stages</option><option value="draft">Draft</option><option value="pending_approval">Pending approval</option><option value="approved">Approved</option><option value="ordered">Ordered</option><option value="received">Received</option><option value="cancelled">Cancelled</option></select><button class="filter-go" (click)="resetProcurementPageAndLoad()">Filter</button></div>
               <div class="table-wrap compact-scroll-table"><table><thead><tr><th>Purchase order</th><th>Vendor</th><th>Order date</th><th>Expected</th><th>Items</th><th>Status</th><th class="right">Total</th><th></th></tr></thead><tbody>
                 @for (order of purchaseOrders(); track order.id) {
-                  <tr><td><strong class="mono">{{ order.number }}</strong></td><td><strong>{{ order.vendor_name }}</strong><small>{{ order.vendor?.email || 'Supplier' }}</small></td><td>{{ order.order_date | date:'MMM d, y' }}</td><td>{{ order.expected_date ? (order.expected_date | date:'MMM d, y') : '—' }}</td><td>{{ order.items.length }} line{{ order.items.length === 1 ? '' : 's' }}</td><td><span [class]="'status ' + order.status">{{ pretty(order.status) }}</span></td><td class="right"><strong>{{ order.total | money:order.currency }}</strong></td><td class="actions">@if (order.status === 'draft') { <button type="button" (click)="openEditPurchaseOrder(order)">Edit</button><button type="button" class="danger-action" (click)="deletePurchaseOrder(order)">Delete</button> } @if (nextPoAction(order); as action) { <button type="button" (click)="advancePo(order, action.status)">{{ action.label }}</button> }</td></tr>
+                  <tr [class.highlighted-row]="order.id === highlightedId()"><td><strong class="mono">{{ order.number }}</strong></td><td><strong>{{ order.vendor_name }}</strong><small>{{ order.vendor?.email || 'Supplier' }}</small></td><td>{{ order.order_date | date:'MMM d, y' }}</td><td>{{ order.expected_date ? (order.expected_date | date:'MMM d, y') : '—' }}</td><td>{{ order.items.length }} line{{ order.items.length === 1 ? '' : 's' }}</td><td><span [class]="'status ' + order.status">{{ pretty(order.status) }}</span></td><td class="right"><strong>{{ order.total | money:order.currency }}</strong></td><td class="actions">@if (order.status === 'draft') { <button type="button" (click)="openEditPurchaseOrder(order)">Edit</button><button type="button" class="danger-action" (click)="deletePurchaseOrder(order)">Delete</button> } @if (nextPoAction(order); as action) { <button type="button" (click)="advancePo(order, action.status)">{{ action.label }}</button> }</td></tr>
                 } @empty { <tr><td colspan="8"><div class="empty-state">No purchase orders found.</div></td></tr> }
               </tbody></table></div>
               <div class="table-foot">
@@ -267,7 +267,7 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
             </section>
             <section class="contact-grid">
               @for (contact of contacts(); track contact.id) {
-                <article class="contact-card panel">
+                <article class="contact-card panel" [class.highlighted-card]="contact.id === highlightedId()">
                   <div class="contact-head"><span>{{ initials(contact.name) }}</span><div><h3>{{ contact.name }}</h3><p>{{ pretty(contact.type) }}</p></div><i [class.inactive]="!contact.is_active" [attr.title]="contact.is_active ? 'Active contact' : 'Inactive contact'"></i></div>
                   <dl><div><dt>Email</dt><dd>{{ contact.email || '—' }}</dd></div><div><dt>Phone</dt><dd>{{ contact.phone || '—' }}</dd></div><div><dt>Terms</dt><dd>{{ contact.payment_terms }} days</dd></div><div><dt>Currency</dt><dd>{{ contact.currency }}</dd></div></dl>
                   <footer><span>{{ contact.purchase_orders_count || 0 }} purchase orders</span><span>{{ contact.invoices_count || 0 }} invoices</span></footer>
@@ -304,7 +304,7 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
                   </thead>
                   <tbody>
                     @for (account of paginatedAccounts(); track account.id) {
-                      <tr>
+                      <tr [class.highlighted-row]="account.id === highlightedId()">
                         <td><strong class="account-code">{{ account.code }}</strong></td>
                         <td><strong>{{ account.name }}</strong><small>{{ account.is_system ? 'System account' : account.is_active ? 'Custom account' : 'Archived custom account' }}</small></td>
                         <td><span [class]="'account-type ' + account.type">{{ pretty(account.type) }}</span></td>
@@ -336,7 +336,7 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
             <section class="table-panel panel">
               <div class="table-toolbar"><div class="search-box"><span>⌕</span><input placeholder="Search journal, reference or memo" [(ngModel)]="search" (keyup.enter)="resetJournalPageAndLoad()" /></div><select [(ngModel)]="statusFilter" (change)="resetJournalPageAndLoad()"><option value="">All entries</option><option value="posted">Posted</option><option value="draft">Draft</option></select><button class="filter-go" (click)="resetJournalPageAndLoad()">Filter</button></div>
               <div class="table-wrap compact-scroll-table"><table><thead><tr><th>Date</th><th>Journal</th><th>Reference / memo</th><th>Source</th><th>Status</th><th class="right">Debit</th><th class="right">Credit</th><th></th></tr></thead><tbody>
-                @for (journal of journals(); track journal.id) { <tr><td>{{ journal.entry_date | date:'MMM d, y' }}</td><td><strong class="mono">{{ journal.number }}</strong></td><td><strong>{{ journal.reference || 'Manual entry' }}</strong><small>{{ journal.memo }}</small></td><td>{{ journal.source_type ? pretty(journal.source_type) : 'Manual' }}</td><td><span [class]="'status ' + journal.status">{{ pretty(journal.status) }}</span></td><td class="right">{{ journal.total_debit | money:currency() }}</td><td class="right">{{ journal.total_credit | money:currency() }}</td><td class="actions"><button type="button" (click)="openJournalView(journal)">View</button>@if (journal.status === 'draft' && !journal.source_type) { <button type="button" (click)="openEditJournal(journal)">Edit</button><button type="button" class="danger-action" (click)="deleteJournal(journal)">Delete</button><button type="button" (click)="postJournal(journal)">Post</button> } @else if (journal.status === 'posted') { <span class="paid-check">✓</span> }</td></tr> }
+                @for (journal of journals(); track journal.id) { <tr [class.highlighted-row]="journal.id === highlightedId()"><td>{{ journal.entry_date | date:'MMM d, y' }}</td><td><strong class="mono">{{ journal.number }}</strong></td><td><strong>{{ journal.reference || 'Manual entry' }}</strong><small>{{ journal.memo }}</small></td><td>{{ journal.source_type ? pretty(journal.source_type) : 'Manual' }}</td><td><span [class]="'status ' + journal.status">{{ pretty(journal.status) }}</span></td><td class="right">{{ journal.total_debit | money:currency() }}</td><td class="right">{{ journal.total_credit | money:currency() }}</td><td class="actions"><button type="button" (click)="openJournalView(journal)">View</button>@if (journal.status === 'draft' && !journal.source_type) { <button type="button" (click)="openEditJournal(journal)">Edit</button><button type="button" class="danger-action" (click)="deleteJournal(journal)">Delete</button><button type="button" (click)="postJournal(journal)">Post</button> } @else if (journal.status === 'posted') { <span class="paid-check">✓</span> }</td></tr> }
               </tbody></table></div>
               <div class="table-foot">
                 <span>Showing {{ journals().length }} items · Page {{ currentJournalPage() }} of {{ totalJournalPages() }} · {{ total() }} journals total</span>
@@ -374,7 +374,7 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
           @case ('reconciliation') {
             <section class="bank-grid">
               @for (bank of bankAccounts(); track bank.id) {
-                <article class="bank-card panel">
+                <article class="bank-card panel" [class.highlighted-card]="bank.id === highlightedId()">
                   <header><span>▰</span><div><p>{{ bank.bank_name || 'Bank account' }}</p><h3>{{ bank.name }}</h3></div><i>•••• {{ bank.account_number_last4 || '0000' }}</i></header>
                   <div><small>Statement balance</small><strong>{{ bank.statement_balance || 0 | money:bank.currency }}</strong><p><span>Book {{ bank.ledger_balance || 0 | money:bank.currency }}</span><b [class.warning]="bank.difference">Difference {{ bank.difference || 0 | money:bank.currency }}</b></p></div>
                   <footer><span [class.warning]="bank.unmatched_count">{{ bank.unmatched_count || 0 }} unmatched</span><span>{{ bank.transactions_count || 0 }} imported</span></footer>
@@ -398,7 +398,7 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
               <div class="table-toolbar"><div class="search-box"><span>⌕</span><input placeholder="Search statement description or reference" [(ngModel)]="search" (keyup.enter)="resetReconciliationPageAndLoad()" /></div><select [(ngModel)]="statusFilter" (change)="resetReconciliationPageAndLoad()"><option value="">All status</option><option value="unmatched">Unmatched</option><option value="matched">Matched</option><option value="excluded">Excluded</option></select><button type="button" class="filter-go" (click)="resetReconciliationPageAndLoad()">Filter</button></div>
               <div class="table-wrap compact-scroll-table"><table><thead><tr><th>Date</th><th>Statement description</th><th>Reference</th><th>Bank</th><th>Status</th><th class="right">Amount</th><th></th></tr></thead><tbody>
                 @for (transaction of bankTransactions(); track transaction.id) {
-                  <tr><td>{{ transaction.transaction_date | date:'MMM d, y' }}</td><td><strong>{{ transaction.description }}</strong><small>{{ transaction.payment ? 'Matched to ' + transaction.payment.reference : 'No ledger match' }}</small></td><td class="mono">{{ transaction.reference || '—' }}</td><td>{{ transaction.bank_account?.name }}</td><td><span [class]="'status ' + transaction.status">{{ pretty(transaction.status) }}</span></td><td class="right movement-amount" [class.outgoing]="+transaction.amount < 0">{{ transaction.amount | money:transaction.bank_account?.currency }}</td><td class="actions">
+                  <tr [class.highlighted-row]="transaction.id === highlightedId()"><td>{{ transaction.transaction_date | date:'MMM d, y' }}</td><td><strong>{{ transaction.description }}</strong><small>{{ transaction.payment ? 'Matched to ' + transaction.payment.reference : 'No ledger match' }}</small></td><td class="mono">{{ transaction.reference || '—' }}</td><td>{{ transaction.bank_account?.name }}</td><td><span [class]="'status ' + transaction.status">{{ pretty(transaction.status) }}</span></td><td class="right movement-amount" [class.outgoing]="+transaction.amount < 0">{{ transaction.amount | money:transaction.bank_account?.currency }}</td><td class="actions">
                     @if (transaction.status === 'unmatched') { <button type="button" (click)="openEditBankTransaction(transaction)">Edit</button><button type="button" (click)="openReconcile(transaction)">Match</button><button type="button" (click)="excludeTransaction(transaction)">Exclude</button><button type="button" class="danger-action" (click)="deleteBankTransaction(transaction)">Delete</button> }
                     @else { <button type="button" (click)="undoReconcile(transaction)">Undo</button> }
                   </td></tr>
@@ -424,7 +424,7 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
         <header><div><p class="eyebrow">{{ drawerEyebrow() }}</p><h2>{{ drawerTitle() }}</h2></div><button type="button" (click)="closeDrawer()" aria-label="Close">×</button></header>
         <div class="drawer-body">
           @if (drawer() === 'invoice') {
-            <form id="accounting-form" (ngSubmit)="saveInvoice()">
+            <form id="accounting-form" (ngSubmit)="submitDrawerForm()">
               <div class="form-grid two"><label>Customer name<input required [(ngModel)]="invoiceForm.customer_name" name="customer_name" placeholder="e.g. Atlas Retail Group" /></label><label>Customer email<input type="email" [(ngModel)]="invoiceForm.customer_email" name="customer_email" placeholder="billing@customer.com" /></label></div>
               <div class="form-grid two"><label>Issue date<input type="date" required [(ngModel)]="invoiceForm.issue_date" name="issue_date" /></label><label>Due date<input type="date" required [(ngModel)]="invoiceForm.due_date" name="due_date" /></label></div>
               <label>Discount amount<input type="number" min="0" step="0.01" [(ngModel)]="invoiceForm.discount_total" name="discount_total" /></label>
@@ -440,11 +440,11 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
 
           @if (drawer() === 'payment') {
             <div class="payment-context"><span>Invoice</span><strong>{{ selectedInvoice()?.number }}</strong><p>{{ selectedInvoice()?.customer_name }}</p><div><small>Balance due</small><b>{{ selectedInvoice()?.balance_due | money:selectedInvoice()?.currency }}</b></div></div>
-            <form id="accounting-form" (ngSubmit)="recordPayment()"><label>Amount received<input type="number" required min="0.01" [max]="selectedInvoice()?.balance_due ?? null" step="0.01" [(ngModel)]="paymentForm.amount" name="amount" /></label><div class="form-grid two"><label>Payment date<input type="date" required [(ngModel)]="paymentForm.paid_on" name="paid_on" /></label><label>Method<select [(ngModel)]="paymentForm.method" name="method"><option value="bank_transfer">Bank transfer</option><option value="card">Card</option><option value="mobile_money">Mobile money</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select></label></div><label>Reference<input [(ngModel)]="paymentForm.reference" name="reference" placeholder="Optional bank or receipt reference" /></label><label>Notes<textarea rows="3" [(ngModel)]="paymentForm.notes" name="notes"></textarea></label></form>
+            <form id="accounting-form" (ngSubmit)="submitDrawerForm()"><label>Amount received<input type="number" required min="0.01" [max]="selectedInvoice()?.balance_due ?? null" step="0.01" [(ngModel)]="paymentForm.amount" name="amount" /></label><div class="form-grid two"><label>Payment date<input type="date" required [(ngModel)]="paymentForm.paid_on" name="paid_on" /></label><label>Method<select [(ngModel)]="paymentForm.method" name="method"><option value="bank_transfer">Bank transfer</option><option value="card">Card</option><option value="mobile_money">Mobile money</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select></label></div><label>Reference<input [(ngModel)]="paymentForm.reference" name="reference" placeholder="Optional bank or receipt reference" /></label><label>Notes<textarea rows="3" [(ngModel)]="paymentForm.notes" name="notes"></textarea></label></form>
           }
 
           @if (drawer() === 'paymentEntry') {
-            <form id="accounting-form" (ngSubmit)="submitPaymentEntry()">
+            <form id="accounting-form" (ngSubmit)="submitDrawerForm()">
               <label>Payment source<select required [(ngModel)]="paymentSourceType" name="paymentSourceType" (ngModelChange)="changePaymentSourceType()"><option value="invoice">Customer invoice · Money in</option><option value="expense">Supplier bill · Money out</option></select></label>
               @if (paymentSourceType === 'invoice') {
                 <label>Invoice<select required [(ngModel)]="paymentSourceId" name="paymentSourceId" (ngModelChange)="updatePaymentAmount()"><option value="">Select an open invoice</option>@for (invoice of eligiblePaymentInvoices(); track invoice.id) { <option [value]="invoice.id">{{ invoice.number }} · {{ invoice.customer_name }} · {{ invoice.balance_due | money:invoice.currency }}</option> }</select></label>
@@ -467,27 +467,27 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
           }
 
           @if (drawer() === 'expense') {
-            <form id="accounting-form" (ngSubmit)="saveExpense()"><div class="form-grid two"><label>Vendor<select [(ngModel)]="expenseForm.vendor_id" name="vendor_id" (ngModelChange)="chooseExpenseVendor($event)"><option value="">No saved vendor</option>@for (vendor of vendors(); track vendor.id) { <option [value]="vendor.id">{{ vendor.name }}</option> }</select></label><label>Vendor name<input [(ngModel)]="expenseForm.vendor_name" name="vendor_name" placeholder="Supplier or payee" /></label></div><label>Description<input required [(ngModel)]="expenseForm.description" name="description" placeholder="What was this expense for?" /></label><div class="form-grid two"><label>Category<select required [(ngModel)]="expenseForm.category" name="category">@for (category of expenseCategories; track category) { <option [value]="category">{{ category }}</option> }</select></label><label>Receipt reference<input [(ngModel)]="expenseForm.receipt_reference" name="receipt_reference" /></label></div><div class="form-grid two"><label>Expense date<input required type="date" [(ngModel)]="expenseForm.expense_date" name="expense_date" /></label><label>Due date<input type="date" [(ngModel)]="expenseForm.due_date" name="due_date" /></label></div><div class="form-grid two"><label>Amount before tax<input required type="number" min="0.01" step="0.01" [(ngModel)]="expenseForm.amount" name="amount" /></label><label>Tax amount<input type="number" min="0" step="0.01" [(ngModel)]="expenseForm.tax_amount" name="tax_amount" /></label></div><label>Status<select [(ngModel)]="expenseForm.status" name="status"><option value="draft">Save as draft</option><option value="pending">Submit bill</option></select></label><div class="form-total"><span>Total bill</span><strong>{{ (+expenseForm.amount + +expenseForm.tax_amount) | money:expenseForm.currency }}</strong></div><label>Notes<textarea rows="3" [(ngModel)]="expenseForm.notes" name="notes"></textarea></label></form>
+            <form id="accounting-form" (ngSubmit)="submitDrawerForm()"><div class="form-grid two"><label>Vendor<select [(ngModel)]="expenseForm.vendor_id" name="vendor_id" (ngModelChange)="chooseExpenseVendor($event)"><option value="">No saved vendor</option>@for (vendor of vendors(); track vendor.id) { <option [value]="vendor.id">{{ vendor.name }}</option> }</select></label><label>Vendor name<input [(ngModel)]="expenseForm.vendor_name" name="vendor_name" placeholder="Supplier or payee" /></label></div><label>Description<input required [(ngModel)]="expenseForm.description" name="description" placeholder="What was this expense for?" /></label><div class="form-grid two"><label>Category<select required [(ngModel)]="expenseForm.category" name="category">@for (category of expenseCategories; track category) { <option [value]="category">{{ category }}</option> }</select></label><label>Receipt reference<input [(ngModel)]="expenseForm.receipt_reference" name="receipt_reference" /></label></div><div class="form-grid two"><label>Expense date<input required type="date" [(ngModel)]="expenseForm.expense_date" name="expense_date" /></label><label>Due date<input type="date" [(ngModel)]="expenseForm.due_date" name="due_date" /></label></div><div class="form-grid two"><label>Amount before tax<input required type="number" min="0.01" step="0.01" [(ngModel)]="expenseForm.amount" name="amount" /></label><label>Tax amount<input type="number" min="0" step="0.01" [(ngModel)]="expenseForm.tax_amount" name="tax_amount" /></label></div><label>Status<select [(ngModel)]="expenseForm.status" name="status"><option value="draft">Save as draft</option><option value="pending">Submit bill</option></select></label><div class="form-total"><span>Total bill</span><strong>{{ (+expenseForm.amount + +expenseForm.tax_amount) | money:expenseForm.currency }}</strong></div><label>Notes<textarea rows="3" [(ngModel)]="expenseForm.notes" name="notes"></textarea></label></form>
           }
 
           @if (drawer() === 'payExpense') {
-            <div class="payment-context"><span>Bill</span><strong>{{ selectedExpense()?.number }}</strong><p>{{ selectedExpense()?.description }}</p><div><small>Amount to pay</small><b>{{ selectedExpense()?.total | money:selectedExpense()?.currency }}</b></div></div><form id="accounting-form" (ngSubmit)="payExpense()"><div class="form-grid two"><label>Payment date<input required type="date" [(ngModel)]="paymentForm.paid_on" name="paid_on" /></label><label>Method<select [(ngModel)]="paymentForm.method" name="method"><option value="bank_transfer">Bank transfer</option><option value="card">Card</option><option value="mobile_money">Mobile money</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select></label></div><label>Reference<input [(ngModel)]="paymentForm.reference" name="reference" placeholder="Optional transaction reference" /></label></form>
+            <div class="payment-context"><span>Bill</span><strong>{{ selectedExpense()?.number }}</strong><p>{{ selectedExpense()?.description }}</p><div><small>Amount to pay</small><b>{{ selectedExpense()?.total | money:selectedExpense()?.currency }}</b></div></div><form id="accounting-form" (ngSubmit)="submitDrawerForm()"><div class="form-grid two"><label>Payment date<input required type="date" [(ngModel)]="paymentForm.paid_on" name="paid_on" /></label><label>Method<select [(ngModel)]="paymentForm.method" name="method"><option value="bank_transfer">Bank transfer</option><option value="card">Card</option><option value="mobile_money">Mobile money</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select></label></div><label>Reference<input [(ngModel)]="paymentForm.reference" name="reference" placeholder="Optional transaction reference" /></label></form>
           }
 
           @if (drawer() === 'purchaseOrder') {
-            <form id="accounting-form" (ngSubmit)="savePurchaseOrder()"><div class="form-grid two"><label>Vendor<select required [(ngModel)]="poForm.vendor_id" name="vendor_id" (ngModelChange)="choosePoVendor($event)"><option value="">Select vendor</option>@for (vendor of vendors(); track vendor.id) { <option [value]="vendor.id">{{ vendor.name }}</option> }</select></label><label>Order date<input required type="date" [(ngModel)]="poForm.order_date" name="order_date" /></label></div><label>Expected delivery<input type="date" [(ngModel)]="poForm.expected_date" name="expected_date" /></label><div class="line-head"><div><h3>Order items</h3><p>Quantities and agreed supplier cost</p></div><button type="button" (click)="addPoLine()">+ Add line</button></div><div class="line-table po"><div class="line-labels"><span>Description</span><span>Qty</span><span>Unit cost</span><span>Tax %</span><span></span></div>@for (line of poForm.items; track $index; let i = $index) { <div class="line-inputs"><input required [(ngModel)]="line.description" [name]="'po_desc_'+i" placeholder="Product or supply" /><input required type="number" min="0.01" step="0.01" [(ngModel)]="line.quantity" [name]="'po_qty_'+i" /><input required type="number" min="0" step="0.01" [(ngModel)]="line.unit_cost" [name]="'po_cost_'+i" /><input type="number" min="0" max="100" [(ngModel)]="line.tax_rate" [name]="'po_tax_'+i" /><button type="button" (click)="removePoLine(i)" [disabled]="poForm.items.length === 1">×</button></div> }</div><div class="totals"><div><span>Subtotal</span><b>{{ poSubtotal() | money:poForm.currency }}</b></div><div><span>Tax</span><b>{{ poTax() | money:poForm.currency }}</b></div><div class="grand"><span>Order total</span><b>{{ poSubtotal() + poTax() | money:poForm.currency }}</b></div></div><label class="textarea-label">Procurement notes<textarea rows="3" [(ngModel)]="poForm.notes" name="notes"></textarea></label><label class="check"><input type="checkbox" [(ngModel)]="poForm.submit_for_approval" name="submit_for_approval" /><span><b>Submit for approval</b><small>Start the controlled purchasing workflow</small></span></label></form>
+            <form id="accounting-form" (ngSubmit)="submitDrawerForm()"><div class="form-grid two"><label>Vendor<select required [(ngModel)]="poForm.vendor_id" name="vendor_id" (ngModelChange)="choosePoVendor($event)"><option value="">Select vendor</option>@for (vendor of vendors(); track vendor.id) { <option [value]="vendor.id">{{ vendor.name }}</option> }</select></label><label>Order date<input required type="date" [(ngModel)]="poForm.order_date" name="order_date" /></label></div><label>Expected delivery<input type="date" [(ngModel)]="poForm.expected_date" name="expected_date" /></label><div class="line-head"><div><h3>Order items</h3><p>Quantities and agreed supplier cost</p></div><button type="button" (click)="addPoLine()">+ Add line</button></div><div class="line-table po"><div class="line-labels"><span>Description</span><span>Qty</span><span>Unit cost</span><span>Tax %</span><span></span></div>@for (line of poForm.items; track $index; let i = $index) { <div class="line-inputs"><input required [(ngModel)]="line.description" [name]="'po_desc_'+i" placeholder="Product or supply" /><input required type="number" min="0.01" step="0.01" [(ngModel)]="line.quantity" [name]="'po_qty_'+i" /><input required type="number" min="0" step="0.01" [(ngModel)]="line.unit_cost" [name]="'po_cost_'+i" /><input type="number" min="0" max="100" [(ngModel)]="line.tax_rate" [name]="'po_tax_'+i" /><button type="button" (click)="removePoLine(i)" [disabled]="poForm.items.length === 1">×</button></div> }</div><div class="totals"><div><span>Subtotal</span><b>{{ poSubtotal() | money:poForm.currency }}</b></div><div><span>Tax</span><b>{{ poTax() | money:poForm.currency }}</b></div><div class="grand"><span>Order total</span><b>{{ poSubtotal() + poTax() | money:poForm.currency }}</b></div></div><label class="textarea-label">Procurement notes<textarea rows="3" [(ngModel)]="poForm.notes" name="notes"></textarea></label><label class="check"><input type="checkbox" [(ngModel)]="poForm.submit_for_approval" name="submit_for_approval" /><span><b>Submit for approval</b><small>Start the controlled purchasing workflow</small></span></label></form>
           }
 
           @if (drawer() === 'contact') {
-            <form id="accounting-form" (ngSubmit)="saveContact()"><div class="form-grid two"><label>Contact type<select required [(ngModel)]="contactForm.type" name="type"><option value="vendor">Vendor</option><option value="customer">Customer</option><option value="both">Customer & vendor</option></select></label><label>Business name<input required [(ngModel)]="contactForm.name" name="name" /></label></div><div class="form-grid two"><label>Email<input type="email" [(ngModel)]="contactForm.email" name="email" /></label><label>Phone<input [(ngModel)]="contactForm.phone" name="phone" /></label></div><div class="form-grid two"><label>Tax ID<input [(ngModel)]="contactForm.tax_id" name="tax_id" /></label><label>Payment terms<select [(ngModel)]="contactForm.payment_terms" name="payment_terms"><option [value]="0">Due now</option><option [value]="7">7 days</option><option [value]="14">14 days</option><option [value]="30">30 days</option><option [value]="60">60 days</option></select></label></div><label>Address<textarea rows="4" [(ngModel)]="contactForm.address" name="address"></textarea></label>@if (editingContact()) { <label class="check"><input type="checkbox" [(ngModel)]="contactForm.is_active" name="is_active" /><span><b>Active contact</b><small>Uncheck to archive — archived contacts stay in history</small></span></label> }</form>
+            <form id="accounting-form" (ngSubmit)="submitDrawerForm()"><div class="form-grid two"><label>Contact type<select required [(ngModel)]="contactForm.type" name="type"><option value="vendor">Vendor</option><option value="customer">Customer</option><option value="both">Customer & vendor</option></select></label><label>Business name<input required [(ngModel)]="contactForm.name" name="name" /></label></div><div class="form-grid two"><label>Email<input type="email" [(ngModel)]="contactForm.email" name="email" /></label><label>Phone<input [(ngModel)]="contactForm.phone" name="phone" /></label></div><div class="form-grid two"><label>Tax ID<input [(ngModel)]="contactForm.tax_id" name="tax_id" /></label><label>Payment terms<select [(ngModel)]="contactForm.payment_terms" name="payment_terms"><option [value]="0">Due now</option><option [value]="7">7 days</option><option [value]="14">14 days</option><option [value]="30">30 days</option><option [value]="60">60 days</option></select></label></div><label>Address<textarea rows="4" [(ngModel)]="contactForm.address" name="address"></textarea></label>@if (editingContact()) { <label class="check"><input type="checkbox" [(ngModel)]="contactForm.is_active" name="is_active" /><span><b>Active contact</b><small>Uncheck to archive — archived contacts stay in history</small></span></label> }</form>
           }
 
           @if (drawer() === 'account') {
-            <form id="accounting-form" (ngSubmit)="saveAccount()"><div class="form-grid two"><label>Account code<input required [(ngModel)]="accountForm.code" name="code" placeholder="e.g. 6950" [readonly]="accountCodeLocked()" /></label><label>Account type<select required [(ngModel)]="accountForm.type" name="type" [disabled]="accountCodeLocked()">@for (type of accountTypes; track type.key) { <option [value]="type.key">{{ type.label }}</option> }</select></label></div><label>Account name<input required [(ngModel)]="accountForm.name" name="name" placeholder="e.g. Bank charges" /></label><label>Subtype<input [(ngModel)]="accountForm.subtype" name="subtype" placeholder="Optional account grouping" /></label><label>Description<textarea rows="4" [(ngModel)]="accountForm.description" name="description" placeholder="How this account should be used"></textarea></label>@if (editingAccount()) { <label class="check"><input type="checkbox" [(ngModel)]="accountForm.is_active" name="is_active" /><span><b>Active account</b><small>Archived accounts stay in past reports but cannot be used for new journals.</small></span></label> }<div class="control-note"><span>i</span><p><b>Permanent ledger account</b>Accounts with posted activity cannot be removed or reclassified. Rename or archive them to preserve the audit trail.</p></div></form>
+            <form id="accounting-form" (ngSubmit)="submitDrawerForm()"><div class="form-grid two"><label>Account code<input required [(ngModel)]="accountForm.code" name="code" placeholder="e.g. 6950" [readonly]="accountCodeLocked()" /></label><label>Account type<select required [(ngModel)]="accountForm.type" name="type" [disabled]="accountCodeLocked()">@for (type of accountTypes; track type.key) { <option [value]="type.key">{{ type.label }}</option> }</select></label></div><label>Account name<input required [(ngModel)]="accountForm.name" name="name" placeholder="e.g. Bank charges" /></label><label>Subtype<input [(ngModel)]="accountForm.subtype" name="subtype" placeholder="Optional account grouping" /></label><label>Description<textarea rows="4" [(ngModel)]="accountForm.description" name="description" placeholder="How this account should be used"></textarea></label>@if (editingAccount()) { <label class="check"><input type="checkbox" [(ngModel)]="accountForm.is_active" name="is_active" /><span><b>Active account</b><small>Archived accounts stay in past reports but cannot be used for new journals.</small></span></label> }<div class="control-note"><span>i</span><p><b>Permanent ledger account</b>Accounts with posted activity cannot be removed or reclassified. Rename or archive them to preserve the audit trail.</p></div></form>
           }
 
           @if (drawer() === 'journal') {
-            <form id="accounting-form" (ngSubmit)="saveJournal()"><div class="form-grid two"><label>Journal date<input type="date" required [(ngModel)]="journalForm.entry_date" name="entry_date" /></label><label>Reference<input [(ngModel)]="journalForm.reference" name="reference" placeholder="Optional source reference" /></label></div><label>Memo<input required [(ngModel)]="journalForm.memo" name="memo" placeholder="Why is this adjustment needed?" /></label><div class="line-head"><div><h3>Double-entry lines</h3><p>Debits and credits must balance</p></div><button type="button" (click)="addJournalLine()">+ Add line</button></div><div class="journal-lines"><div class="journal-labels"><span>Account</span><span>Description</span><span>Debit</span><span>Credit</span><span></span></div>@for (line of journalForm.lines; track $index; let i = $index) { <div class="journal-inputs"><select required [(ngModel)]="line.account_id" [name]="'j_account_'+i"><option value="">Select account</option>@for (account of activeAccounts(); track account.id) { <option [value]="account.id">{{ account.code }} · {{ account.name }}</option> }</select><input [(ngModel)]="line.description" [name]="'j_desc_'+i" placeholder="Line memo" /><input type="number" min="0" step="0.01" [(ngModel)]="line.debit" [name]="'j_debit_'+i" (ngModelChange)="clearJournalOpposite(line, 'debit')" /><input type="number" min="0" step="0.01" [(ngModel)]="line.credit" [name]="'j_credit_'+i" (ngModelChange)="clearJournalOpposite(line, 'credit')" /><button type="button" (click)="removeJournalLine(i)" [disabled]="journalForm.lines.length <= 2">×</button></div> }</div><div class="journal-balance" [class.unbalanced]="journalDifference() !== 0"><div><span>Total debits</span><b>{{ journalDebit() | money:currency() }}</b></div><div><span>Total credits</span><b>{{ journalCredit() | money:currency() }}</b></div><div><span>Difference</span><b>{{ journalDifference() | money:currency() }}</b></div></div>@if (!editingJournal()) { <label class="check"><input type="checkbox" [(ngModel)]="journalForm.post_now" name="post_now" /><span><b>Post immediately</b><small>Posted journals affect reports and cannot be edited</small></span></label> } @else { <div class="control-note"><span>i</span><p><b>Draft journal only</b>Save this change first, then post the journal from the list when it balances.</p></div> }</form>
+            <form id="accounting-form" (ngSubmit)="submitDrawerForm()"><div class="form-grid two"><label>Journal date<input type="date" required [(ngModel)]="journalForm.entry_date" name="entry_date" /></label><label>Reference<input [(ngModel)]="journalForm.reference" name="reference" placeholder="Optional source reference" /></label></div><label>Memo<input required [(ngModel)]="journalForm.memo" name="memo" placeholder="Why is this adjustment needed?" /></label><div class="line-head"><div><h3>Double-entry lines</h3><p>Debits and credits must balance</p></div><button type="button" (click)="addJournalLine()">+ Add line</button></div><div class="journal-lines"><div class="journal-labels"><span>Account</span><span>Description</span><span>Debit</span><span>Credit</span><span></span></div>@for (line of journalForm.lines; track $index; let i = $index) { <div class="journal-inputs"><select required [(ngModel)]="line.account_id" [name]="'j_account_'+i"><option value="">Select account</option>@for (account of activeAccounts(); track account.id) { <option [value]="account.id">{{ account.code }} · {{ account.name }}</option> }</select><input [(ngModel)]="line.description" [name]="'j_desc_'+i" placeholder="Line memo" /><input type="number" min="0" step="0.01" [(ngModel)]="line.debit" [name]="'j_debit_'+i" (ngModelChange)="clearJournalOpposite(line, 'debit')" /><input type="number" min="0" step="0.01" [(ngModel)]="line.credit" [name]="'j_credit_'+i" (ngModelChange)="clearJournalOpposite(line, 'credit')" /><button type="button" (click)="removeJournalLine(i)" [disabled]="journalForm.lines.length <= 2">×</button></div> }</div><div class="journal-balance" [class.unbalanced]="journalDifference() !== 0"><div><span>Total debits</span><b>{{ journalDebit() | money:currency() }}</b></div><div><span>Total credits</span><b>{{ journalCredit() | money:currency() }}</b></div><div><span>Difference</span><b>{{ journalDifference() | money:currency() }}</b></div></div>@if (!editingJournal()) { <label class="check"><input type="checkbox" [(ngModel)]="journalForm.post_now" name="post_now" /><span><b>Post immediately</b><small>Posted journals affect reports and cannot be edited</small></span></label> } @else { <div class="control-note"><span>i</span><p><b>Draft journal only</b>Save this change first, then post the journal from the list when it balances.</p></div> }</form>
           }
 
           @if (drawer() === 'journalView') {
@@ -499,20 +499,20 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
           }
 
           @if (drawer() === 'bankAccount') {
-            <form id="accounting-form" (ngSubmit)="saveBankAccount()"><label>Account name<input required [(ngModel)]="bankAccountForm.name" name="name" placeholder="Main operating account" /></label><div class="form-grid two"><label>Bank name<input [(ngModel)]="bankAccountForm.bank_name" name="bank_name" /></label><label>Last four digits<input maxlength="4" inputmode="numeric" [(ngModel)]="bankAccountForm.account_number_last4" name="account_number_last4" /></label></div><div class="form-grid two"><label>Currency<input required maxlength="3" [(ngModel)]="bankAccountForm.currency" name="currency" /></label><label>Opening balance<input type="number" step="0.01" [(ngModel)]="bankAccountForm.opening_balance" name="opening_balance" [readonly]="bankOpeningBalanceLocked()" /></label></div>@if (editingBankAccount()) { <label class="check"><input type="checkbox" [(ngModel)]="bankAccountForm.is_active" name="is_active" /><span><b>Active bank account</b><small>Archive accounts with imported statement history instead of deleting them.</small></span></label> }</form>
+            <form id="accounting-form" (ngSubmit)="submitDrawerForm()"><label>Account name<input required [(ngModel)]="bankAccountForm.name" name="name" placeholder="Main operating account" /></label><div class="form-grid two"><label>Bank name<input [(ngModel)]="bankAccountForm.bank_name" name="bank_name" /></label><label>Last four digits<input maxlength="4" inputmode="numeric" [(ngModel)]="bankAccountForm.account_number_last4" name="account_number_last4" /></label></div><div class="form-grid two"><label>Currency<input required maxlength="3" [(ngModel)]="bankAccountForm.currency" name="currency" /></label><label>Opening balance<input type="number" step="0.01" [(ngModel)]="bankAccountForm.opening_balance" name="opening_balance" [readonly]="bankOpeningBalanceLocked()" /></label></div>@if (editingBankAccount()) { <label class="check"><input type="checkbox" [(ngModel)]="bankAccountForm.is_active" name="is_active" /><span><b>Active bank account</b><small>Archive accounts with imported statement history instead of deleting them.</small></span></label> }</form>
           }
 
           @if (drawer() === 'bankTransaction') {
-            <form id="accounting-form" (ngSubmit)="saveBankTransaction()"><label>Bank account<select required [(ngModel)]="bankTransactionForm.bank_account_id" name="bank_account_id">@for (bank of activeBankAccounts(); track bank.id) { <option [value]="bank.id">{{ bank.name }} · {{ bank.currency }}</option> }</select></label><div class="form-grid two"><label>Transaction date<input required type="date" [(ngModel)]="bankTransactionForm.transaction_date" name="transaction_date" /></label><label>Amount<input required type="number" step="0.01" [(ngModel)]="bankTransactionForm.amount" name="amount" /><small>Use a negative amount for money out</small></label></div><label>Description<input required [(ngModel)]="bankTransactionForm.description" name="description" /></label><label>Statement reference<input [(ngModel)]="bankTransactionForm.reference" name="reference" /></label></form>
+            <form id="accounting-form" (ngSubmit)="submitDrawerForm()"><label>Bank account<select required [(ngModel)]="bankTransactionForm.bank_account_id" name="bank_account_id">@for (bank of activeBankAccounts(); track bank.id) { <option [value]="bank.id">{{ bank.name }} · {{ bank.currency }}</option> }</select></label><div class="form-grid two"><label>Transaction date<input required type="date" [(ngModel)]="bankTransactionForm.transaction_date" name="transaction_date" /></label><label>Amount<input required type="number" step="0.01" [(ngModel)]="bankTransactionForm.amount" name="amount" /><small>Use a negative amount for money out</small></label></div><label>Description<input required [(ngModel)]="bankTransactionForm.description" name="description" /></label><label>Statement reference<input [(ngModel)]="bankTransactionForm.reference" name="reference" /></label></form>
           }
 
           @if (drawer() === 'reconcile') {
-            <div class="payment-context"><span>Bank transaction</span><strong>{{ selectedBankTransaction()?.reference || 'No reference' }}</strong><p>{{ selectedBankTransaction()?.description }}</p><div><small>Statement amount</small><b>{{ selectedBankTransaction()?.amount | money:selectedBankTransaction()?.bank_account?.currency }}</b></div></div><form id="accounting-form" (ngSubmit)="reconcileTransaction()"><label>Match to payment<select required [(ngModel)]="reconcileForm.payment_id" name="payment_id"><option value="">Select equal payment</option>@for (payment of matchingPayments(); track payment.id) { <option [value]="payment.id">{{ payment.reference }} · {{ payment.direction === 'incoming' ? '+' : '−' }}{{ payment.amount | money:payment.currency }}</option> }</select></label><div class="control-note"><span>✓</span><p><b>Amount control</b>Only payments with the same signed amount are available for matching.</p></div></form>
+            <div class="payment-context"><span>Bank transaction</span><strong>{{ selectedBankTransaction()?.reference || 'No reference' }}</strong><p>{{ selectedBankTransaction()?.description }}</p><div><small>Statement amount</small><b>{{ selectedBankTransaction()?.amount | money:selectedBankTransaction()?.bank_account?.currency }}</b></div></div><form id="accounting-form" (ngSubmit)="submitDrawerForm()"><label>Match to payment<select required [(ngModel)]="reconcileForm.payment_id" name="payment_id"><option value="">Select equal payment</option>@for (payment of matchingPayments(); track payment.id) { <option [value]="payment.id">{{ payment.reference }} · {{ payment.direction === 'incoming' ? '+' : '−' }}{{ payment.amount | money:payment.currency }}</option> }</select></label><div class="control-note"><span>✓</span><p><b>Amount control</b>Only payments with the same signed amount are available for matching.</p></div></form>
           }
         </div>
         <footer>
           @if (drawer() === 'paymentDetail' || drawer() === 'journalView') { <button type="button" class="btn ghost" (click)="closeDrawer()">Close</button> }
-          @else { <button type="button" class="btn ghost" (click)="closeDrawer()">Cancel</button><button type="submit" form="accounting-form" class="btn primary" [disabled]="saving()">{{ saving() ? 'Saving…' : drawerSubmitLabel() }}</button> }
+          @else { <button type="button" class="btn ghost" (click)="closeDrawer()">Cancel</button><button type="button" class="btn primary" (click)="submitDrawerForm()" [disabled]="saving()">{{ saving() ? 'Saving…' : drawerSubmitLabel() }}</button> }
         </footer>
       </aside>
     }
@@ -599,6 +599,7 @@ export class SellerAccountingComponent {
   saving = signal(false);
   error = signal('');
   toast = signal('');
+  highlightedId = signal<number | null>(null);
   total = signal(0);
   currentInvoicePage = signal(1);
   readonly invoicePageSize = 10;
@@ -777,8 +778,15 @@ export class SellerAccountingComponent {
         next: (res) => {
           this.accounts.set(res.data);
           if (!this.accountTypeFilter && !this.search) this.allAccounts.set(res.data);
-          if (this.currentAccountPage() > this.totalAccountPages()) {
-            this.currentAccountPage.set(1);
+          const hid = this.highlightedId();
+          if (hid) {
+            const idx = res.data.findIndex((a: any) => a.id === hid);
+            if (idx !== -1) {
+              const targetPage = Math.floor(idx / this.accountPageSize) + 1;
+              this.currentAccountPage.set(targetPage);
+            }
+          } else if (this.currentAccountPage() > this.totalAccountPages()) {
+            this.currentAccountPage.set(Math.max(1, this.totalAccountPages()));
           }
         },
         error: (err) => this.fail(err),
@@ -997,6 +1005,62 @@ export class SellerAccountingComponent {
     return ({ payment: 'Record payment', paymentEntry: 'Save payment', payExpense: 'Mark as paid', reconcile: 'Confirm match' } as Record<string, string>)[this.drawer() || ''] || 'Save';
   }
 
+  highlightRecord(id: number | null): void {
+    if (!id) return;
+    this.highlightedId.set(id);
+    setTimeout(() => {
+      if (this.highlightedId() === id) {
+        this.highlightedId.set(null);
+      }
+    }, 3500);
+  }
+
+  submitDrawerForm(): void {
+    if (this.saving()) return;
+    const currentDrawer = this.drawer();
+    switch (currentDrawer) {
+      case 'invoice':
+        this.saveInvoice();
+        break;
+      case 'payment':
+        this.recordPayment();
+        break;
+      case 'paymentEntry':
+        this.submitPaymentEntry();
+        break;
+      case 'expense':
+        this.saveExpense();
+        break;
+      case 'payExpense':
+        this.payExpense();
+        break;
+      case 'purchaseOrder':
+        this.savePurchaseOrder();
+        break;
+      case 'contact':
+        this.saveContact();
+        break;
+      case 'account':
+        this.saveAccount();
+        break;
+      case 'journal':
+        this.saveJournal();
+        break;
+      case 'bankAccount':
+        this.saveBankAccount();
+        break;
+      case 'bankTransaction':
+        this.saveBankTransaction();
+        break;
+      case 'reconcile':
+        this.reconcileTransaction();
+        break;
+      default:
+        this.closeDrawer();
+        break;
+    }
+  }
+
   saveInvoice(): void {
     const editing = this.editingInvoice();
     if (editing) {
@@ -1004,6 +1068,7 @@ export class SellerAccountingComponent {
       this.save(this.api.updateAccountingInvoice(editing.id, payload), 'Invoice updated', () => { this.editingInvoice.set(null); this.invoiceForm = this.freshInvoice(); });
       return;
     }
+    this.currentInvoicePage.set(1);
     this.save(this.api.createAccountingInvoice(this.invoiceForm), 'Invoice created', () => { this.invoiceForm = this.freshInvoice(); });
   }
   openEditInvoice(invoice: AccountingInvoice): void {
@@ -1025,7 +1090,7 @@ export class SellerAccountingComponent {
   }
   sendInvoice(invoice: AccountingInvoice): void { this.saving.set(true); this.api.updateAccountingInvoice(invoice.id, { status: 'sent' }).pipe(finalize(() => this.saving.set(false))).subscribe({ next: () => { this.showToast('Invoice marked as sent'); this.loadCurrent(); }, error: (err) => this.fail(err) }); }
   openPayment(invoice: AccountingInvoice): void { this.selectedInvoice.set(invoice); this.paymentForm = { ...this.freshPayment(), amount: +invoice.balance_due }; this.drawer.set('payment'); }
-  recordPayment(): void { const invoice = this.selectedInvoice(); if (!invoice) return; this.save(this.api.recordAccountingPayment(invoice.id, this.paymentForm), 'Payment recorded'); }
+  recordPayment(): void { const invoice = this.selectedInvoice(); if (!invoice) return; this.currentPaymentPage.set(1); this.save(this.api.recordAccountingPayment(invoice.id, this.paymentForm), 'Payment recorded'); }
 
   eligiblePaymentInvoices(): AccountingInvoice[] { return this.invoices().filter((invoice) => ['sent', 'partial', 'overdue'].includes(invoice.status) && +invoice.balance_due > 0); }
   eligiblePaymentExpenses(): AccountingExpense[] { return this.expenses().filter((expense) => ['pending', 'overdue'].includes(expense.status)); }
@@ -1039,6 +1104,7 @@ export class SellerAccountingComponent {
   }
   submitPaymentEntry(): void {
     if (!this.paymentSourceId) return;
+    this.currentPaymentPage.set(1);
     if (this.paymentSourceType === 'invoice') {
       this.save(this.api.recordAccountingPayment(+this.paymentSourceId, this.paymentForm), 'Payment recorded');
       return;
@@ -1072,7 +1138,13 @@ export class SellerAccountingComponent {
     if (!window.confirm(`Delete draft invoice ${invoice.number}? This cannot be undone.`)) return;
     this.saving.set(true); this.error.set('');
     this.api.deleteAccountingInvoice(invoice.id).pipe(finalize(() => this.saving.set(false))).subscribe({
-      next: () => { this.showToast(`Invoice ${invoice.number} deleted`); this.loadCurrent(); },
+      next: () => {
+        this.showToast(`Invoice ${invoice.number} deleted`);
+        if (this.invoices().length <= 1 && this.currentInvoicePage() > 1) {
+          this.currentInvoicePage.update((p) => p - 1);
+        }
+        this.loadCurrent();
+      },
       error: (err) => this.fail(err),
     });
   }
@@ -1084,6 +1156,7 @@ export class SellerAccountingComponent {
       this.save(this.api.updateAccountingExpense(editing.id, this.expenseForm), message, () => { this.editingExpense.set(null); this.expenseForm = this.freshExpense(); });
       return;
     }
+    this.currentExpensePage.set(1);
     const message = this.expenseForm.status === 'draft' ? 'Draft bill saved' : 'Bill submitted';
     this.save(this.api.createAccountingExpense(this.expenseForm), message, () => { this.expenseForm = this.freshExpense(); });
   }
@@ -1096,19 +1169,29 @@ export class SellerAccountingComponent {
   deleteExpense(expense: AccountingExpense): void {
     if (!window.confirm(`Delete draft bill ${expense.number}? This cannot be undone.`)) return;
     this.saving.set(true);
-    this.api.deleteAccountingExpense(expense.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: () => { this.showToast(`Bill ${expense.number} deleted`); this.loadCurrent(); }, error: (err) => this.fail(err) });
+    this.api.deleteAccountingExpense(expense.id).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.showToast(`Bill ${expense.number} deleted`);
+        if (this.expenses().length <= 1 && this.currentExpensePage() > 1) {
+          this.currentExpensePage.update((p) => p - 1);
+        }
+        this.loadCurrent();
+      },
+      error: (err) => this.fail(err),
+    });
   }
   submitExpense(expense: AccountingExpense): void {
     this.save(this.api.updateAccountingExpense(expense.id, { status: 'pending' }), 'Bill submitted');
   }
   openExpensePayment(expense: AccountingExpense): void { this.selectedExpense.set(expense); this.paymentForm = this.freshPayment(); this.drawer.set('payExpense'); }
-  payExpense(): void { const expense = this.selectedExpense(); if (!expense) return; this.save(this.api.payAccountingExpense(expense.id, this.paymentForm), 'Bill marked as paid'); }
+  payExpense(): void { const expense = this.selectedExpense(); if (!expense) return; this.currentPaymentPage.set(1); this.save(this.api.payAccountingExpense(expense.id, this.paymentForm), 'Bill marked as paid'); }
   savePurchaseOrder(): void {
     const editing = this.editingPurchaseOrder();
     if (editing) {
       this.save(this.api.updatePurchaseOrder(editing.id, this.poForm), this.poForm.submit_for_approval ? 'Purchase order submitted for approval' : 'Draft purchase order updated', () => { this.editingPurchaseOrder.set(null); this.poForm = this.freshPo(); });
       return;
     }
+    this.currentProcurementPage.set(1);
     this.save(this.api.createPurchaseOrder(this.poForm), this.poForm.submit_for_approval ? 'Purchase order submitted' : 'Draft purchase order created', () => { this.poForm = this.freshPo(); });
   }
   openEditPurchaseOrder(order: PurchaseOrder): void {
@@ -1125,7 +1208,16 @@ export class SellerAccountingComponent {
   deletePurchaseOrder(order: PurchaseOrder): void {
     if (!window.confirm(`Delete draft purchase order ${order.number}? This cannot be undone.`)) return;
     this.saving.set(true);
-    this.api.deletePurchaseOrder(order.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: () => { this.showToast(`Purchase order ${order.number} deleted`); this.loadCurrent(); }, error: (err) => this.fail(err) });
+    this.api.deletePurchaseOrder(order.id).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.showToast(`Purchase order ${order.number} deleted`);
+        if (this.purchaseOrders().length <= 1 && this.currentProcurementPage() > 1) {
+          this.currentProcurementPage.update((p) => p - 1);
+        }
+        this.loadCurrent();
+      },
+      error: (err) => this.fail(err),
+    });
   }
   /** Edit path: reuse the contact drawer, prefilled from the card. */
   openEditContact(contact: AccountingContact): void {
@@ -1194,6 +1286,7 @@ export class SellerAccountingComponent {
       this.save(this.api.updateAccountingJournal(editing.id, payload), 'Draft journal updated', () => { this.editingJournal.set(null); this.journalForm = this.freshJournal(); });
       return;
     }
+    this.currentJournalPage.set(1);
     this.save(this.api.createAccountingJournal(this.journalForm), this.journalForm.post_now ? 'Journal posted' : 'Draft journal saved', () => { this.journalForm = this.freshJournal(); });
   }
   openEditJournal(journal: AccountingJournalEntry): void {
@@ -1207,7 +1300,16 @@ export class SellerAccountingComponent {
   deleteJournal(journal: AccountingJournalEntry): void {
     if (!window.confirm(`Delete draft journal ${journal.number}? This cannot be undone.`)) return;
     this.saving.set(true);
-    this.api.deleteAccountingJournal(journal.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: () => { this.showToast(`Journal ${journal.number} deleted`); this.loadCurrent(); }, error: (err) => this.fail(err) });
+    this.api.deleteAccountingJournal(journal.id).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.showToast(`Journal ${journal.number} deleted`);
+        if (this.journals().length <= 1 && this.currentJournalPage() > 1) {
+          this.currentJournalPage.update((p) => p - 1);
+        }
+        this.loadCurrent();
+      },
+      error: (err) => this.fail(err),
+    });
   }
   postJournal(journal: AccountingJournalEntry): void { this.save(this.api.postAccountingJournal(journal.id), 'Journal posted'); }
   saveBankAccount(): void {
@@ -1241,6 +1343,7 @@ export class SellerAccountingComponent {
       this.save(this.api.reconcileAccountingBankTransaction(editing.id, this.bankTransactionForm), 'Statement line updated', () => { this.editingBankTransaction.set(null); this.bankTransactionForm = this.freshBankTransaction(); });
       return;
     }
+    this.currentReconciliationPage.set(1);
     this.save(this.api.createAccountingBankTransaction(this.bankTransactionForm), 'Bank transaction added', () => { this.bankTransactionForm = this.freshBankTransaction(); });
   }
   openEditBankTransaction(transaction: AccountingBankTransaction): void {
@@ -1252,7 +1355,16 @@ export class SellerAccountingComponent {
   deleteBankTransaction(transaction: AccountingBankTransaction): void {
     if (!window.confirm(`Delete unmatched statement line “${transaction.description}”?`)) return;
     this.saving.set(true);
-    this.api.deleteAccountingBankTransaction(transaction.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: () => { this.showToast('Statement line deleted'); this.loadCurrent(); }, error: (err) => this.fail(err) });
+    this.api.deleteAccountingBankTransaction(transaction.id).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: () => {
+        this.showToast('Statement line deleted');
+        if (this.bankTransactions().length <= 1 && this.currentReconciliationPage() > 1) {
+          this.currentReconciliationPage.update((p) => p - 1);
+        }
+        this.loadCurrent();
+      },
+      error: (err) => this.fail(err),
+    });
   }
 
   nextAccountPage(): void { if (this.currentAccountPage() < this.totalAccountPages()) this.currentAccountPage.update((page) => page + 1); }
@@ -1326,11 +1438,34 @@ export class SellerAccountingComponent {
 
   private loadContacts(): void { this.api.accountingContacts({ per_page: 100 }).subscribe({ next: (res) => this.contacts.set(res.data) }); }
   private loadAccountLookup(): void { this.api.accountingAccounts().subscribe({ next: (res) => this.allAccounts.set(res.data) }); }
-  private save(request: any, message: string, after?: () => void): void {
+  private save(request: any, message: string, after?: (res?: any) => void): void {
     this.saving.set(true); this.error.set('');
-    request.pipe(finalize(() => this.saving.set(false))).subscribe({ next: () => { this.drawer.set(null); if (after) after(); this.showToast(message); this.loadCurrent(); }, error: (err: any) => this.fail(err) });
+    request.pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: (res: any) => {
+        this.drawer.set(null);
+        if (after) after(res);
+        this.showToast(message);
+        this.loadCurrent();
+        if (res?.data?.id) {
+          this.highlightRecord(res.data.id);
+        }
+      },
+      error: (err: any) => this.fail(err),
+    });
   }
-  private fail(err: any): void { const errors = err?.error?.errors; const first = errors ? Object.values(errors).flat()[0] : null; this.error.set(String(first || err?.error?.message || 'Something went wrong. Please try again.')); }
+  private fail(err: any): void {
+    const raw = err?.error;
+    const fields = raw?.errors || raw?.error?.fields;
+    if (fields && typeof fields === 'object') {
+      const firstField = Object.values(fields).flat()[0];
+      if (firstField) {
+        this.error.set(String(firstField));
+        return;
+      }
+    }
+    const message = raw?.message || raw?.error?.message || (typeof raw?.error === 'string' ? raw.error : null) || err?.message;
+    this.error.set(String(message || 'Something went wrong. Please try again.'));
+  }
   private showToast(message: string): void { this.toast.set(message); setTimeout(() => this.toast.set(''), 3000); }
   private date(offsetDays = 0): string { const date = new Date(); date.setDate(date.getDate() + offsetDays); return date.toISOString().slice(0, 10); }
   private yearStart(): string { const date = new Date(); date.setMonth(0, 1); return date.toISOString().slice(0, 10); }

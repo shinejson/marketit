@@ -114,7 +114,7 @@ class AccountingController extends Controller
     public function invoices(Request $request): JsonResponse
     {
         $this->refreshOverdue();
-        $query = AccountingInvoice::query()->with(['contact:id,name', 'items', 'payments:id,invoice_id,reference,amount,method,paid_on'])->latest('issue_date');
+        $query = AccountingInvoice::query()->with(['contact:id,name', 'items', 'payments:id,invoice_id,reference,amount,method,paid_on'])->latest('issue_date')->latest('id');
         $this->applySearchAndStatus($query, $request, ['number', 'customer_name', 'customer_email']);
 
         return $this->paginated($query, $request);
@@ -338,7 +338,8 @@ class AccountingController extends Controller
     {
         $query = AccountingPayment::query()
             ->with(['invoice:id,number,customer_name', 'expense:id,number,vendor_name,description'])
-            ->latest('paid_on');
+            ->latest('paid_on')
+            ->latest('id');
         $this->applySearchAndStatus($query, $request, ['reference', 'method'], 'direction', false);
         if ($direction = $request->string('direction')->trim()->toString()) {
             $query->where('direction', $direction);
@@ -359,7 +360,7 @@ class AccountingController extends Controller
     public function expenses(Request $request): JsonResponse
     {
         $this->refreshOverdue();
-        $query = AccountingExpense::query()->with('vendor:id,name')->latest('expense_date');
+        $query = AccountingExpense::query()->with('vendor:id,name')->latest('expense_date')->latest('id');
         $this->applySearchAndStatus($query, $request, ['number', 'vendor_name', 'category', 'description']);
 
         return $this->paginated($query, $request);
@@ -586,7 +587,7 @@ class AccountingController extends Controller
 
     public function purchaseOrders(Request $request): JsonResponse
     {
-        $query = PurchaseOrder::query()->with(['vendor:id,name,email', 'items'])->latest('order_date');
+        $query = PurchaseOrder::query()->with(['vendor:id,name,email', 'items'])->latest('order_date')->latest('id');
         $this->applySearchAndStatus($query, $request, ['number', 'vendor_name']);
 
         return $this->paginated($query, $request);

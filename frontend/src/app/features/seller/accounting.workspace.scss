@@ -84,4 +84,25 @@ app-seller-accounting {
   .table-wrap tfoot th { padding: 10px 8px; border-top: 2px solid var(--ink); text-align: right; font-size: 10px; }
   .table-wrap tfoot th:first-child { text-align: left; }
 
+  .highlighted-row {
+    animation: rowPulse 2.8s ease-out;
+    background-color: rgba(30, 102, 80, 0.12) !important;
+  }
+  .highlighted-card {
+    animation: cardPulse 2.8s ease-out;
+    border-color: var(--green) !important;
+    box-shadow: 0 0 0 3px rgba(30, 102, 80, 0.25) !important;
+  }
+
+  @keyframes rowPulse {
+    0% { background-color: rgba(30, 102, 80, 0.35); }
+    100% { background-color: rgba(30, 102, 80, 0.12); }
+  }
+
+  @keyframes cardPulse {
+    0% { box-shadow: 0 0 0 6px rgba(30, 102, 80, 0.4); }
+    100% { box-shadow: 0 0 0 3px rgba(30, 102, 80, 0.25); }
+  }
+
 }
+
