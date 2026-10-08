@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 
@@ -40,8 +40,8 @@ interface FaqItem {
               <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
             </button>
             <div class="nav-dropdown" role="menu">
-              @for (item of productLinks; track item.href) {
-                <a class="dd-item" [href]="item.href" role="menuitem" (click)="closeMenus()">
+              @for (item of productLinks; track item.id) {
+                <a class="dd-item" href="#{{ item.id }}" role="menuitem" (click)="scrollTo(item.id, $event)">
                   <span class="dd-icon" aria-hidden="true">{{ item.icon }}</span>
                   <span class="dd-copy">
                     <strong>{{ item.title }}</strong>
@@ -65,8 +65,8 @@ interface FaqItem {
               <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
             </button>
             <div class="nav-dropdown" role="menu">
-              @for (item of solutionLinks; track item.href) {
-                <a class="dd-item" [href]="item.href" role="menuitem" (click)="closeMenus()">
+              @for (item of solutionLinks; track item.id) {
+                <a class="dd-item" href="#{{ item.id }}" role="menuitem" (click)="scrollTo(item.id, $event)">
                   <span class="dd-icon" aria-hidden="true">{{ item.icon }}</span>
                   <span class="dd-copy">
                     <strong>{{ item.title }}</strong>
@@ -77,8 +77,8 @@ interface FaqItem {
             </div>
           </div>
 
-          <a href="#pricing" class="nav-link">Pricing</a>
-          <a href="#faq" class="nav-link">FAQ</a>
+          <a href="#pricing" class="nav-link" (click)="scrollTo('pricing', $event)">Pricing</a>
+          <a href="#faq" class="nav-link" (click)="scrollTo('faq', $event)">FAQ</a>
         </nav>
 
         <div class="nav-actions">
@@ -126,8 +126,8 @@ interface FaqItem {
                 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
               </button>
               <div class="m-items">
-                @for (item of productLinks; track item.href) {
-                  <a [href]="item.href" (click)="closeMobile()"><span class="m-icon" aria-hidden="true">{{ item.icon }}</span> {{ item.title }}</a>
+                @for (item of productLinks; track item.id) {
+                  <a href="#{{ item.id }}" (click)="scrollTo(item.id, $event)"><span class="m-icon" aria-hidden="true">{{ item.icon }}</span> {{ item.title }}</a>
                 }
               </div>
             </div>
@@ -138,14 +138,14 @@ interface FaqItem {
                 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
               </button>
               <div class="m-items">
-                @for (item of solutionLinks; track item.href) {
-                  <a [href]="item.href" (click)="closeMobile()"><span class="m-icon" aria-hidden="true">{{ item.icon }}</span> {{ item.title }}</a>
+                @for (item of solutionLinks; track item.id) {
+                  <a href="#{{ item.id }}" (click)="scrollTo(item.id, $event)"><span class="m-icon" aria-hidden="true">{{ item.icon }}</span> {{ item.title }}</a>
                 }
               </div>
             </div>
 
-            <a href="#pricing" class="m-direct" (click)="closeMobile()">Pricing</a>
-            <a href="#faq" class="m-direct" (click)="closeMobile()">FAQ</a>
+            <a href="#pricing" class="m-direct" (click)="scrollTo('pricing', $event)">Pricing</a>
+            <a href="#faq" class="m-direct" (click)="scrollTo('faq', $event)">FAQ</a>
 
             <div class="m-actions">
               <a routerLink="/" class="btn-ghost-sm" (click)="closeMobile()">← Market Square</a>
@@ -176,7 +176,7 @@ interface FaqItem {
               <a [routerLink]="createStoreTarget()" class="btn-primary-lg">
                 Create Your Store <span aria-hidden="true">→</span>
               </a>
-              <a href="#templates" class="btn-secondary-lg">
+              <a href="#templates" class="btn-secondary-lg" (click)="scrollTo('templates', $event)">
                 Explore Templates <span aria-hidden="true">↓</span>
               </a>
             </div>
@@ -957,14 +957,14 @@ interface FaqItem {
           <div class="footer-col">
             <h4>Platform</h4>
             <ul>
-              <li><a href="#builder">Store Builder</a></li>
-              <li><a href="#builder">Page Builder</a></li>
-              <li><a href="#templates">Templates</a></li>
-              <li><a href="#features">Ecommerce</a></li>
-              <li><a href="#operations">Product Management</a></li>
-              <li><a href="#operations">Order Management</a></li>
-              <li><a href="#operations">Analytics</a></li>
-              <li><a href="#pricing">Pricing</a></li>
+              <li><a href="#builder" (click)="scrollTo('builder', $event)">Store Builder</a></li>
+              <li><a href="#builder" (click)="scrollTo('builder', $event)">Page Builder</a></li>
+              <li><a href="#templates" (click)="scrollTo('templates', $event)">Templates</a></li>
+              <li><a href="#features" (click)="scrollTo('features', $event)">Ecommerce</a></li>
+              <li><a href="#operations" (click)="scrollTo('operations', $event)">Product Management</a></li>
+              <li><a href="#operations" (click)="scrollTo('operations', $event)">Order Management</a></li>
+              <li><a href="#operations" (click)="scrollTo('operations', $event)">Analytics</a></li>
+              <li><a href="#pricing" (click)="scrollTo('pricing', $event)">Pricing</a></li>
             </ul>
           </div>
           <div class="footer-col">
@@ -973,8 +973,8 @@ interface FaqItem {
               <li><a routerLink="/support">Help Center</a></li>
               <li><a routerLink="/support">Documentation</a></li>
               <li><a routerLink="/">Marketplace Blog</a></li>
-              <li><a href="#builder">Tutorials</a></li>
-              <li><a href="#faq">FAQs</a></li>
+              <li><a href="#builder" (click)="scrollTo('builder', $event)">Tutorials</a></li>
+              <li><a href="#faq" (click)="scrollTo('faq', $event)">FAQs</a></li>
               <li><a routerLink="/support">Contact Support</a></li>
             </ul>
           </div>
@@ -1394,7 +1394,7 @@ interface FaqItem {
     '(document:keydown.escape)': 'onEscape()',
   },
 })
-export class SaasLandingComponent {
+export class SaasLandingComponent implements OnInit {
   auth = inject(AuthService);
 
   previewDevice = signal<DevicePreview>('desktop');
@@ -1407,17 +1407,41 @@ export class SaasLandingComponent {
   mobileGroup = signal<string | null>('product');
 
   productLinks = [
-    { href: '#builder', icon: '🎨', title: 'Page Builder', desc: 'Drag-and-drop visual editor — no code required' },
-    { href: '#templates', icon: '🧩', title: 'Templates', desc: 'Ready-made designs for every kind of business' },
-    { href: '#features', icon: '⚡', title: 'Store Features', desc: '20+ built-in ecommerce tools out of the box' },
-    { href: '#operations', icon: '🗂️', title: 'Operations Suite', desc: 'Orders, inventory and analytics in one dashboard' },
+    { id: 'builder', icon: '🎨', title: 'Page Builder', desc: 'Drag-and-drop visual editor — no code required' },
+    { id: 'templates', icon: '🧩', title: 'Templates', desc: 'Ready-made designs for every kind of business' },
+    { id: 'features', icon: '⚡', title: 'Store Features', desc: '20+ built-in ecommerce tools out of the box' },
+    { id: 'operations', icon: '🗂️', title: 'Operations Suite', desc: 'Orders, inventory and analytics in one dashboard' },
   ];
 
   solutionLinks = [
-    { href: '#how-it-works', icon: '🚀', title: 'How It Works', desc: 'From idea to live store in six simple steps' },
-    { href: '#industries', icon: '🏬', title: 'Industries', desc: 'Fashion, food, electronics, beauty and more' },
-    { href: '#overview', icon: '✦', title: 'Platform Overview', desc: 'See everything MarketHub does at a glance' },
+    { id: 'how-it-works', icon: '🚀', title: 'How It Works', desc: 'From idea to live store in six simple steps' },
+    { id: 'industries', icon: '🏬', title: 'Industries', desc: 'Fashion, food, electronics, beauty and more' },
+    { id: 'overview', icon: '✦', title: 'Platform Overview', desc: 'See everything MarketHub does at a glance' },
   ];
+
+  ngOnInit(): void {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      setTimeout(() => this.scrollTo(window.location.hash), 300);
+    }
+  }
+
+  scrollTo(target: string, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.closeMenus();
+    this.closeMobile();
+
+    const id = target.replace(/^#/, '');
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (typeof window !== 'undefined' && window.history) {
+        window.history.replaceState(null, '', `/platform#${id}`);
+      }
+    }
+  }
 
   toggleMenu(menu: 'product' | 'solutions', event: Event): void {
     event.stopPropagation();
