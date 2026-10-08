@@ -202,13 +202,8 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
               <div class="table-toolbar"><div class="search-box"><span>⌕</span><input placeholder="Search reference or method" [(ngModel)]="search" (keyup.enter)="resetPaymentPageAndLoad()" /></div><select [(ngModel)]="statusFilter" (change)="resetPaymentPageAndLoad()"><option value="">All movements</option><option value="incoming">Money in</option><option value="outgoing">Money out</option></select><button class="filter-go" type="button" (click)="resetPaymentPageAndLoad()">Filter</button></div>
               <div class="table-wrap compact-scroll-table"><table><thead><tr><th>Date</th><th>Reference</th><th>Related record</th><th>Method</th><th>Direction</th><th class="right">Amount</th><th></th></tr></thead><tbody>
                 @for (payment of payments(); track payment.id) {
-<<<<<<< HEAD
-                  <tr><td>{{ payment.paid_on | date:'MMM d, y' }}</td><td><strong class="mono">{{ payment.reference }}</strong></td><td><strong>{{ relatedPayment(payment) }}</strong><small>{{ payment.invoice ? payment.invoice.customer_name : payment.expense?.vendor_name || '' }}</small></td><td>{{ pretty(payment.method) }}</td><td><span [class]="'movement ' + payment.direction">{{ payment.direction === 'incoming' ? '↙ Money in' : '↗ Money out' }}</span></td><td class="right movement-amount" [class.outgoing]="payment.direction === 'outgoing'">{{ payment.direction === 'outgoing' ? '−' : '+' }}{{ payment.amount | money:payment.currency }}</td></tr>
-                } @empty { <tr><td colspan="6"><div class="empty-state">No payment activity found.</div></td></tr> }
-=======
                   <tr><td>{{ payment.paid_on | date:'MMM d, y' }}</td><td><strong class="mono">{{ payment.reference }}</strong></td><td><strong>{{ relatedPayment(payment) }}</strong><small>{{ payment.invoice ? payment.invoice.customer_name : payment.expense?.vendor_name || '' }}</small></td><td>{{ pretty(payment.method) }}</td><td><span [class]="'movement ' + payment.direction">{{ payment.direction === 'incoming' ? '↙ Money in' : '↗ Money out' }}</span></td><td class="right movement-amount" [class.outgoing]="payment.direction === 'outgoing'">{{ payment.direction === 'outgoing' ? '−' : '+' }}{{ payment.amount | money:payment.currency }}</td><td class="actions"><button type="button" (click)="openViewPayment(payment)">View</button></td></tr>
                 } @empty { <tr><td colspan="7"><div class="empty-state">No payment activity found.</div></td></tr> }
->>>>>>> ad640129b7351923433090aa4304ad081b3c0f10
               </tbody></table></div>
               <div class="table-foot">
                 <span>Showing {{ payments().length }} items · Page {{ currentPaymentPage() }} of {{ totalPaymentPages() }} · {{ total() }} payments total</span>
@@ -399,9 +394,6 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
               }
             </section>
             <section class="reconcile-progress panel"><div><p>Reconciliation progress</p><strong>{{ reconciliationPercent() }}%</strong></div><span><i [style.width.%]="reconciliationPercent()"></i></span><small>{{ matchedTransactions() }} of {{ bankTransactions().length }} statement lines reviewed</small></section>
-<<<<<<< HEAD
-            <section class="table-panel panel"><div class="table-toolbar"><div class="search-box"><span>⌕</span><input disabled placeholder="Imported statement activity" /></div><select [(ngModel)]="statusFilter" (change)="loadCurrent()"><option value="">All status</option><option value="unmatched">Unmatched</option><option value="matched">Matched</option><option value="excluded">Excluded</option></select></div><div class="table-wrap compact-scroll-table"><table><thead><tr><th>Date</th><th>Statement description</th><th>Reference</th><th>Bank</th><th>Status</th><th class="right">Amount</th></tr></thead><tbody>@for (transaction of bankTransactions(); track transaction.id) { <tr><td>{{ transaction.transaction_date | date:'MMM d, y' }}</td><td><strong>{{ transaction.description }}</strong><small>{{ transaction.payment ? 'Matched to ' + transaction.payment.reference : 'No ledger match' }}</small></td><td class="mono">{{ transaction.reference || '—' }}</td><td>{{ transaction.bank_account?.name }}</td><td><span [class]="'status ' + transaction.status">{{ pretty(transaction.status) }}</span></td><td class="right movement-amount" [class.outgoing]="+transaction.amount < 0">{{ transaction.amount | money:transaction.bank_account?.currency }}</td><td class="actions">@if (transaction.status === 'unmatched') { <button (click)="openReconcile(transaction)">Match</button><button (click)="excludeTransaction(transaction)">Exclude</button> } @else { <button (click)="undoReconcile(transaction)">Undo</button> }</td></tr> }</tbody></table></div>
-=======
             <section class="table-panel panel">
               <div class="table-toolbar"><div class="search-box"><span>⌕</span><input placeholder="Search statement description or reference" [(ngModel)]="search" (keyup.enter)="resetReconciliationPageAndLoad()" /></div><select [(ngModel)]="statusFilter" (change)="resetReconciliationPageAndLoad()"><option value="">All status</option><option value="unmatched">Unmatched</option><option value="matched">Matched</option><option value="excluded">Excluded</option></select><button type="button" class="filter-go" (click)="resetReconciliationPageAndLoad()">Filter</button></div>
               <div class="table-wrap compact-scroll-table"><table><thead><tr><th>Date</th><th>Statement description</th><th>Reference</th><th>Bank</th><th>Status</th><th class="right">Amount</th><th></th></tr></thead><tbody>
@@ -412,7 +404,6 @@ type Drawer = 'invoice' | 'payment' | 'paymentEntry' | 'paymentDetail' | 'expens
                   </td></tr>
                 } @empty { <tr><td colspan="7"><div class="empty-state">No statement transactions found.</div></td></tr> }
               </tbody></table></div>
->>>>>>> ad640129b7351923433090aa4304ad081b3c0f10
               <div class="table-foot">
                 <span>Showing {{ bankTransactions().length }} statement items · Page {{ currentReconciliationPage() }} of {{ totalReconciliationPages() }} · {{ total() }} total</span>
                 <div class="pagination-controls">
@@ -1264,13 +1255,8 @@ export class SellerAccountingComponent {
     this.api.deleteAccountingBankTransaction(transaction.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: () => { this.showToast('Statement line deleted'); this.loadCurrent(); }, error: (err) => this.fail(err) });
   }
 
-<<<<<<< HEAD
-  nextAccountPage(): void { if (this.currentAccountPage() < this.totalAccountPages()) this.currentAccountPage.set(this.currentAccountPage() + 1); }
-  prevAccountPage(): void { if (this.currentAccountPage() > 1) this.currentAccountPage.set(this.currentAccountPage() - 1); }
-=======
   nextAccountPage(): void { if (this.currentAccountPage() < this.totalAccountPages()) this.currentAccountPage.update((page) => page + 1); }
   prevAccountPage(): void { if (this.currentAccountPage() > 1) this.currentAccountPage.update((page) => page - 1); }
->>>>>>> ad640129b7351923433090aa4304ad081b3c0f10
   resetAccountPageAndLoad(): void { this.currentAccountPage.set(1); this.loadCurrent(); }
   filterAccounts(type: string): void { this.accountTypeFilter = this.accountTypeFilter === type ? '' : type; this.currentAccountPage.set(1); this.loadCurrent(); }
   accountTypeCount(type: string): number { return this.allAccounts().filter((account) => account.type === type).length; }
