@@ -18,12 +18,13 @@ interface FaqItem {
       <!-- 21-SECTION SAAS PLATFORM LANDING PAGE (landingPage.md) -->
 
       <!-- TOPNAV: Dedicated SaaS Platform Navigation (dropdown-based) -->
-      <header class="saas-nav wrap">
-        <div class="nav-left">
-          <a routerLink="/platform" class="brand serif">
-            MarketHub <span class="brand-badge">SaaS Platform</span>
-          </a>
-        </div>
+      <header class="saas-header">
+        <div class="wrap saas-nav">
+          <div class="nav-left">
+            <a routerLink="/platform" class="brand serif">
+              MarketHub
+            </a>
+          </div>
 
         <nav class="nav-links" aria-label="Platform navigation">
           <!-- Product dropdown -->
@@ -83,10 +84,16 @@ interface FaqItem {
         <div class="nav-actions">
           <a routerLink="/" class="btn-ghost-sm nav-market-square" title="Browse customer market square">← Market Square</a>
           @if (!auth.isLoggedIn()) {
-            <a routerLink="/login" [queryParams]="{ returnUrl: '/platform' }" class="btn-ghost-sm">Log in</a>
-            <a [routerLink]="createStoreTarget()" class="btn-primary-sm">Create Store →</a>
+            <a routerLink="/login" [queryParams]="{ returnUrl: '/platform' }" class="btn-ghost-sm nav-login">Log in</a>
+            <a [routerLink]="createStoreTarget()" class="btn-primary-sm nav-cta">
+              <span class="cta-full">Create Store →</span>
+              <span class="cta-compact">Create Store</span>
+            </a>
           } @else {
-            <a [routerLink]="createStoreTarget()" class="btn-primary-sm">Open Workspace →</a>
+            <a [routerLink]="createStoreTarget()" class="btn-primary-sm nav-cta">
+              <span class="cta-full">Open Workspace →</span>
+              <span class="cta-compact">Workspace</span>
+            </a>
           }
           <!-- Hamburger (small screens) -->
           <button
@@ -108,6 +115,7 @@ interface FaqItem {
             }
           </button>
         </div>
+      </div>
 
         <!-- Mobile menu panel with accordion dropdowns -->
         <div class="mobile-panel" id="saas-mobile-menu" [class.open]="mobileOpen()" (click)="$event.stopPropagation()">
@@ -1023,14 +1031,39 @@ interface FaqItem {
     .btn-accent { background: #c45c26; color: white; padding: 12px 24px; border-radius: 999px; font-size: 14px; font-weight: 700; text-decoration: none; }
 
     /* SAAS TOPNAV */
-    .saas-nav { height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid #e9eee9; background: #fafaf7; position: sticky; top: 0; z-index: 60; backdrop-filter: blur(8px); }
-    .nav-left { display: flex; align-items: center; gap: 14px; flex: none; }
-    .brand { font-size: 22px; font-weight: 800; color: #183329; text-decoration: none; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
-    .brand-badge { font-family: 'Inter', sans-serif; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; background: #e6f0ea; color: #1f4b3a; padding: 3px 8px; border-radius: 12px; }
+    .saas-header {
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      width: 100%;
+      background: rgba(250, 250, 247, 0.96);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid #e9eee9;
+    }
+    .saas-nav {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: relative;
+    }
+    .nav-left { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+    .brand {
+      font-size: 24px;
+      font-weight: 800;
+      color: #183329;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      transition: color 0.15s ease;
+    }
+    .brand:hover { color: #1f4b3a; }
 
     /* Top-level nav: dropdown triggers + direct links */
-    .nav-links { display: flex; align-items: center; gap: 2px; }
-    .nav-trigger, .nav-link { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border: 0; border-radius: 999px; background: transparent; color: #536257; font-size: 13.5px; font-weight: 600; text-decoration: none; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .nav-links { display: flex; align-items: center; gap: 3px; }
+    .nav-trigger, .nav-link { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border: 0; border-radius: 999px; background: transparent; color: #536257; font-size: 13.5px; font-weight: 600; text-decoration: none; cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; }
     .nav-trigger:hover, .nav-link:hover { color: #1f4b3a; background: #edf2ee; }
     .nav-item { position: relative; }
     .nav-item.open .nav-trigger { color: #1f4b3a; background: #e6f0ea; }
@@ -1038,7 +1071,7 @@ interface FaqItem {
     .nav-item.open .nav-trigger .chev { transform: rotate(180deg); }
 
     /* Dropdown panels */
-    .nav-dropdown { position: absolute; top: calc(100% + 12px); left: 50%; transform: translate(-50%, 8px); width: 330px; background: white; border: 1px solid #e4eae4; border-radius: 16px; box-shadow: 0 18px 44px rgba(20, 48, 32, 0.16); padding: 8px; display: flex; flex-direction: column; gap: 2px; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s; }
+    .nav-dropdown { position: absolute; top: calc(100% + 12px); left: 50%; transform: translate(-50%, 8px); width: 330px; background: white; border: 1px solid #e4eae4; border-radius: 16px; box-shadow: 0 18px 44px rgba(20, 48, 32, 0.16); padding: 8px; display: flex; flex-direction: column; gap: 2px; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s; z-index: 100; }
     .nav-item.open .nav-dropdown { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); }
     .dd-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 12px; text-decoration: none; }
     .dd-item:hover { background: #f2f6f3; }
@@ -1047,28 +1080,31 @@ interface FaqItem {
     .dd-copy strong { display: block; font-size: 13.5px; font-weight: 700; color: #183329; }
     .dd-copy small { display: block; margin-top: 2px; font-size: 12px; line-height: 1.4; color: #6b7a70; }
 
-    .nav-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+    .nav-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .nav-cta { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; }
+    .cta-compact { display: none; }
 
     /* Hamburger + mobile panel */
-    .burger { display: none; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #e0e7e1; border-radius: 12px; background: white; color: #1f4b3a; cursor: pointer; transition: background 0.15s; }
-    .burger:hover { background: #edf2ee; }
-    .burger svg { width: 18px; height: 18px; }
+    .burger { display: none; align-items: center; justify-content: center; width: 42px; height: 42px; border: 1px solid #dce4dd; border-radius: 12px; background: white; color: #1f4b3a; cursor: pointer; transition: all 0.15s ease; flex-shrink: 0; }
+    .burger:hover { background: #edf2ee; border-color: #c4d3c6; }
+    .burger svg { width: 20px; height: 20px; }
 
-    .mobile-panel { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fafaf7; box-shadow: 0 24px 48px rgba(20, 48, 32, 0.14); max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-    .mobile-panel.open { max-height: calc(100vh - 80px); overflow-y: auto; border: 1px solid #e9eee9; border-top: 0; border-radius: 0 0 18px 18px; }
-    .m-inner { padding: 12px 14px 18px; display: flex; flex-direction: column; gap: 4px; }
-    .m-trigger { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 10px; border: 0; background: transparent; font-size: 14px; font-weight: 700; color: #183329; cursor: pointer; border-radius: 12px; }
+    .mobile-panel { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fafaf7; box-shadow: 0 24px 48px rgba(20, 48, 32, 0.15); max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-bottom: 1px solid #e0e7e1; z-index: 95; }
+    .mobile-panel.open { max-height: calc(100vh - 72px); overflow-y: auto; border-top: 1px solid #e9eee9; }
+    .m-inner { padding: 14px 20px 24px; display: flex; flex-direction: column; gap: 6px; max-width: 1240px; margin: 0 auto; }
+    .m-trigger { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border: 0; background: transparent; font-size: 15px; font-weight: 700; color: #183329; cursor: pointer; border-radius: 12px; transition: background 0.15s ease; }
     .m-trigger:hover { background: #eef3ef; }
-    .m-trigger .chev { color: #6b7a70; }
+    .m-trigger .chev { color: #6b7a70; width: 16px; height: 16px; }
     .m-group.open .m-trigger .chev { transform: rotate(180deg); }
-    .m-items { display: flex; flex-direction: column; max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
-    .m-group.open .m-items { max-height: 340px; }
-    .m-items a { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 18px; font-size: 13.5px; font-weight: 600; color: #536257; text-decoration: none; border-radius: 10px; }
+    .m-items { display: flex; flex-direction: column; max-height: 0; overflow: hidden; transition: max-height 0.28s ease; padding-left: 6px; }
+    .m-group.open .m-items { max-height: 360px; padding: 4px 0 8px 6px; }
+    .m-items a { display: flex; align-items: center; gap: 12px; padding: 10px 14px; font-size: 14px; font-weight: 600; color: #536257; text-decoration: none; border-radius: 10px; transition: background 0.15s ease, color 0.15s ease; }
     .m-items a:hover { background: #eef3ef; color: #1f4b3a; }
-    .m-icon { width: 22px; text-align: center; }
-    .m-direct { display: block; padding: 12px 10px; font-size: 14px; font-weight: 700; color: #183329; text-decoration: none; border-radius: 12px; }
+    .m-icon { width: 24px; text-align: center; font-size: 16px; }
+    .m-direct { display: block; padding: 12px 14px; font-size: 15px; font-weight: 700; color: #183329; text-decoration: none; border-radius: 12px; transition: background 0.15s ease; }
     .m-direct:hover { background: #eef3ef; }
-    .m-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 14px; border-top: 1px solid #e9eee9; }
+    .m-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding-top: 16px; border-top: 1px solid #e9eee9; }
+    .m-actions a { text-align: center; justify-content: center; padding: 12px 18px; font-size: 14px; }
 
     /* HERO */
     .hero-section { padding: 65px 0 85px; background: radial-gradient(1000px 480px at 20% 0%, #f3ebe0 0%, transparent 80%); }
@@ -1322,18 +1358,32 @@ interface FaqItem {
       .premium-box { grid-template-columns: 1fr; gap: 35px; }
       .tmpl-pricing-card { flex-direction: column; align-items: flex-start; }
       .tp-options { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 992px) {
       .saas-nav .nav-links { display: none; }
       .saas-nav .nav-market-square { display: none; }
       .saas-nav .burger { display: inline-flex; }
       .mobile-panel { display: block; }
     }
     @media (max-width: 768px) {
+      .wrap { padding: 0 16px; }
+      .saas-nav { height: 64px; }
+      .brand { font-size: 21px; }
       .pillar-grid, .steps-grid, .builder-feature-grid, .template-categories-grid, .industries-grid, .ops-grid, .checklist-grid, .pricing-grid, .why-grid, .brand-tokens-grid, .audiences-grid { grid-template-columns: 1fr; }
       .builder-banner-cta { flex-direction: column; align-items: flex-start; }
       .footer-grid { grid-template-columns: 1fr; gap: 30px; }
       .footer-bottom { flex-direction: column; gap: 10px; text-align: center; }
+    }
+    @media (max-width: 580px) {
+      .saas-nav .nav-login { display: none; }
+      .cta-full { display: none; }
+      .cta-compact { display: inline; }
+      .btn-primary-sm { padding: 8px 14px; font-size: 12.5px; }
+      .saas-nav { gap: 10px; }
+      .nav-actions { gap: 8px; }
+      .burger { width: 38px; height: 38px; }
+    }
+    @media (max-width: 380px) {
+      .brand { font-size: 19px; }
+      .nav-actions .nav-cta { display: none; }
     }
 
     /* Anchor targets clear the sticky topnav when jumping in-page */
