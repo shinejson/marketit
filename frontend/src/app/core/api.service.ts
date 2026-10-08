@@ -313,8 +313,8 @@ export class ApiService {
     return this.http.post<{ data: AccountingInvoice }>('/api/tenant/accounting/invoices', payload);
   }
 
-  updateAccountingInvoice(id: number, status: string) {
-    return this.http.patch<{ data: AccountingInvoice }>(`/api/tenant/accounting/invoices/${id}`, { status });
+  updateAccountingInvoice(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: AccountingInvoice }>(`/api/tenant/accounting/invoices/${id}`, payload);
   }
 
   accountingInvoice(id: number) {
@@ -333,12 +333,24 @@ export class ApiService {
     return this.http.get<Paginated<AccountingPayment[]>>('/api/tenant/accounting/payments', { params });
   }
 
+  accountingPayment(id: number) {
+    return this.http.get<{ data: AccountingPayment }>(`/api/tenant/accounting/payments/${id}`);
+  }
+
   accountingExpenses(params: Record<string, string | number> = {}) {
     return this.http.get<Paginated<AccountingExpense[]>>('/api/tenant/accounting/expenses', { params });
   }
 
   createAccountingExpense(payload: Record<string, unknown>) {
     return this.http.post<{ data: AccountingExpense }>('/api/tenant/accounting/expenses', payload);
+  }
+
+  updateAccountingExpense(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: AccountingExpense }>(`/api/tenant/accounting/expenses/${id}`, payload);
+  }
+
+  deleteAccountingExpense(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/accounting/expenses/${id}`);
   }
 
   payAccountingExpense(id: number, payload: Record<string, unknown>) {
@@ -369,8 +381,12 @@ export class ApiService {
     return this.http.post<{ data: PurchaseOrder }>('/api/tenant/accounting/purchase-orders', payload);
   }
 
-  updatePurchaseOrder(id: number, status: string) {
-    return this.http.patch<{ data: PurchaseOrder }>(`/api/tenant/accounting/purchase-orders/${id}`, { status });
+  updatePurchaseOrder(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: PurchaseOrder }>(`/api/tenant/accounting/purchase-orders/${id}`, payload);
+  }
+
+  deletePurchaseOrder(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/accounting/purchase-orders/${id}`);
   }
 
   accountingAccounts(params: Record<string, string | number> = {}) {
@@ -381,12 +397,28 @@ export class ApiService {
     return this.http.post<{ data: AccountingAccount }>('/api/tenant/accounting/accounts', payload);
   }
 
+  updateAccountingAccount(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: AccountingAccount }>(`/api/tenant/accounting/accounts/${id}`, payload);
+  }
+
+  deleteAccountingAccount(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/accounting/accounts/${id}`);
+  }
+
   accountingJournals(params: Record<string, string | number> = {}) {
     return this.http.get<Paginated<AccountingJournalEntry[]>>('/api/tenant/accounting/journals', { params });
   }
 
   createAccountingJournal(payload: Record<string, unknown>) {
     return this.http.post<{ data: AccountingJournalEntry }>('/api/tenant/accounting/journals', payload);
+  }
+
+  updateAccountingJournal(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: AccountingJournalEntry }>(`/api/tenant/accounting/journals/${id}`, payload);
+  }
+
+  deleteAccountingJournal(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/accounting/journals/${id}`);
   }
 
   postAccountingJournal(id: number) {
@@ -405,6 +437,14 @@ export class ApiService {
     return this.http.post<{ data: AccountingBankAccount }>('/api/tenant/accounting/bank-accounts', payload);
   }
 
+  updateAccountingBankAccount(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: AccountingBankAccount }>(`/api/tenant/accounting/bank-accounts/${id}`, payload);
+  }
+
+  deleteAccountingBankAccount(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/accounting/bank-accounts/${id}`);
+  }
+
   accountingBankTransactions(params: Record<string, string | number> = {}) {
     return this.http.get<Paginated<AccountingBankTransaction[]>>('/api/tenant/accounting/bank-transactions', { params });
   }
@@ -413,8 +453,12 @@ export class ApiService {
     return this.http.post<{ data: AccountingBankTransaction }>('/api/tenant/accounting/bank-transactions', payload);
   }
 
-  reconcileAccountingBankTransaction(id: number, payload: { status: string; payment_id?: number | null }) {
+  reconcileAccountingBankTransaction(id: number, payload: Record<string, unknown>) {
     return this.http.patch<{ data: AccountingBankTransaction }>(`/api/tenant/accounting/bank-transactions/${id}`, payload);
+  }
+
+  deleteAccountingBankTransaction(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/accounting/bank-transactions/${id}`);
   }
 
   salesDashboard() {

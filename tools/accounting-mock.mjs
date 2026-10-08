@@ -88,11 +88,24 @@ const bankTransactions = [
   { id: 591, bank_account_id: 1, payment_id: null, transaction_date: today(), description: 'Unidentified customer transfer', reference: 'STM-NOR-UNIDENTIFIED', amount: 275, status: 'unmatched', bank_account: { id: 1, name: bankAccounts[0].name, currency: 'USD' }, payment: null },
 ].sort((a, b) => b.transaction_date.localeCompare(a.transaction_date));
 
-const paginate = (res, json, rows, url) => json(res, 200, { data: rows, meta: { page: 1, per_page: 100, total: rows.length, last_page: 1 } });
-const filtered = (rows, url, fields, statusField = 'status') => {
+const paginate = (res, json, rows, url) => {
+  const perPage = Math.max(1, Math.min(100, Number(url.searchParams.get('per_page') || 25)));
+  const page = Math.max(1, Number(url.searchParams.get('page') || 1));
+  const start = (page - 1) * perPage;
+  return json(res, 200, { data: rows.slice(start, start + perPage), meta: { page, per_page: perPage, total: rows.length, last_page: Math.max(1, Math.ceil(rows.length / perPage)) } });
+};
+const filtered = (rows, url, fields, statusField = 'status', statusParam = 'status') => {
   const search = (url.searchParams.get('search') || '').toLowerCase();
-  const status = url.searchParams.get('status') || '';
+  const status = url.searchParams.get(statusParam) || '';
   return rows.filter((row) => (!status || row[statusField] === status) && (!search || fields.some((field) => String(row[field] || '').toLowerCase().includes(search))));
+};
+const applyJournalToAccounts = (journal) => {
+  for (const line of journal.lines || []) {
+    const account = accounts.find((row) => row.id === +line.account_id); if (!account) continue;
+    account.debit_total = +account.debit_total + (+line.debit || 0);
+    account.credit_total = +account.credit_total + (+line.credit || 0);
+    account.balance = ['asset', 'expense'].includes(account.type) ? account.debit_total - account.credit_total : account.credit_total - account.debit_total;
+  }
 };
 const lineTotals = (items, key) => {
   let subtotal = 0; let tax = 0;
@@ -135,32 +148,65 @@ export async function handleAccounting(req, res, url, method, readBody, json) {
 
   if (path === '/api/tenant/accounting/invoices' && method === 'GET') return paginate(res, json, filtered(invoices, url, ['number', 'customer_name', 'customer_email']), url) || true;
   if (path === '/api/tenant/accounting/invoices' && method === 'POST') {
-    const body = await readBody(req); const totals = lineTotals(body.items || [], 'unit_price'); const total = +(totals.subtotal + totals.tax - (+body.discount_total || 0)).toFixed(2);
-    const invoice = { id: nextId(), number: `INV-2026-NOR-${String(invoices.length + 1).padStart(4, '0')}`, contact_id: body.contact_id || null, customer_name: body.customer_name, customer_email: body.customer_email, issue_date: body.issue_date, due_date: body.due_date, status: body.send_now ? 'sent' : 'draft', subtotal: totals.subtotal, tax_total: totals.tax, discount_total: +body.discount_total || 0, total, amount_paid: 0, balance_due: total, currency: body.currency || 'USD', notes: body.notes, items: totals.items, payments: [] };
+    const body = await readBody(req); const totals = lineTotals(body.items || [], 'unit_price'); const discount = Math.min(+body.discount_total || 0, totals.subtotal + totals.tax); const total = +(totals.subtotal + totals.tax - discount).toFixed(2);
+    const invoice = { id: nextId(), number: `INV-2026-NOR-${String(invoices.length + 1).padStart(4, '0')}`, contact_id: body.contact_id || null, customer_name: body.customer_name, customer_email: body.customer_email, issue_date: body.issue_date, due_date: body.due_date, status: body.send_now ? 'sent' : 'draft', subtotal: totals.subtotal, tax_total: totals.tax, discount_total: discount, total, amount_paid: 0, balance_due: total, currency: body.currency || 'USD', notes: body.notes, items: totals.items, payments: [] };
     invoices.unshift(invoice); return json(res, 201, { data: invoice }) || true;
   }
   let match = path.match(/^\/api\/tenant\/accounting\/invoices\/(\d+)$/);
-  if (match && method === 'PATCH') { const row = invoices.find((i) => i.id === +match[1]); if (!row) return json(res, 404, { message: 'Invoice not found' }) || true; Object.assign(row, await readBody(req)); return json(res, 200, { data: row }) || true; }
+  if (match && method === 'GET') { const row = invoices.find((i) => i.id === +match[1]); return row ? json(res, 200, { data: row }) || true : json(res, 404, { message: 'Invoice not found' }) || true; }
+  if (match && method === 'PATCH') {
+    const row = invoices.find((i) => i.id === +match[1]); if (!row) return json(res, 404, { message: 'Invoice not found' }) || true;
+    const body = await readBody(req); const { items: inputItems, ...attributes } = body;
+    Object.assign(row, attributes);
+    if (inputItems) { const totals = lineTotals(inputItems, 'unit_price'); row.items = totals.items; row.subtotal = totals.subtotal; row.tax_total = totals.tax; }
+    row.discount_total = Math.min(+row.discount_total || 0, +row.subtotal + +row.tax_total);
+    row.total = +(row.subtotal + row.tax_total - row.discount_total).toFixed(2); row.balance_due = +(row.total - +row.amount_paid).toFixed(2);
+    return json(res, 200, { data: row }) || true;
+  }
+  if (match && method === 'DELETE') {
+    const idx = invoices.findIndex((i) => i.id === +match[1]); if (idx < 0) return json(res, 404, { message: 'Invoice not found' }) || true;
+    if (invoices[idx].status !== 'draft') return json(res, 422, { message: 'Only draft invoices can be deleted.' }) || true;
+    invoices.splice(idx, 1); return json(res, 200, { data: { deleted: true } }) || true;
+  }
   match = path.match(/^\/api\/tenant\/accounting\/invoices\/(\d+)\/payments$/);
   if (match && method === 'POST') {
-    const invoice = invoices.find((i) => i.id === +match[1]); if (!invoice) return json(res, 404, { message: 'Invoice not found' }) || true; const body = await readBody(req); const amount = +body.amount;
+    const invoice = invoices.find((i) => i.id === +match[1]); if (!invoice) return json(res, 404, { message: 'Invoice not found' }) || true;
+    const body = await readBody(req); const amount = +body.amount;
+    if (!(amount > 0) || amount > +invoice.balance_due) return json(res, 422, { message: 'Payment must be greater than zero and no more than the invoice balance.' }) || true;
     const payment = { id: nextId(), reference: body.reference || `PAY-2026-NOR-${sequence}`, direction: 'incoming', method: body.method, amount, currency: invoice.currency, paid_on: body.paid_on, invoice: { id: invoice.id, number: invoice.number, customer_name: invoice.customer_name }, expense: null };
     payments.unshift(payment); invoice.amount_paid += amount; invoice.balance_due = +(invoice.total - invoice.amount_paid).toFixed(2); invoice.status = invoice.balance_due <= 0 ? 'paid' : 'partial'; invoice.payments.push(payment);
     return json(res, 201, { data: { payment, invoice } }) || true;
   }
-
-  if (path === '/api/tenant/accounting/payments' && method === 'GET') return paginate(res, json, filtered(payments, url, ['reference', 'method'], 'direction'), url) || true;
+  if (path === '/api/tenant/accounting/payments' && method === 'GET') return paginate(res, json, filtered(payments, url, ['reference', 'method'], 'direction', 'direction'), url) || true;
+  match = path.match(/^\/api\/tenant\/accounting\/payments\/(\d+)$/);
+  if (match && method === 'GET') { const row = payments.find((payment) => payment.id === +match[1]); return row ? json(res, 200, { data: row }) || true : json(res, 404, { message: 'Payment not found' }) || true; }
   if (path === '/api/tenant/accounting/expenses' && method === 'GET') return paginate(res, json, filtered(expenses, url, ['number', 'vendor_name', 'category', 'description']), url) || true;
   if (path === '/api/tenant/accounting/expenses' && method === 'POST') {
-    const body = await readBody(req); const total = +body.amount + (+body.tax_amount || 0); const expense = { id: nextId(), number: `BILL-2026-NOR-${String(expenses.length + 1).padStart(4, '0')}`, ...body, total, currency: body.currency || 'USD', status: body.status || 'pending' }; expenses.unshift(expense); return json(res, 201, { data: expense }) || true;
+    const body = await readBody(req); const total = +body.amount + (+body.tax_amount || 0); const expense = { id: nextId(), number: `BILL-2026-NOR-${String(expenses.length + 1).padStart(4, '0')}`, ...body, total, currency: body.currency || 'USD', status: body.status || 'draft' }; expenses.unshift(expense); return json(res, 201, { data: expense }) || true;
+  }
+  match = path.match(/^\/api\/tenant\/accounting\/expenses\/(\d+)$/);
+  if (match && method === 'GET') { const row = expenses.find((expense) => expense.id === +match[1]); return row ? json(res, 200, { data: row }) || true : json(res, 404, { message: 'Bill not found' }) || true; }
+  if (match && method === 'PATCH') {
+    const expense = expenses.find((row) => row.id === +match[1]); if (!expense) return json(res, 404, { message: 'Bill not found' }) || true;
+    if (expense.status !== 'draft') return json(res, 422, { message: 'Only draft bills can be edited.' }) || true;
+    Object.assign(expense, await readBody(req)); expense.total = +(+expense.amount + (+expense.tax_amount || 0)).toFixed(2); return json(res, 200, { data: expense }) || true;
+  }
+  if (match && method === 'DELETE') {
+    const idx = expenses.findIndex((row) => row.id === +match[1]); if (idx < 0) return json(res, 404, { message: 'Bill not found' }) || true;
+    if (expenses[idx].status !== 'draft') return json(res, 422, { message: 'Only draft bills can be deleted.' }) || true;
+    expenses.splice(idx, 1); return json(res, 200, { data: { deleted: true } }) || true;
   }
   match = path.match(/^\/api\/tenant\/accounting\/expenses\/(\d+)\/pay$/);
   if (match && method === 'POST') {
     const expense = expenses.find((e) => e.id === +match[1]); if (!expense) return json(res, 404, { message: 'Expense not found' }) || true; const body = await readBody(req); expense.status = 'paid';
-    const payment = { id: nextId(), reference: body.reference || `PAY-2026-NOR-${sequence}`, direction: 'outgoing', method: body.method, amount: expense.total, currency: expense.currency, paid_on: body.paid_on, invoice: null, expense: { id: expense.id, number: expense.number, vendor_name: expense.vendor_name, description: expense.description } }; payments.unshift(payment); return json(res, 201, { data: { expense, payment } }) || true;
+    const payment = { id: nextId(), reference: body.reference || `PAY-2026-NOR-${sequence}`, direction: 'outgoing', method: body.method, amount: expense.total, currency: expense.currency, paid_on: body.paid_on, notes: body.notes || '', invoice: null, expense: { id: expense.id, number: expense.number, vendor_name: expense.vendor_name, description: expense.description } }; payments.unshift(payment); return json(res, 201, { data: { expense, payment } }) || true;
   }
 
-  if (path === '/api/tenant/accounting/contacts' && method === 'GET') return paginate(res, json, filtered(contacts, url, ['name', 'email', 'phone'], 'type'), url) || true;
+  if (path === '/api/tenant/accounting/contacts' && method === 'GET') {
+    const search = (url.searchParams.get('search') || '').toLowerCase(); const type = url.searchParams.get('type') || '';
+    const rows = contacts.filter((contact) => (!type || contact.type === type || contact.type === 'both') && (!search || `${contact.name} ${contact.email || ''} ${contact.phone || ''}`.toLowerCase().includes(search)));
+    return paginate(res, json, rows, url) || true;
+  }
   if (path === '/api/tenant/accounting/contacts' && method === 'POST') { const body = await readBody(req); const contact = { id: nextId(), is_active: true, invoices_count: 0, purchase_orders_count: 0, ...body }; contacts.push(contact); return json(res, 201, { data: contact }) || true; }
   match = path.match(/^\/api\/tenant\/accounting\/contacts\/(\d+)$/);
   if (match && method === 'PATCH') { const row = contacts.find((c) => c.id === +match[1]); if (!row) return json(res, 404, { message: 'Contact not found' }) || true; Object.assign(row, await readBody(req)); return json(res, 200, { data: row }) || true; }
@@ -176,7 +222,24 @@ export async function handleAccounting(req, res, url, method, readBody, json) {
     const body = await readBody(req); const totals = lineTotals(body.items || [], 'unit_cost'); const vendor = contacts.find((c) => c.id === +body.vendor_id); const po = { id: nextId(), number: `PO-2026-NOR-${String(purchaseOrders.length + 1).padStart(4, '0')}`, ...body, vendor, status: body.submit_for_approval ? 'pending_approval' : 'draft', subtotal: totals.subtotal, tax_total: totals.tax, total: totals.subtotal + totals.tax, items: totals.items }; purchaseOrders.unshift(po); return json(res, 201, { data: po }) || true;
   }
   match = path.match(/^\/api\/tenant\/accounting\/purchase-orders\/(\d+)$/);
-  if (match && method === 'PATCH') { const po = purchaseOrders.find((row) => row.id === +match[1]); if (!po) return json(res, 404, { message: 'Purchase order not found' }) || true; Object.assign(po, await readBody(req)); return json(res, 200, { data: po }) || true; }
+  if (match && method === 'PATCH') {
+    const po = purchaseOrders.find((row) => row.id === +match[1]); if (!po) return json(res, 404, { message: 'Purchase order not found' }) || true;
+    const body = await readBody(req);
+    if (body.status) { po.status = body.status; if (body.status === 'received') po.items.forEach((line) => { line.received_quantity = line.quantity; }); }
+    else {
+      if (po.status !== 'draft') return json(res, 422, { message: 'Only draft purchase orders can be edited.' }) || true;
+      const totals = lineTotals(body.items || [], 'unit_cost');
+      if (body.vendor_id) { const vendor = contacts.find((contact) => contact.id === +body.vendor_id); po.vendor_id = vendor?.id || null; po.vendor_name = vendor?.name || body.vendor_name; po.vendor = vendor || null; }
+      Object.assign(po, body); po.items = totals.items; po.subtotal = totals.subtotal; po.tax_total = totals.tax; po.total = totals.subtotal + totals.tax;
+      if (body.submit_for_approval) po.status = 'pending_approval';
+    }
+    return json(res, 200, { data: po }) || true;
+  }
+  if (match && method === 'DELETE') {
+    const index = purchaseOrders.findIndex((row) => row.id === +match[1]); if (index < 0) return json(res, 404, { message: 'Purchase order not found' }) || true;
+    if (purchaseOrders[index].status !== 'draft') return json(res, 422, { message: 'Only draft purchase orders can be deleted.' }) || true;
+    purchaseOrders.splice(index, 1); return json(res, 200, { data: { deleted: true } }) || true;
+  }
 
   if (path === '/api/tenant/accounting/accounts' && method === 'GET') {
     const search = (url.searchParams.get('search') || '').toLowerCase(); const type = url.searchParams.get('type') || '';
@@ -186,14 +249,48 @@ export async function handleAccounting(req, res, url, method, readBody, json) {
   if (path === '/api/tenant/accounting/accounts' && method === 'POST') {
     const body = await readBody(req); const account = { id: nextId(), is_system: false, is_active: true, debit_total: 0, credit_total: 0, balance: 0, ...body }; accounts.push(account); return json(res, 201, { data: account }) || true;
   }
+  match = path.match(/^\/api\/tenant\/accounting\/accounts\/(\d+)$/);
+  if (match && method === 'PATCH') { const account = accounts.find((row) => row.id === +match[1]); if (!account) return json(res, 404, { message: 'Account not found' }) || true; Object.assign(account, await readBody(req)); return json(res, 200, { data: account }) || true; }
+  if (match && method === 'DELETE') {
+    const index = accounts.findIndex((row) => row.id === +match[1]); if (index < 0) return json(res, 404, { message: 'Account not found' }) || true;
+    const account = accounts[index];
+    if (account.is_system || Math.abs(+account.debit_total) > 0.001 || Math.abs(+account.credit_total) > 0.001 || journals.some((journal) => journal.lines.some((line) => +line.account_id === account.id))) return json(res, 422, { message: 'Accounts with activity cannot be deleted.' }) || true;
+    accounts.splice(index, 1); return json(res, 200, { data: { deleted: true } }) || true;
+  }
   if (path === '/api/tenant/accounting/journals' && method === 'GET') return paginate(res, json, filtered(journals, url, ['number', 'reference', 'memo']), url) || true;
   if (path === '/api/tenant/accounting/journals' && method === 'POST') {
     const body = await readBody(req); const debit = (body.lines || []).reduce((sum, line) => sum + (+line.debit || 0), 0); const credit = (body.lines || []).reduce((sum, line) => sum + (+line.credit || 0), 0);
     if (!debit || Math.abs(debit - credit) > 0.001) return json(res, 422, { message: 'The given data was invalid.', errors: { lines: ['Total debits and credits must be equal and greater than zero.'] } }) || true;
-    const journal = { id: nextId(), number: `JRN-2026-${String(journals.length + 1).padStart(5, '0')}`, entry_date: body.entry_date, reference: body.reference, memo: body.memo, status: body.post_now ? 'posted' : 'draft', source_type: null, source_id: null, total_debit: debit, total_credit: credit, lines: body.lines }; journals.unshift(journal); return json(res, 201, { data: journal }) || true;
+    if ((body.lines || []).some((line) => !accounts.find((row) => row.id === +line.account_id)?.is_active)) return json(res, 422, { message: 'Restore archived ledger accounts before using them in a journal.' }) || true;
+    const lines = (body.lines || []).map((line) => { const account = accounts.find((row) => row.id === +line.account_id); return { ...line, account_id: +line.account_id, account: account ? { id: account.id, code: account.code, name: account.name, type: account.type } : null }; });
+    const journal = { id: nextId(), number: `JRN-2026-${String(journals.length + 1).padStart(5, '0')}`, entry_date: body.entry_date, reference: body.reference, memo: body.memo, status: body.post_now ? 'posted' : 'draft', source_type: null, source_id: null, total_debit: debit, total_credit: credit, lines };
+    journals.unshift(journal);
+    if (journal.status === 'posted') applyJournalToAccounts(journal);
+    return json(res, 201, { data: journal }) || true;
+  }
+  match = path.match(/^\/api\/tenant\/accounting\/journals\/(\d+)$/);
+  if (match && method === 'PATCH') {
+    const journal = journals.find((row) => row.id === +match[1]); if (!journal) return json(res, 404, { message: 'Journal not found' }) || true;
+    if (journal.status !== 'draft') return json(res, 422, { message: 'Only draft journals can be edited.' }) || true;
+    const body = await readBody(req); const debit = (body.lines || []).reduce((sum, line) => sum + (+line.debit || 0), 0); const credit = (body.lines || []).reduce((sum, line) => sum + (+line.credit || 0), 0);
+    if (!debit || Math.abs(debit - credit) > 0.001) return json(res, 422, { message: 'The given data was invalid.', errors: { lines: ['Total debits and credits must be equal and greater than zero.'] } }) || true;
+    if ((body.lines || []).some((line) => !accounts.find((row) => row.id === +line.account_id)?.is_active)) return json(res, 422, { message: 'Restore archived ledger accounts before using them in a journal.' }) || true;
+    journal.lines = (body.lines || []).map((line) => { const account = accounts.find((row) => row.id === +line.account_id); return { ...line, account_id: +line.account_id, account: account ? { id: account.id, code: account.code, name: account.name, type: account.type } : null }; });
+    Object.assign(journal, { entry_date: body.entry_date, reference: body.reference, memo: body.memo, total_debit: debit, total_credit: credit });
+    return json(res, 200, { data: journal }) || true;
+  }
+  if (match && method === 'DELETE') {
+    const index = journals.findIndex((row) => row.id === +match[1]); if (index < 0) return json(res, 404, { message: 'Journal not found' }) || true;
+    if (journals[index].status !== 'draft') return json(res, 422, { message: 'Posted journals are immutable.' }) || true;
+    journals.splice(index, 1); return json(res, 200, { data: { deleted: true } }) || true;
   }
   match = path.match(/^\/api\/tenant\/accounting\/journals\/(\d+)\/post$/);
-  if (match && method === 'POST') { const journal = journals.find((row) => row.id === +match[1]); if (!journal) return json(res, 404, { message: 'Journal not found' }) || true; journal.status = 'posted'; return json(res, 200, { data: journal }) || true; }
+  if (match && method === 'POST') {
+    const journal = journals.find((row) => row.id === +match[1]); if (!journal) return json(res, 404, { message: 'Journal not found' }) || true;
+    if (journal.status !== 'draft') return json(res, 422, { message: 'Journal is already posted.' }) || true;
+    if ((journal.lines || []).some((line) => !accounts.find((row) => row.id === +line.account_id)?.is_active)) return json(res, 422, { message: 'Restore archived ledger accounts before posting this draft.' }) || true;
+    journal.status = 'posted'; applyJournalToAccounts(journal); return json(res, 200, { data: journal }) || true;
+  }
   if (path === '/api/tenant/accounting/reports' && method === 'GET') {
     const report = url.searchParams.get('report') || 'profit_loss'; const from = url.searchParams.get('from') || `${new Date().getFullYear()}-01-01`; const to = url.searchParams.get('to') || today();
     const rows = accounts.map((account) => ({ id: account.id, code: account.code, name: account.name, type: account.type, debit: account.debit_total, credit: account.credit_total, balance: account.balance }));
@@ -206,11 +303,71 @@ export async function handleAccounting(req, res, url, method, readBody, json) {
   }
 
   if (path === '/api/tenant/accounting/bank-accounts' && method === 'GET') return json(res, 200, { data: bankAccounts }) || true;
-  if (path === '/api/tenant/accounting/bank-accounts' && method === 'POST') { const body = await readBody(req); const bank = { id: nextId(), transactions_count: 0, unmatched_count: 0, statement_balance: +body.opening_balance || 0, is_active: true, ...body }; bankAccounts.push(bank); return json(res, 201, { data: bank }) || true; }
+  if (path === '/api/tenant/accounting/bank-accounts' && method === 'POST') {
+    const body = await readBody(req); const opening = +body.opening_balance || 0;
+    const bank = { id: nextId(), transactions_count: 0, unmatched_count: 0, statement_balance: opening, ledger_balance: opening, difference: 0, is_active: true, ...body };
+    bankAccounts.push(bank); return json(res, 201, { data: bank }) || true;
+  }
+  match = path.match(/^\/api\/tenant\/accounting\/bank-accounts\/(\d+)$/);
+  if (match && method === 'PATCH') {
+    const bank = bankAccounts.find((row) => row.id === +match[1]); if (!bank) return json(res, 404, { message: 'Bank account not found' }) || true;
+    const body = await readBody(req);
+    if (bank.transactions_count > 0 && body.opening_balance !== undefined && +body.opening_balance !== +bank.opening_balance) return json(res, 422, { message: 'Opening balance cannot be changed after statement activity.' }) || true;
+    Object.assign(bank, body);
+    for (const transaction of bankTransactions.filter((row) => row.bank_account_id === bank.id)) transaction.bank_account = { id: bank.id, name: bank.name, currency: bank.currency };
+    return json(res, 200, { data: bank }) || true;
+  }
+  if (match && method === 'DELETE') {
+    const index = bankAccounts.findIndex((row) => row.id === +match[1]); if (index < 0) return json(res, 404, { message: 'Bank account not found' }) || true;
+    if (bankAccounts[index].transactions_count > 0) return json(res, 422, { message: 'Bank accounts with statement activity cannot be deleted.' }) || true;
+    bankAccounts.splice(index, 1); return json(res, 200, { data: { deleted: true } }) || true;
+  }
   if (path === '/api/tenant/accounting/bank-transactions' && method === 'GET') return paginate(res, json, filtered(bankTransactions, url, ['description', 'reference']), url) || true;
-  if (path === '/api/tenant/accounting/bank-transactions' && method === 'POST') { const body = await readBody(req); const bank = bankAccounts.find((row) => row.id === +body.bank_account_id); const transaction = { id: nextId(), payment_id: null, status: 'unmatched', bank_account: { id: bank.id, name: bank.name, currency: bank.currency }, payment: null, ...body }; bankTransactions.unshift(transaction); bank.transactions_count += 1; bank.unmatched_count += 1; bank.statement_balance += +body.amount; bank.difference = bank.statement_balance - bank.ledger_balance; return json(res, 201, { data: transaction }) || true; }
+  if (path === '/api/tenant/accounting/bank-transactions' && method === 'POST') {
+    const body = await readBody(req); const bank = bankAccounts.find((row) => row.id === +body.bank_account_id);
+    if (!bank) return json(res, 422, { message: 'Choose an active bank account.' }) || true;
+    const transaction = { id: nextId(), payment_id: null, status: 'unmatched', bank_account: { id: bank.id, name: bank.name, currency: bank.currency }, payment: null, ...body };
+    bankTransactions.unshift(transaction); bank.transactions_count += 1; bank.unmatched_count += 1; bank.statement_balance = +(+bank.statement_balance + +body.amount).toFixed(2); bank.difference = +(bank.statement_balance - bank.ledger_balance).toFixed(2);
+    return json(res, 201, { data: transaction }) || true;
+  }
   match = path.match(/^\/api\/tenant\/accounting\/bank-transactions\/(\d+)$/);
-  if (match && method === 'PATCH') { const transaction = bankTransactions.find((row) => row.id === +match[1]); if (!transaction) return json(res, 404, { message: 'Transaction not found' }) || true; const body = await readBody(req); const wasUnmatched = transaction.status === 'unmatched'; transaction.status = body.status; transaction.payment_id = body.status === 'matched' ? +body.payment_id : null; transaction.payment = body.status === 'matched' ? payments.find((payment) => payment.id === +body.payment_id) : null; if (wasUnmatched && body.status !== 'unmatched') bankAccounts[0].unmatched_count -= 1; if (!wasUnmatched && body.status === 'unmatched') bankAccounts[0].unmatched_count += 1; return json(res, 200, { data: transaction }) || true; }
+  if (match && method === 'PATCH') {
+    const transaction = bankTransactions.find((row) => row.id === +match[1]); if (!transaction) return json(res, 404, { message: 'Transaction not found' }) || true;
+    const body = await readBody(req); const oldBank = bankAccounts.find((row) => row.id === transaction.bank_account_id); const oldAmount = +transaction.amount; const oldStatus = transaction.status;
+    const targetBankId = body.bank_account_id === undefined ? transaction.bank_account_id : +body.bank_account_id;
+    const newBank = bankAccounts.find((row) => row.id === +targetBankId);
+    if (!newBank || (body.bank_account_id !== undefined && !newBank.is_active)) return json(res, 422, { message: 'Choose an active bank account.' }) || true;
+    if (body.status === 'matched') {
+      const payment = payments.find((row) => row.id === +body.payment_id); if (!payment) return json(res, 422, { message: 'Choose a payment to match.' }) || true;
+      transaction.payment_id = payment.id; transaction.payment = payment;
+    }
+    if (body.status === 'unmatched' || body.status === 'excluded') { transaction.payment_id = null; transaction.payment = null; }
+    Object.assign(transaction, { ...body, bank_account_id: +targetBankId });
+    if (oldBank && oldBank !== newBank) {
+      oldBank.transactions_count -= 1; newBank.transactions_count += 1;
+      oldBank.statement_balance = +(oldBank.statement_balance - oldAmount).toFixed(2);
+      newBank.statement_balance = +(newBank.statement_balance + +transaction.amount).toFixed(2);
+    } else if (newBank) newBank.statement_balance = +(newBank.statement_balance - oldAmount + +transaction.amount).toFixed(2);
+    if (oldBank !== newBank) {
+      if (oldStatus === 'unmatched' && oldBank) oldBank.unmatched_count = Math.max(0, oldBank.unmatched_count - 1);
+      if (transaction.status === 'unmatched') newBank.unmatched_count += 1;
+    } else {
+      if (oldStatus === 'unmatched' && transaction.status !== 'unmatched' && oldBank) oldBank.unmatched_count = Math.max(0, oldBank.unmatched_count - 1);
+      if (oldStatus !== 'unmatched' && transaction.status === 'unmatched' && newBank) newBank.unmatched_count += 1;
+    }
+    if (transaction.status === 'unmatched') transaction.reconciled_at = null;
+    else if (transaction.status === 'matched' || transaction.status === 'excluded') transaction.reconciled_at = iso();
+    if (newBank) { transaction.bank_account = { id: newBank.id, name: newBank.name, currency: newBank.currency }; newBank.difference = +(newBank.statement_balance - newBank.ledger_balance).toFixed(2); }
+    if (oldBank) oldBank.difference = +(oldBank.statement_balance - oldBank.ledger_balance).toFixed(2);
+    return json(res, 200, { data: transaction }) || true;
+  }
+  if (match && method === 'DELETE') {
+    const index = bankTransactions.findIndex((row) => row.id === +match[1]); if (index < 0) return json(res, 404, { message: 'Transaction not found' }) || true;
+    const transaction = bankTransactions[index]; if (transaction.status !== 'unmatched') return json(res, 422, { message: 'Only unmatched statement lines can be deleted.' }) || true;
+    const bank = bankAccounts.find((row) => row.id === transaction.bank_account_id);
+    if (bank) { bank.transactions_count = Math.max(0, bank.transactions_count - 1); bank.unmatched_count = Math.max(0, bank.unmatched_count - 1); bank.statement_balance = +(bank.statement_balance - +transaction.amount).toFixed(2); bank.difference = +(bank.statement_balance - bank.ledger_balance).toFixed(2); }
+    bankTransactions.splice(index, 1); return json(res, 200, { data: { deleted: true } }) || true;
+  }
 
   json(res, 404, { message: `Accounting mock: no handler for ${method} ${path}` }); return true;
 }

@@ -287,8 +287,11 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/invoices/{invoice}', [AccountingController::class, 'destroyInvoice']);
             Route::post('/invoices/{invoice}/payments', [AccountingController::class, 'recordInvoicePayment']);
             Route::get('/payments', [AccountingController::class, 'payments']);
+            Route::get('/payments/{payment}', [AccountingController::class, 'showPayment']);
             Route::get('/expenses', [AccountingController::class, 'expenses']);
             Route::post('/expenses', [AccountingController::class, 'storeExpense']);
+            Route::patch('/expenses/{expense}', [AccountingController::class, 'updateExpense']);
+            Route::delete('/expenses/{expense}', [AccountingController::class, 'destroyExpense']);
             Route::post('/expenses/{expense}/pay', [AccountingController::class, 'payExpense']);
             Route::get('/contacts', [AccountingController::class, 'contacts']);
             Route::post('/contacts', [AccountingController::class, 'storeContact']);
@@ -297,18 +300,26 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/purchase-orders', [AccountingController::class, 'purchaseOrders']);
             Route::post('/purchase-orders', [AccountingController::class, 'storePurchaseOrder']);
             Route::patch('/purchase-orders/{purchaseOrder}', [AccountingController::class, 'updatePurchaseOrder']);
+            Route::delete('/purchase-orders/{purchaseOrder}', [AccountingController::class, 'destroyPurchaseOrder']);
 
             Route::get('/accounts', [AccountingLedgerController::class, 'accounts']);
             Route::post('/accounts', [AccountingLedgerController::class, 'storeAccount']);
+            Route::patch('/accounts/{account}', [AccountingLedgerController::class, 'updateAccount']);
+            Route::delete('/accounts/{account}', [AccountingLedgerController::class, 'destroyAccount']);
             Route::get('/journals', [AccountingLedgerController::class, 'journals']);
             Route::post('/journals', [AccountingLedgerController::class, 'storeJournal']);
+            Route::patch('/journals/{journal}', [AccountingLedgerController::class, 'updateJournal']);
+            Route::delete('/journals/{journal}', [AccountingLedgerController::class, 'destroyJournal']);
             Route::post('/journals/{journal}/post', [AccountingLedgerController::class, 'postJournal']);
             Route::get('/reports', [AccountingLedgerController::class, 'reports']);
             Route::get('/bank-accounts', [AccountingLedgerController::class, 'bankAccounts']);
             Route::post('/bank-accounts', [AccountingLedgerController::class, 'storeBankAccount']);
+            Route::patch('/bank-accounts/{bankAccount}', [AccountingLedgerController::class, 'updateBankAccount']);
+            Route::delete('/bank-accounts/{bankAccount}', [AccountingLedgerController::class, 'destroyBankAccount']);
             Route::get('/bank-transactions', [AccountingLedgerController::class, 'bankTransactions']);
             Route::post('/bank-transactions', [AccountingLedgerController::class, 'storeBankTransaction']);
             Route::patch('/bank-transactions/{bankTransaction}', [AccountingLedgerController::class, 'reconcileBankTransaction']);
+            Route::delete('/bank-transactions/{bankTransaction}', [AccountingLedgerController::class, 'destroyBankTransaction']);
         });
 
         // Sales workspace: leads, pipeline, quotes and customer accounts.
