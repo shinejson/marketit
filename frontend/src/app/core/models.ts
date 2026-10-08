@@ -2081,7 +2081,7 @@ export interface AdWorkspaceMeta {
 }
 
 // ---------------------------------------------------------------------------
-// Analytics workspace (/tenant/analytics)
+// Tenant report workspace (/tenant/reports)
 // ---------------------------------------------------------------------------
 
 export interface AnalyticsKpi {

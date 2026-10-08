@@ -1,11 +1,15 @@
 @use 'workspace-kit' as kit;
 
-// Reporting workspace (/tenant/analytics).
+// Full tenant reporting workspace (/tenant/reports).
 app-seller-analytics {
   @include kit.base;
 
-  .range-note { margin: 0 0 16px; color: var(--ink); font-size: 12px; font-weight: 700; }
-  .range-note .muted { font-weight: 500; }
+  .report-facts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 1fr); margin: 0 0 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); overflow: hidden; }
+  .report-fact { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; padding: 12px 16px; border-right: 1px solid var(--line); }
+  .report-fact:last-child { border-right: 0; }
+  .report-fact > span { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+  .report-fact strong { overflow-wrap: anywhere; font-size: 12px; }
+  .report-fact small { color: var(--muted); font-size: 10px; line-height: 1.4; }
 
   .highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 18px; }
   .highlight { padding: 13px 15px; border: 1px solid var(--line); border-left-width: 3px; border-radius: 13px; background: var(--card); }
@@ -51,6 +55,7 @@ app-seller-analytics {
   .stat-grid strong { font-size: 17px; }
 
   .lifetime-note { margin: 18px 2px 0; color: var(--muted); font-size: 11.5px; }
+  .report-footer { display: flex; justify-content: space-between; gap: 12px; margin: 22px 2px 0; padding-top: 11px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
 
   table { min-width: 440px; }
 
@@ -58,4 +63,106 @@ app-seller-analytics {
     .split { grid-template-columns: 1fr; }
     .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
+
+  @media (max-width: 760px) {
+    .report-facts { grid-template-columns: 1fr; }
+    .report-fact { border-right: 0; border-bottom: 1px solid var(--line); padding: 10px 13px; }
+    .report-fact:last-child { border-bottom: 0; }
+    .report-footer { flex-direction: column; gap: 4px; }
+  }
+}
+
+// Browser PDF export: the on-screen data is printed as a report, without the
+// tenant console chrome or interactive controls. Users can choose "Save as PDF"
+// in the native print dialog.
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+
+  html, body {
+    min-height: 0 !important;
+    background: #fff !important;
+    color: #171717 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  app-seller-shell .dash { display: block !important; min-height: 0 !important; background: #fff !important; }
+  app-seller-shell aside,
+  app-seller-shell .topnav,
+  app-seller-shell .backdrop { display: none !important; }
+  app-seller-shell .content,
+  app-seller-shell .body { display: block !important; width: auto !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; }
+
+  app-seller-analytics { max-width: none !important; margin: 0 !important; padding: 0 !important; color: #171717 !important; }
+  app-seller-analytics .head-actions,
+  app-seller-analytics .breadcrumbs,
+  app-seller-analytics button,
+  app-seller-analytics .panel-head a,
+  app-seller-analytics .error-banner,
+  app-seller-analytics .metric-switch { display: none !important; }
+  app-seller-analytics .page-head { align-items: flex-start !important; margin-bottom: 11px !important; padding-bottom: 11px; border-bottom: 2px solid #1f4b3a; }
+  app-seller-analytics .eyebrow { color: #1f4b3a !important; }
+  app-seller-analytics .page-head h1 { font-size: 24px !important; }
+  app-seller-analytics .intro { margin-top: 5px !important; color: #525252 !important; font-size: 10px !important; }
+
+  app-seller-analytics .report-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 1fr) !important; margin-bottom: 11px !important; border-color: #d1d5db !important; border-radius: 7px !important; background: #fff !important; }
+  app-seller-analytics .report-fact { padding: 8px 10px !important; border-color: #d1d5db !important; }
+  app-seller-analytics .report-fact > span,
+  app-seller-analytics .report-fact small { color: #525252 !important; font-size: 8px !important; }
+  app-seller-analytics .report-fact strong { color: #111 !important; font-size: 9px !important; }
+
+  app-seller-analytics .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 7px !important; margin-bottom: 10px !important; }
+  app-seller-analytics .metric-card,
+  app-seller-analytics .panel,
+  app-seller-analytics .highlight { overflow: visible !important; border-color: #d1d5db !important; border-radius: 7px !important; background: #fff !important; box-shadow: none !important; color: #171717 !important; }
+  app-seller-analytics .metric-card { padding: 9px 10px !important; }
+  app-seller-analytics .metric-card p { margin: 6px 0 3px !important; color: #525252 !important; font-size: 9px !important; }
+  app-seller-analytics .metric-card h2 { color: #111 !important; font-size: 17px !important; }
+  app-seller-analytics .metric-card small { color: #525252 !important; font-size: 8px !important; }
+  app-seller-analytics .metric-icon { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+  app-seller-analytics .highlights { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 6px !important; margin-bottom: 9px !important; }
+  app-seller-analytics .highlight { padding: 8px 10px !important; }
+  app-seller-analytics .highlight strong { font-size: 9px !important; }
+  app-seller-analytics .highlight p { color: #525252 !important; font-size: 8px !important; }
+
+  app-seller-analytics .split { grid-template-columns: 1fr !important; gap: 0 !important; margin-top: 9px !important; }
+  app-seller-analytics .split .panel + .panel { margin-top: 9px !important; }
+  app-seller-analytics .panel { margin-top: 9px !important; }
+  app-seller-analytics .panel-head { padding: 8px 10px !important; border-color: #e5e7eb !important; }
+  app-seller-analytics .panel-head h3 { color: #111 !important; font-size: 12px !important; }
+  app-seller-analytics .overline { color: #525252 !important; font-size: 7px !important; }
+  app-seller-analytics .chart { padding: 8px 10px !important; }
+  app-seller-analytics .chart svg { height: 125px !important; border-radius: 4px !important; }
+  app-seller-analytics .chart .axis { color: #525252 !important; font-size: 8px !important; }
+  app-seller-analytics .funnel,
+  app-seller-analytics .mix { padding: 9px 10px !important; }
+  app-seller-analytics .funnel { gap: 8px !important; }
+  app-seller-analytics .funnel-label,
+  app-seller-analytics .mix-row { font-size: 8px !important; }
+  app-seller-analytics .funnel-step small,
+  app-seller-analytics .funnel-note,
+  app-seller-analytics .mix-row .muted { color: #525252 !important; font-size: 7px !important; }
+  app-seller-analytics .table-wrap { overflow: visible !important; }
+  app-seller-analytics table { width: 100% !important; min-width: 0 !important; table-layout: auto !important; }
+  app-seller-analytics th,
+  app-seller-analytics td { padding: 6px 7px !important; font-size: 8px !important; }
+  app-seller-analytics th { background: #f3f4f6 !important; color: #525252 !important; }
+  app-seller-analytics td { border-color: #e5e7eb !important; }
+  app-seller-analytics td small { color: #525252 !important; font-size: 7px !important; }
+  app-seller-analytics .stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  app-seller-analytics .stat-grid > div { padding: 8px !important; background: #fff !important; }
+  app-seller-analytics .stat-grid p { color: #525252 !important; font-size: 7px !important; }
+  app-seller-analytics .stat-grid strong { color: #111 !important; font-size: 11px !important; }
+  app-seller-analytics .lifetime-note { margin-top: 10px !important; color: #333 !important; font-size: 9px !important; }
+  app-seller-analytics .report-footer { margin-top: 12px !important; padding-top: 7px !important; border-color: #d1d5db !important; color: #525252 !important; font-size: 7px !important; }
+
+  app-seller-analytics .report-facts,
+  app-seller-analytics .report-fact,
+  app-seller-analytics .metric-card,
+  app-seller-analytics .panel,
+  app-seller-analytics .highlight,
+  app-seller-analytics tr,
+  app-seller-analytics .report-footer { break-inside: avoid; page-break-inside: avoid; }
+  * { animation: none !important; transition: none !important; }
 }

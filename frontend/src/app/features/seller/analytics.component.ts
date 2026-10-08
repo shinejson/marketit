@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { AnalyticsKpi, TenantAnalyticsReport } from '../../core/models';
 import { MoneyPipe } from '../../shared/money.pipe';
 
@@ -36,12 +37,12 @@ const STATUS_TONES: Record<string, string> = {
     <div class="analytics-shell">
       <header class="page-head">
         <div>
-          <div class="breadcrumbs"><a routerLink="/tenant">Tenant</a><span>/</span><span>Insights</span></div>
-          <p class="eyebrow">Reporting</p>
-          <h1>Analytics</h1>
+          <div class="breadcrumbs"><a routerLink="/tenant">Workspace</a><span>/</span><span>Reports</span></div>
+          <p class="eyebrow">Tenant reporting</p>
+          <h1>Full tenant report</h1>
           <p class="intro">
-            How the business is actually trading — revenue, conversion, the products that sell and the
-            channels paying for themselves, each compared with the previous period.
+            A complete view of sales, customers, products, stores, fulfilment and advertising,
+            based on this tenant's live marketplace data for the selected period.
           </p>
         </div>
         <div class="head-actions">
@@ -55,8 +56,11 @@ const STATUS_TONES: Record<string, string> = {
             <option [ngValue]="90">Last 90 days</option>
             <option [ngValue]="365">Last 12 months</option>
           </select>
-          <button class="btn ghost" type="button" (click)="exportCsv()" [disabled]="!report()">⤓ Export</button>
-          <button class="btn primary" type="button" (click)="load()" [disabled]="loading()">
+          <button class="btn ghost" type="button" (click)="exportCsv()" [disabled]="!report() || loading() || refreshing()" aria-label="Export report data as CSV">⇩ Export CSV</button>
+          <button class="btn primary" type="button" (click)="exportPdf()" [disabled]="!report() || loading() || refreshing()" title="Opens the print dialog. Choose Save as PDF to download a PDF report.">
+            <span aria-hidden="true">⇩</span> Export PDF
+          </button>
+          <button class="btn ghost" type="button" (click)="load()" [disabled]="loading() || refreshing()">
             <span class="spin-icon" [class.spinning]="refreshing()">⟳</span> Refresh
           </button>
         </div>
@@ -69,10 +73,23 @@ const STATUS_TONES: Record<string, string> = {
       @if (loading()) {
         <div class="skeletons">@for (i of [1,2,3,4,5,6]; track i) { <div class="skeleton-row"></div> }</div>
       } @else if (report(); as r) {
-        <p class="range-note">
-          {{ r.range.start | date:'mediumDate' }} – {{ r.range.end | date:'mediumDate' }}
-          <span class="muted">vs {{ r.range.previous_start | date:'mediumDate' }} – {{ r.range.previous_end | date:'mediumDate' }}</span>
-        </p>
+        <section class="report-facts" aria-label="Report details">
+          <div class="report-fact">
+            <span>Prepared for</span>
+            <strong>{{ tenantName() }}</strong>
+            <small>@if (tenantId()) { Tenant ID #{{ tenantId() }} } @else { Tenant workspace }</small>
+          </div>
+          <div class="report-fact">
+            <span>Reporting period</span>
+            <strong>{{ r.range.start | date:'mediumDate' }} – {{ r.range.end | date:'mediumDate' }}</strong>
+            <small>Compared with {{ r.range.previous_start | date:'mediumDate' }} – {{ r.range.previous_end | date:'mediumDate' }}</small>
+          </div>
+          <div class="report-fact">
+            <span>Scope &amp; generated</span>
+            <strong>{{ selectedStoreName() }}</strong>
+            <small>{{ generatedAt() | date:'medium' }}</small>
+          </div>
+        </section>
 
         <section class="kpi-grid">
           <article class="metric-card value">
@@ -270,12 +287,22 @@ const STATUS_TONES: Record<string, string> = {
             commission {{ +lifetime.commission | money }} ({{ lifetime.take_rate }}% take rate).
           </p>
         }
+
+        <footer class="report-footer">
+          <span>MarketHub tenant report · Figures reflect the selected reporting window and store scope.</span>
+          <span>{{ tenantName() }} · {{ generatedAt() | date:'mediumDate' }}</span>
+        </footer>
       }
     </div>
   `,
 })
 export class SellerAnalyticsComponent {
   private api = inject(ApiService);
+  private auth = inject(AuthService);
+
+  tenantName = computed(() => this.auth.user()?.tenant_name?.trim() || this.auth.user()?.name || 'Tenant workspace');
+  tenantId = computed(() => this.auth.user()?.tenant_id ?? null);
+  generatedAt = signal<Date | null>(null);
 
   readonly metricOptions: { key: MetricKey; label: string }[] = [
     { key: 'gmv', label: 'Revenue' },
@@ -300,6 +327,7 @@ export class SellerAnalyticsComponent {
   }
 
   load(): void {
+    this.error.set('');
     if (this.report()) this.refreshing.set(true);
     const params: Record<string, string | number> = { days: this.days };
     if (this.storeFilter) params['store_id'] = this.storeFilter;
@@ -310,9 +338,12 @@ export class SellerAnalyticsComponent {
         this.refreshing.set(false);
       }))
       .subscribe({
-        next: (res) => this.report.set(res.data),
+        next: (res) => {
+          this.report.set(res.data);
+          this.generatedAt.set(new Date());
+        },
         error: (err) => {
-          this.error.set(err?.error?.message || 'We could not load your analytics. Please try again.');
+          this.error.set(err?.error?.message || 'We could not load your tenant report. Please try again.');
         },
       });
   }
@@ -340,6 +371,11 @@ export class SellerAnalyticsComponent {
 
   metricLabel(): string {
     return this.metricOptions.find((m) => m.key === this.metric())?.label ?? 'Revenue';
+  }
+
+  selectedStoreName(): string {
+    if (!this.storeFilter) return 'All stores';
+    return this.report()?.stores.find((store) => store.id === Number(this.storeFilter))?.name ?? 'Selected store';
   }
 
   peakLabel(): string {
@@ -377,22 +413,78 @@ export class SellerAnalyticsComponent {
     return STATUS_TONES[status] ?? '#8a8070';
   }
 
+  /** Opens the browser print dialog; choose "Save as PDF" for a clean report file. */
+  exportPdf(): void {
+    const r = this.report();
+    if (!r || typeof window === 'undefined') return;
+
+    const safeName = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tenant';
+    const tenantSlug = safeName(this.tenantName());
+    const scopeSlug = safeName(this.selectedStoreName());
+    const previousTitle = document.title;
+    document.title = `${tenantSlug}-report-${scopeSlug}-${r.range.start}-to-${r.range.end}`;
+    window.addEventListener('afterprint', () => { document.title = previousTitle; }, { once: true });
+    try {
+      window.print();
+    } catch {
+      document.title = previousTitle;
+    }
+  }
+
   exportCsv(): void {
     const r = this.report();
     if (!r) return;
     const rows: (string | number)[][] = [
+      ['Tenant report', this.tenantName()],
+      ['Tenant ID', this.tenantId() ?? ''],
+      ['Reporting period', r.range.start, r.range.end],
+      ['Comparison period', r.range.previous_start, r.range.previous_end],
+      ['Store scope', this.selectedStoreName()],
+      ['Generated at', this.generatedAt()?.toISOString() ?? new Date().toISOString()],
+      [],
+      ['Summary metrics'],
+      ['Metric', 'Current period', 'Previous period', 'Change (%)'],
+      ...Object.entries(r.kpis).map(([key, value]) => [key, value.value, value.previous, value.delta_percent]),
+      [],
+      ['Daily performance'],
       ['Day', 'Revenue', 'Orders', 'Product views'],
       ...r.series.map((d) => [d.day, d.gmv, d.orders, d.views]),
+      [],
+      ['Conversion funnel'],
+      ['Step', 'Events', 'Rate (%)'],
+      ...r.funnel.steps.map((step) => [step.label, step.value, step.rate]),
+      ['Cart abandonment', '', r.funnel.cart_abandonment],
+      [],
+      ['Order status mix'],
+      ['Status', 'Orders', 'Revenue'],
+      ...r.status_mix.map((status) => [status.status, status.count, status.gmv]),
       [],
       ['Best sellers'],
       ['Product', 'SKU', 'Units', 'Orders', 'Revenue'],
       ...r.top_products.map((p) => [p.name, p.sku || '', p.units, p.orders, p.revenue]),
+      [],
+      ['Stores'],
+      ['Store', 'Currency', 'Orders', 'Revenue', 'Net payout'],
+      ...r.stores.map((store) => [store.name, store.currency, store.orders, store.gmv, store.net]),
+      [],
+      ['Customers'],
+      ['Buyers', 'Repeat buyers', 'Repeat rate (%)', 'Revenue per buyer'],
+      [r.customers.buyers, r.customers.repeat_buyers, r.customers.repeat_rate, r.customers.revenue_per_buyer],
+      [],
+      ['Advertising'],
+      ['Impressions', 'Clicks', 'CTR (%)', 'Spend', 'Average CPC'],
+      [r.ads.impressions, r.ads.clicks, r.ads.ctr, r.ads.spend, r.ads.avg_cpc],
     ];
+    if (r.lifetime) {
+      rows.push([], ['Lifetime'], ['Revenue', 'Orders', 'Commission', 'Take rate (%)']);
+      rows.push([r.lifetime.gmv, r.lifetime.orders, r.lifetime.commission, r.lifetime.take_rate]);
+    }
     const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = `analytics-${r.range.start}-to-${r.range.end}.csv`;
+    const scopeSlug = this.selectedStoreName().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'all-stores';
+    link.download = `tenant-report-${scopeSlug}-${r.range.start}-to-${r.range.end}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
