@@ -60,6 +60,46 @@ class AccountingLedgerController extends Controller
         return response()->json(['data' => $account], 201);
     }
 
+    public function updateAccount(Request $request, AccountingAccount $account): JsonResponse
+    {
+        if ($account->is_system) {
+            throw ValidationException::withMessages(['account' => 'System ledger accounts are protected.']);
+        }
+
+        $tenantId = (int) $request->user()->tenantId();
+        $data = $request->validate([
+            'code' => ['sometimes', 'required', 'string', 'max:20', Rule::unique('accounting_accounts', 'code')->where('tenant_id', $tenantId)->ignore($account->id)],
+            'name' => ['sometimes', 'required', 'string', 'max:180'],
+            'type' => ['sometimes', 'required', Rule::in(AccountingAccount::TYPES)],
+            'subtype' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        $classificationChanged = (isset($data['code']) && $data['code'] !== $account->code)
+            || (isset($data['type']) && $data['type'] !== $account->type);
+        if ($classificationChanged && $account->lines()->exists()) {
+            throw ValidationException::withMessages(['account' => 'Code and type cannot change after this account has ledger activity. You can still rename or archive it.']);
+        }
+        $account->update($data);
+
+        return response()->json(['data' => $account->fresh()]);
+    }
+
+    public function destroyAccount(AccountingAccount $account): JsonResponse
+    {
+        if ($account->is_system) {
+            throw ValidationException::withMessages(['account' => 'System ledger accounts cannot be deleted.']);
+        }
+        if ($account->lines()->exists() || AccountingBankAccount::query()->where('ledger_account_id', $account->id)->exists()) {
+            throw ValidationException::withMessages(['account' => 'This account is referenced by ledger or bank activity. Archive it instead of deleting it.']);
+        }
+
+        $account->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
+    }
+
     public function journals(Request $request): JsonResponse
     {
         $query = AccountingJournalEntry::query()
@@ -89,7 +129,7 @@ class AccountingLedgerController extends Controller
             'memo' => ['required', 'string', 'max:255'],
             'post_now' => ['nullable', 'boolean'],
             'lines' => ['required', 'array', 'min:2', 'max:100'],
-            'lines.*.account_id' => ['required', Rule::exists('accounting_accounts', 'id')->where('tenant_id', $tenantId)],
+            'lines.*.account_id' => ['required', Rule::exists('accounting_accounts', 'id')->where('tenant_id', $tenantId)->where('is_active', true)],
             'lines.*.description' => ['nullable', 'string', 'max:255'],
             'lines.*.debit' => ['nullable', 'numeric', 'min:0'],
             'lines.*.credit' => ['nullable', 'numeric', 'min:0'],
@@ -123,6 +163,63 @@ class AccountingLedgerController extends Controller
         return response()->json(['data' => $entry->load('lines.account:id,code,name,type')], 201);
     }
 
+    public function updateJournal(Request $request, AccountingJournalEntry $journal): JsonResponse
+    {
+        if ($journal->status !== 'draft' || $journal->source_type !== null) {
+            throw ValidationException::withMessages(['journal' => 'Only manually created draft journals can be edited.']);
+        }
+
+        $tenantId = (int) $request->user()->tenantId();
+        $data = $request->validate([
+            'entry_date' => ['sometimes', 'required', 'date'],
+            'reference' => ['sometimes', 'nullable', 'string', 'max:180'],
+            'memo' => ['sometimes', 'required', 'string', 'max:255'],
+            'lines' => ['sometimes', 'required', 'array', 'min:2', 'max:100'],
+            'lines.*.account_id' => ['required_with:lines', Rule::exists('accounting_accounts', 'id')->where('tenant_id', $tenantId)->where('is_active', true)],
+            'lines.*.description' => ['nullable', 'string', 'max:255'],
+            'lines.*.debit' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.credit' => ['nullable', 'numeric', 'min:0'],
+        ]);
+        if ($data === []) {
+            throw ValidationException::withMessages(['journal' => 'Add at least one change before saving.']);
+        }
+
+        $linesChanged = array_key_exists('lines', $data);
+        if ($linesChanged) {
+            [$debit, $credit] = $this->validateBalancedLines($data['lines']);
+        } else {
+            $debit = (float) $journal->total_debit;
+            $credit = (float) $journal->total_credit;
+        }
+
+        DB::transaction(function () use ($journal, $data, $linesChanged, $debit, $credit) {
+            $attributes = array_intersect_key($data, array_flip(['entry_date', 'reference', 'memo']));
+            $journal->update([...$attributes, 'total_debit' => $debit, 'total_credit' => $credit]);
+            if ($linesChanged) {
+                $journal->lines()->delete();
+                $journal->lines()->createMany(collect($data['lines'])->map(fn (array $line) => [
+                    'account_id' => $line['account_id'],
+                    'description' => $line['description'] ?? null,
+                    'debit' => round((float) ($line['debit'] ?? 0), 2),
+                    'credit' => round((float) ($line['credit'] ?? 0), 2),
+                ])->all());
+            }
+        });
+
+        return response()->json(['data' => $journal->fresh()->load('lines.account:id,code,name,type')]);
+    }
+
+    public function destroyJournal(AccountingJournalEntry $journal): JsonResponse
+    {
+        if ($journal->status !== 'draft' || $journal->source_type !== null) {
+            throw ValidationException::withMessages(['journal' => 'Only manually created draft journals can be deleted.']);
+        }
+
+        $journal->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
+    }
+
     public function postJournal(Request $request, AccountingJournalEntry $journal): JsonResponse
     {
         if ($journal->status !== 'draft') {
@@ -130,6 +227,9 @@ class AccountingLedgerController extends Controller
         }
         if (abs((float) $journal->total_debit - (float) $journal->total_credit) > 0.001) {
             throw ValidationException::withMessages(['journal' => 'Journal is not balanced.']);
+        }
+        if ($journal->lines()->whereHas('account', fn (Builder $query) => $query->where('is_active', false))->exists()) {
+            throw ValidationException::withMessages(['journal' => 'Restore archived ledger accounts before posting this draft.']);
         }
         $journal->update(['status' => 'posted', 'posted_by' => $request->user()->id, 'posted_at' => now()]);
 
@@ -205,6 +305,40 @@ class AccountingLedgerController extends Controller
         return response()->json(['data' => $account->load('ledgerAccount:id,code,name')], 201);
     }
 
+    public function updateBankAccount(Request $request, AccountingBankAccount $bankAccount): JsonResponse
+    {
+        $tenantId = (int) $request->user()->tenantId();
+        $data = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:180', Rule::unique('accounting_bank_accounts', 'name')->where('tenant_id', $tenantId)->ignore($bankAccount->id)],
+            'bank_name' => ['sometimes', 'nullable', 'string', 'max:180'],
+            'account_number_last4' => ['sometimes', 'nullable', 'digits:4'],
+            'currency' => ['sometimes', 'nullable', 'string', 'size:3'],
+            'opening_balance' => ['sometimes', 'numeric'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+        if (array_key_exists('opening_balance', $data) && $bankAccount->transactions()->exists()
+            && round((float) $data['opening_balance'], 2) !== round((float) $bankAccount->opening_balance, 2)) {
+            throw ValidationException::withMessages(['opening_balance' => 'Opening balance is locked after statement activity has been imported.']);
+        }
+        if (! empty($data['currency'])) {
+            $data['currency'] = strtoupper($data['currency']);
+        }
+        $bankAccount->update($data);
+
+        return response()->json(['data' => $bankAccount->fresh()->load('ledgerAccount:id,code,name')]);
+    }
+
+    public function destroyBankAccount(AccountingBankAccount $bankAccount): JsonResponse
+    {
+        if ($bankAccount->transactions()->exists()) {
+            throw ValidationException::withMessages(['bank_account' => 'This account has statement history. Archive it instead of deleting it.']);
+        }
+
+        $bankAccount->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
+    }
+
     public function bankTransactions(Request $request): JsonResponse
     {
         $query = AccountingBankTransaction::query()->with([
@@ -216,6 +350,10 @@ class AccountingLedgerController extends Controller
         }
         if ($bankId = $request->integer('bank_account_id')) {
             $query->where('bank_account_id', $bankId);
+        }
+        if ($search = $request->string('search')->trim()->toString()) {
+            $query->where(fn (Builder $builder) => $builder->where('description', 'like', "%{$search}%")
+                ->orWhere('reference', 'like', "%{$search}%"));
         }
         $result = $query->paginate(min(100, max(1, $request->integer('per_page', 100))));
 
@@ -235,6 +373,10 @@ class AccountingLedgerController extends Controller
             'reference' => ['nullable', 'string', 'max:180'],
             'amount' => ['required', 'numeric', 'not_in:0'],
         ]);
+        $bankAccount = AccountingBankAccount::query()->findOrFail($data['bank_account_id']);
+        if (! $bankAccount->is_active) {
+            throw ValidationException::withMessages(['bank_account_id' => 'Choose an active bank account.']);
+        }
         $transaction = AccountingBankTransaction::query()->create([...$data, 'tenant_id' => $tenantId]);
 
         return response()->json(['data' => $transaction->load('bankAccount:id,name,currency')], 201);
@@ -244,13 +386,30 @@ class AccountingLedgerController extends Controller
     {
         $tenantId = (int) $request->user()->tenantId();
         $data = $request->validate([
-            'status' => ['required', Rule::in(['matched', 'excluded', 'unmatched'])],
-            'payment_id' => ['nullable', Rule::exists('accounting_payments', 'id')->where('tenant_id', $tenantId)],
+            'status' => ['sometimes', 'required', Rule::in(['matched', 'excluded', 'unmatched'])],
+            'payment_id' => ['required_if:status,matched', 'nullable', Rule::exists('accounting_payments', 'id')->where('tenant_id', $tenantId)],
+            'bank_account_id' => ['sometimes', 'required', Rule::exists('accounting_bank_accounts', 'id')->where('tenant_id', $tenantId)],
+            'transaction_date' => ['sometimes', 'required', 'date'],
+            'description' => ['sometimes', 'required', 'string', 'max:255'],
+            'reference' => ['sometimes', 'nullable', 'string', 'max:180'],
+            'amount' => ['sometimes', 'required', 'numeric', 'not_in:0'],
         ]);
-        if ($data['status'] === 'matched') {
+
+        $editKeys = ['bank_account_id', 'transaction_date', 'description', 'reference', 'amount'];
+        $hasStatementEdits = count(array_intersect($editKeys, array_keys($data))) > 0;
+        if ($hasStatementEdits && $bankTransaction->status !== 'unmatched') {
+            throw ValidationException::withMessages(['transaction' => 'Matched or excluded statement lines cannot be edited. Undo the reconciliation first.']);
+        }
+        if (! $hasStatementEdits && ! array_key_exists('status', $data)) {
+            throw ValidationException::withMessages(['transaction' => 'No transaction changes were provided.']);
+        }
+
+        $targetStatus = $data['status'] ?? $bankTransaction->status;
+        $amount = (float) ($data['amount'] ?? $bankTransaction->amount);
+        if ($targetStatus === 'matched') {
             $payment = AccountingPayment::query()->findOrFail($data['payment_id'] ?? 0);
             $expected = $payment->direction === 'incoming' ? (float) $payment->amount : -(float) $payment->amount;
-            if (abs($expected - (float) $bankTransaction->amount) > 0.01) {
+            if (abs($expected - $amount) > 0.01) {
                 throw ValidationException::withMessages(['payment_id' => 'Payment amount and bank transaction amount must match.']);
             }
             $alreadyMatched = AccountingBankTransaction::query()
@@ -260,13 +419,36 @@ class AccountingLedgerController extends Controller
                 throw ValidationException::withMessages(['payment_id' => 'This payment is already matched to another bank transaction.']);
             }
         }
-        $bankTransaction->update([
-            'status' => $data['status'],
-            'payment_id' => $data['status'] === 'matched' ? $data['payment_id'] : null,
-            'reconciled_at' => $data['status'] === 'unmatched' ? null : now(),
-        ]);
+
+        $updates = array_intersect_key($data, array_flip($editKeys));
+        if (isset($updates['reference'])) {
+            $updates['reference'] = $updates['reference'] ?: null;
+        }
+        if (isset($updates['bank_account_id'])) {
+            $bankAccount = AccountingBankAccount::query()->findOrFail($updates['bank_account_id']);
+            if (! $bankAccount->is_active) {
+                throw ValidationException::withMessages(['bank_account_id' => 'Choose an active bank account.']);
+            }
+        }
+        if (array_key_exists('status', $data)) {
+            $updates['status'] = $targetStatus;
+            $updates['payment_id'] = $targetStatus === 'matched' ? $data['payment_id'] : null;
+            $updates['reconciled_at'] = $targetStatus === 'unmatched' ? null : now();
+        }
+        $bankTransaction->update($updates);
 
         return response()->json(['data' => $bankTransaction->fresh()->load(['bankAccount:id,name,currency', 'payment'])]);
+    }
+
+    public function destroyBankTransaction(AccountingBankTransaction $bankTransaction): JsonResponse
+    {
+        if ($bankTransaction->status !== 'unmatched' || $bankTransaction->payment_id !== null) {
+            throw ValidationException::withMessages(['transaction' => 'Only unmatched statement lines can be deleted. Undo a match or exclusion first.']);
+        }
+
+        $bankTransaction->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
     }
 
     private function balances(int $tenantId, ?string $from, ?string $to)

@@ -74,4 +74,14 @@ app-seller-accounting {
   .invoice-print{position:fixed;inset:0 auto auto 0;width:100%;box-shadow:none;border-radius:0}
 }
 
+  .payment-lock-note { margin: 0 0 14px; }
+  .record-details { display: grid; gap: 0; margin: 14px 0; }
+  .record-details > div { display: grid; grid-template-columns: minmax(100px,.7fr) 1.3fr; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+  .record-details dt { color: var(--ink-soft); font-size: 10px; font-weight: 700; }
+  .record-details dd { margin: 0; color: var(--ink); font-size: 11px; overflow-wrap: anywhere; }
+  .bank-card .contact-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+  .bank-card .contact-actions button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); font-size: 9px; font-weight: 750; cursor: pointer; }
+  .table-wrap tfoot th { padding: 10px 8px; border-top: 2px solid var(--ink); text-align: right; font-size: 10px; }
+  .table-wrap tfoot th:first-child { text-align: left; }
+
 }
