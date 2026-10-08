@@ -162,6 +162,15 @@ export async function handleAccounting(req, res, url, method, readBody, json) {
 
   if (path === '/api/tenant/accounting/contacts' && method === 'GET') return paginate(res, json, filtered(contacts, url, ['name', 'email', 'phone'], 'type'), url) || true;
   if (path === '/api/tenant/accounting/contacts' && method === 'POST') { const body = await readBody(req); const contact = { id: nextId(), is_active: true, invoices_count: 0, purchase_orders_count: 0, ...body }; contacts.push(contact); return json(res, 201, { data: contact }) || true; }
+  match = path.match(/^\/api\/tenant\/accounting\/contacts\/(\d+)$/);
+  if (match && method === 'PATCH') { const row = contacts.find((c) => c.id === +match[1]); if (!row) return json(res, 404, { message: 'Contact not found' }) || true; Object.assign(row, await readBody(req)); return json(res, 200, { data: row }) || true; }
+  if (match && method === 'DELETE') {
+    const idx = contacts.findIndex((c) => c.id === +match[1]); if (idx < 0) return json(res, 404, { message: 'Contact not found' }) || true;
+    const row = contacts[idx];
+    const used = invoices.some((i) => i.contact_id === row.id) || expenses.some((e) => e.vendor_id === row.id) || purchaseOrders.some((po) => po.vendor_id === row.id);
+    if (used) { const message = 'This contact already has invoices, bills or purchase orders. Mark it inactive instead of deleting so the history stays intact.'; return json(res, 422, { message, errors: { contact: [message] } }) || true; }
+    contacts.splice(idx, 1); return json(res, 200, { data: { deleted: true } }) || true;
+  }
   if (path === '/api/tenant/accounting/purchase-orders' && method === 'GET') return paginate(res, json, filtered(purchaseOrders, url, ['number', 'vendor_name']), url) || true;
   if (path === '/api/tenant/accounting/purchase-orders' && method === 'POST') {
     const body = await readBody(req); const totals = lineTotals(body.items || [], 'unit_cost'); const vendor = contacts.find((c) => c.id === +body.vendor_id); const po = { id: nextId(), number: `PO-2026-NOR-${String(purchaseOrders.length + 1).padStart(4, '0')}`, ...body, vendor, status: body.submit_for_approval ? 'pending_approval' : 'draft', subtotal: totals.subtotal, tax_total: totals.tax, total: totals.subtotal + totals.tax, items: totals.items }; purchaseOrders.unshift(po); return json(res, 201, { data: po }) || true;

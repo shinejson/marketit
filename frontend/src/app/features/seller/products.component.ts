@@ -150,169 +150,254 @@ const PRESET_GLYPHS: Record<string, string> = {
       </nav>
 
       <section class="table-panel panel">
+        <!-- Modern DataTable Toolbar -->
         <div class="table-toolbar">
           <div class="search-box">
-            <span>⌕</span>
-            <input type="search" placeholder="Search name, brand, SKU or barcode" [(ngModel)]="searchTerm" (ngModelChange)="onSearch($event)" />
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="search" placeholder="Search by name, SKU, brand or barcode…" [(ngModel)]="searchTerm" (ngModelChange)="onSearch($event)" />
             @if (searchTerm) { <button type="button" class="clear-btn" (click)="clearSearch()" aria-label="Clear search">×</button> }
           </div>
-          <select [(ngModel)]="storeFilter" (change)="onFilterChange()" aria-label="Filter by store">
-            <option value="">All stores</option>
-            @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }
-          </select>
-          <select [(ngModel)]="presetFilter" (change)="onFilterChange()" aria-label="Filter by category type">
-            <option value="">All categories</option>
-            @for (preset of presets(); track preset.key) { <option [value]="preset.key">{{ preset.label }}</option> }
-          </select>
-          <select [(ngModel)]="categoryFilter" (change)="onFilterChange()" aria-label="Filter by collection">
-            <option value="">All collections</option>
-            @for (cat of categories(); track cat.id) { <option [value]="cat.id">{{ cat.name }}</option> }
-          </select>
-          <select [(ngModel)]="typeFilter" (change)="onFilterChange()" aria-label="Filter by product type">
-            <option value="">Any type</option>
-            <option value="physical">Physical</option>
-            <option value="digital">Digital</option>
-            <option value="service">Service</option>
-          </select>
-          <select [(ngModel)]="sortValue" (change)="onSortChange()" aria-label="Sort products">
-            <option value="created_at:desc">Newest first</option>
-            <option value="created_at:asc">Oldest first</option>
-            <option value="name:asc">Name A–Z</option>
-            <option value="name:desc">Name Z–A</option>
-            <option value="price:desc">Price high → low</option>
-            <option value="price:asc">Price low → high</option>
-            <option value="updated_at:desc">Recently updated</option>
-          </select>
-          <div class="view-toggle" role="group" aria-label="View mode">
-            <button type="button" [class.on]="view() === 'table'" (click)="view.set('table')" aria-label="Table view">☰</button>
-            <button type="button" [class.on]="view() === 'grid'" (click)="view.set('grid')" aria-label="Grid view">▦</button>
+
+          <div class="filter-group">
+            <div class="select-wrap">
+              <select [(ngModel)]="storeFilter" (change)="onFilterChange()" aria-label="Filter by store">
+                <option value="">All stores</option>
+                @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }
+              </select>
+            </div>
+
+            <div class="select-wrap">
+              <select [(ngModel)]="categoryFilter" (change)="onFilterChange()" aria-label="Filter by collection">
+                <option value="">All collections</option>
+                @for (cat of categories(); track cat.id) { <option [value]="cat.id">{{ cat.name }}</option> }
+              </select>
+            </div>
+
+            <div class="select-wrap">
+              <select [(ngModel)]="presetFilter" (change)="onFilterChange()" aria-label="Filter by category type">
+                <option value="">All categories</option>
+                @for (preset of presets(); track preset.key) { <option [value]="preset.key">{{ preset.label }}</option> }
+              </select>
+            </div>
+
+            <div class="select-wrap">
+              <select [(ngModel)]="typeFilter" (change)="onFilterChange()" aria-label="Filter by product type">
+                <option value="">Any type</option>
+                <option value="physical">Physical</option>
+                <option value="digital">Digital</option>
+                <option value="service">Service</option>
+              </select>
+            </div>
+
+            <div class="select-wrap sort-select">
+              <select [(ngModel)]="sortValue" (change)="onSortChange()" aria-label="Sort products">
+                <option value="created_at:desc">Newest first</option>
+                <option value="created_at:asc">Oldest first</option>
+                <option value="name:asc">Name A–Z</option>
+                <option value="name:desc">Name Z–A</option>
+                <option value="price:desc">Price high → low</option>
+                <option value="price:asc">Price low → high</option>
+                <option value="updated_at:desc">Recently updated</option>
+              </select>
+            </div>
+
+            @if (hasActiveFilters()) {
+              <button type="button" class="btn-clear-filters" (click)="resetFilters()" title="Reset all active filters">
+                <span>Reset</span>
+                <span class="reset-count">{{ activeFilterCount() }}</span>
+              </button>
+            }
+          </div>
+
+          <div class="toolbar-right">
+            <div class="view-toggle" role="group" aria-label="View mode">
+              <button type="button" [class.on]="view() === 'table'" (click)="view.set('table')" aria-label="Table view" title="Table view">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              </button>
+              <button type="button" [class.on]="view() === 'grid'" (click)="view.set('grid')" aria-label="Grid view" title="Grid view">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
         @if (selectedIds().length) {
           <div class="bulk-bar">
-            <strong>{{ selectedIds().length }} selected</strong>
-            <button type="button" (click)="bulk('activate')">Publish</button>
-            <button type="button" (click)="bulk('draft')">Unpublish</button>
-            <button type="button" (click)="bulk('feature')">★ Feature</button>
-            <button type="button" (click)="bulk('archive')">Archive</button>
-            <div class="bulk-price">
-              <input type="number" [(ngModel)]="bulkPercent" step="1" aria-label="Price change percent" />
-              <span>%</span>
-              <button type="button" (click)="bulk('price_adjust')">Adjust price</button>
+            <div class="bulk-count">
+              <span class="count-pill">{{ selectedIds().length }}</span>
+              <strong>selected</strong>
             </div>
-            <button type="button" class="danger" (click)="bulk('delete')">Delete</button>
-            <button type="button" class="link" (click)="clearSelection()">Clear</button>
+            <div class="bulk-actions">
+              <button type="button" class="btn-bulk" (click)="bulk('activate')">Publish</button>
+              <button type="button" class="btn-bulk" (click)="bulk('draft')">Unpublish</button>
+              <button type="button" class="btn-bulk" (click)="bulk('feature')">★ Feature</button>
+              <button type="button" class="btn-bulk" (click)="bulk('archive')">Archive</button>
+              <div class="bulk-price">
+                <input type="number" [(ngModel)]="bulkPercent" step="1" aria-label="Price change percent" />
+                <span>%</span>
+                <button type="button" class="btn-bulk" (click)="bulk('price_adjust')">Adjust price</button>
+              </div>
+              <button type="button" class="btn-bulk danger" (click)="bulk('delete')">Delete</button>
+              <button type="button" class="btn-bulk-clear" (click)="clearSelection()">Clear selection</button>
+            </div>
           </div>
         }
 
         @if (view() === 'table') {
-          <div class="table-wrap">
-            <table>
+          <!-- ISOLATED SCROLL DATATABLE CONTAINER -->
+          <div class="datatable-scroll-wrap" tabindex="0" role="region" aria-label="Products Table Scroll Area">
+            <table class="datatable">
               <thead>
                 <tr>
-                  <th class="pick"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll($event)" aria-label="Select all" /></th>
-                  <th>Product</th>
-                  <th>Store &amp; collection</th>
-                  <th>Sold as</th>
-                  <th class="right">Pricing</th>
-                  <th>Inventory</th>
-                  <th>Status</th>
-                  <th></th>
+                  <th class="col-pick">
+                    <input type="checkbox" [checked]="allSelected()" (change)="toggleAll($event)" aria-label="Select all products" />
+                  </th>
+                  <th class="col-product">Product</th>
+                  <th class="col-store">Store &amp; Collection</th>
+                  <th class="col-sold-as">Type</th>
+                  <th class="col-price right">Pricing</th>
+                  <th class="col-stock">Inventory</th>
+                  <th class="col-status">Status</th>
+                  <th class="col-actions right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 @if (loading()) {
-                  @for (n of skeletonRows; track n) { <tr class="skeleton-row"><td colspan="8"><div class="skeleton skel-line"></div></td></tr> }
+                  @for (n of skeletonRows; track n) {
+                    <tr class="skeleton-row">
+                      <td colspan="8"><div class="skeleton skel-line"></div></td>
+                    </tr>
+                  }
                 } @else {
                   @for (product of products(); track product.id) {
-                    <tr class="product-row" (click)="openEdit(product)">
-                      <td class="pick" (click)="$event.stopPropagation()">
+                    <tr class="product-row" [class.row-selected]="isSelected(product.id)" (click)="openEdit(product)">
+                      <td class="col-pick" (click)="$event.stopPropagation()">
                         <input type="checkbox" [checked]="isSelected(product.id)" (change)="toggleSelect(product.id)" [attr.aria-label]="'Select ' + product.name" />
                       </td>
-                      <td>
+                      <td class="col-product">
                         <div class="product-cell">
-                          <span class="thumb" [class.empty]="!product.primary_image_url">
-                            @if (product.primary_image_url) { <img [src]="product.primary_image_url" [alt]="product.name" loading="lazy" /> }
-                            @else { {{ glyph(product.catalog_preset) }} }
-                          </span>
-                          <div>
-                            <strong>{{ product.name }}</strong>
-                            <small class="mono">{{ skuOf(product) }}</small>
-                            <div class="chips">
-                              <span class="chip-tag">{{ presetLabel(product.catalog_preset) }}</span>
-                              @if (product.is_featured) { <span class="chip-tag gold">★ Featured</span> }
-                              @if (product.has_variants) { <span class="chip-tag">{{ product.variants.length }} variants</span> }
-                              @if (product.is_perishable) { <span class="chip-tag cool">Perishable</span> }
+                          <div class="thumb-wrap" [class.empty]="!product.primary_image_url">
+                            @if (product.primary_image_url) {
+                              <img [src]="product.primary_image_url" [alt]="product.name" loading="lazy" />
+                            } @else {
+                              <span class="glyph-icon">{{ glyph(product.catalog_preset) }}</span>
+                            }
+                          </div>
+                          <div class="product-info">
+                            <strong class="product-title">{{ product.name }}</strong>
+                            <div class="meta-row">
+                              <span class="sku-pill mono">{{ skuOf(product) }}</span>
+                              <span class="preset-pill">{{ presetLabel(product.catalog_preset) }}</span>
+                              @if (product.is_featured) { <span class="badge-featured">★ Featured</span> }
+                              @if (product.has_variants) { <span class="badge-variants">{{ product.variants.length }} vars</span> }
+                              @if (product.is_perishable) { <span class="badge-perishable">Perishable</span> }
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td>
-                        <strong>{{ product.store?.name || '—' }}</strong>
-                        <small>{{ product.category?.name || 'Uncategorised' }}</small>
-                        @if (product.brand) { <small>{{ product.brand }}</small> }
-                      </td>
-                      <td>
-                        <strong>{{ unitLabel(product.unit) }}</strong>
-                        <small>{{ typeLabel(product.product_type) }}</small>
-                        @if (product.min_order_qty > 1) { <small>Min {{ product.min_order_qty }}</small> }
-                      </td>
-                      <td class="right financial-cell">
-                        <div><span>Price</span><b>{{ +product.price | money:currencyOf(product):'symbol':'1.2-2' }}</b></div>
-                        @if (+(product.compare_at_price || 0) > +product.price) {
-                          <div><span>Was</span><b class="strike">{{ +(product.compare_at_price || 0) | money:currencyOf(product):'symbol':'1.2-2' }}</b></div>
-                        }
-                        @if (product.margin_percent !== null && product.margin_percent !== undefined) {
-                          <div class="net"><span>Margin</span><b>{{ product.margin_percent }}%</b></div>
-                        }
-                      </td>
-                      <td>
-                        <div class="stock-cell">
-                          <span [class]="'stock-pill ' + product.stock_state">{{ stockLabel(product.stock_state) }}</span>
-                          @if (product.track_inventory) {
-                            <b>{{ product.available_stock }} {{ unitShort(product.unit) }}</b>
-                            <div class="meter"><span [style.width.%]="stockPercent(product)" [class]="product.stock_state"></span></div>
-                          } @else { <small>Unlimited</small> }
+                      <td class="col-store">
+                        <div class="store-cell">
+                          <strong class="store-name">{{ product.store?.name || '—' }}</strong>
+                          <span class="category-name">{{ product.category?.name || 'Uncategorised' }}</span>
+                          @if (product.brand) { <span class="brand-name">{{ product.brand }}</span> }
                         </div>
                       </td>
-                      <td><span [class]="'status ' + product.status">{{ product.status }}</span></td>
-                      <td class="actions" (click)="$event.stopPropagation()">
-                        <button type="button" class="primary-action" (click)="togglePublish(product)" [disabled]="savingId() === product.id">
-                          {{ savingId() === product.id ? '…' : (product.status === 'active' ? 'Unpublish' : 'Publish') }}
-                        </button>
-                        <div class="menu-wrap">
-                          <button type="button" class="icon-btn" (click)="toggleMenu(product.id, $event)" aria-label="More actions">⋯</button>
-                          @if (openMenu() === product.id) {
-                            <div class="dropdown-menu">
-                              <button type="button" (click)="openEdit(product)">Edit product</button>
-                              <button type="button" (click)="duplicate(product)">Duplicate</button>
-                              <button type="button" (click)="toggleFeature(product)">{{ product.is_featured ? 'Remove feature' : 'Mark featured' }}</button>
-                              <a [routerLink]="['/products', product.slug]" target="_blank" rel="noopener">View in storefront ↗</a>
-                              <button type="button" class="danger" (click)="confirmDelete(product)">Delete</button>
+                      <td class="col-sold-as">
+                        <div class="sold-cell">
+                          <span class="type-pill" [class]="product.product_type">{{ typeLabel(product.product_type) }}</span>
+                          <small class="unit-sub">{{ unitLabel(product.unit) }}</small>
+                          @if (product.min_order_qty > 1) { <small class="min-qty">Min {{ product.min_order_qty }}</small> }
+                        </div>
+                      </td>
+                      <td class="col-price right">
+                        <div class="price-cell">
+                          <span class="price-main">{{ +product.price | money:currencyOf(product):'symbol':'1.2-2' }}</span>
+                          @if (+(product.compare_at_price || 0) > +product.price) {
+                            <span class="price-strike">{{ +(product.compare_at_price || 0) | money:currencyOf(product):'symbol':'1.2-2' }}</span>
+                          }
+                          @if (product.margin_percent !== null && product.margin_percent !== undefined) {
+                            <span class="margin-badge">{{ product.margin_percent }}% margin</span>
+                          }
+                        </div>
+                      </td>
+                      <td class="col-stock">
+                        <div class="stock-cell">
+                          <div class="stock-top">
+                            <span [class]="'stock-pill ' + product.stock_state">
+                              <span class="stock-dot"></span>
+                              {{ stockLabel(product.stock_state) }}
+                            </span>
+                            @if (product.track_inventory) {
+                              <span class="stock-qty">{{ product.available_stock }} {{ unitShort(product.unit) }}</span>
+                            } @else {
+                              <span class="stock-qty muted">Unlimited</span>
+                            }
+                          </div>
+                          @if (product.track_inventory) {
+                            <div class="meter-track">
+                              <div class="meter-bar" [style.width.%]="stockPercent(product)" [class]="product.stock_state"></div>
                             </div>
                           }
                         </div>
                       </td>
+                      <td class="col-status">
+                        <span [class]="'status-pill ' + product.status">
+                          <span class="status-dot"></span>
+                          {{ product.status === 'active' ? 'Live' : (product.status === 'draft' ? 'Draft' : 'Archived') }}
+                        </span>
+                      </td>
+                      <td class="col-actions right" (click)="$event.stopPropagation()">
+                        <div class="action-btn-group">
+                          <button type="button" class="btn-action edit" (click)="openEdit(product)" title="Edit product">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            <span>Edit</span>
+                          </button>
+                          <a [routerLink]="['/products', product.slug]" target="_blank" rel="noopener" class="btn-action icon" title="View live in storefront ↗">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                          </a>
+                          <div class="menu-wrap">
+                            <button type="button" class="btn-action icon menu-trigger" (click)="toggleMenu(product.id, $event)" aria-label="More actions" title="More actions">⋯</button>
+                            @if (openMenu() === product.id) {
+                              <div class="dropdown-menu">
+                                <button type="button" (click)="togglePublish(product)">
+                                  {{ product.status === 'active' ? 'Unpublish listing' : 'Publish listing' }}
+                                </button>
+                                <button type="button" (click)="openEdit(product)">Full editor</button>
+                                <button type="button" (click)="duplicate(product)">Duplicate</button>
+                                <button type="button" (click)="toggleFeature(product)">{{ product.is_featured ? 'Remove feature' : 'Mark featured' }}</button>
+                                <a [routerLink]="['/products', product.slug]" target="_blank" rel="noopener">Storefront page ↗</a>
+                                <div class="menu-divider"></div>
+                                <button type="button" class="danger" (click)="confirmDelete(product)">Delete product</button>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      </td>
                     </tr>
                   } @empty {
-                    <tr class="empty-row"><td colspan="8">
-                      <div class="empty-state">
-                        <span class="empty-icon">📦</span>
-                        <b>No products match these filters</b>
-                        <span>Change the store, category or search term — or add your first listing.</span>
-                        <div class="empty-actions">
-                          @if (hasActiveFilters()) { <button type="button" class="btn ghost small" (click)="resetFilters()">Clear filters</button> }
-                          <button type="button" class="btn primary small" (click)="openCreate()" [disabled]="!stores().length">＋ New product</button>
+                    <tr class="empty-row">
+                      <td colspan="8">
+                        <div class="empty-state">
+                          <span class="empty-icon">📦</span>
+                          <b>No products match these filters</b>
+                          <span>Change the store, category or search term — or add your first listing.</span>
+                          <div class="empty-actions">
+                            @if (hasActiveFilters()) { <button type="button" class="btn ghost small" (click)="resetFilters()">Clear filters</button> }
+                            <button type="button" class="btn primary small" (click)="openCreate()" [disabled]="!stores().length">＋ New product</button>
+                          </div>
                         </div>
-                      </div>
-                    </td></tr>
+                      </td>
+                    </tr>
                   }
                 }
               </tbody>
             </table>
           </div>
         } @else {
+          <!-- GRID VIEW -->
           <div class="grid-wrap">
             @if (loading()) {
               @for (n of skeletonRows; track n) { <div class="skeleton skel-card"></div> }
@@ -355,19 +440,67 @@ const PRESET_GLYPHS: Record<string, string> = {
           </div>
         }
 
-        <div class="table-foot">
-          <span>Showing {{ products().length }} of {{ total() }} product{{ total() === 1 ? '' : 's' }}</span>
-          <div class="pagination">
-            <select [(ngModel)]="perPage" (change)="onFilterChange()" aria-label="Rows per page">
-              <option [ngValue]="12">12 / page</option>
-              <option [ngValue]="24">24 / page</option>
-              <option [ngValue]="48">48 / page</option>
-            </select>
-            <button type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">‹ Prev</button>
-            <span>Page {{ page() }} of {{ lastPage() }}</span>
-            <button type="button" [disabled]="page() >= lastPage()" (click)="goToPage(page() + 1)">Next ›</button>
+        <!-- PROFESSIONAL DATATABLE PAGINATION FOOTER -->
+        <footer class="datatable-foot">
+          <div class="dt-info">
+            <span>Showing <strong class="dt-highlight">{{ showingRange() }}</strong></span>
+            @if (selectedIds().length) {
+              <span class="dt-selected-tag"><strong>{{ selectedIds().length }}</strong> selected</span>
+            }
           </div>
-        </div>
+
+          <div class="dt-size">
+            <span class="dt-label">Rows per page:</span>
+            <select class="dt-select" [(ngModel)]="perPage" (change)="onPerPageChange()" aria-label="Rows per page">
+              <option [ngValue]="10">10</option>
+              <option [ngValue]="25">25</option>
+              <option [ngValue]="50">50</option>
+              <option [ngValue]="100">100</option>
+            </select>
+          </div>
+
+          <div class="dt-pagination" role="navigation" aria-label="Table pagination">
+            <button
+              type="button"
+              class="dt-nav-btn prev"
+              [disabled]="page() <= 1"
+              (click)="goToPage(page() - 1)"
+              aria-label="Go to previous page"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+              <span>Previous</span>
+            </button>
+
+            <div class="dt-page-numbers">
+              @for (p of pagesList(); track $index) {
+                @if (p === '…') {
+                  <span class="dt-ellipsis" aria-hidden="true">…</span>
+                } @else {
+                  <button
+                    type="button"
+                    class="dt-num-btn"
+                    [class.active]="page() === p"
+                    [attr.aria-current]="page() === p ? 'page' : null"
+                    (click)="goToPage(+p)"
+                  >
+                    {{ p }}
+                  </button>
+                }
+              }
+            </div>
+
+            <button
+              type="button"
+              class="dt-nav-btn next"
+              [disabled]="page() >= lastPage()"
+              (click)="goToPage(page() + 1)"
+              aria-label="Go to next page"
+            >
+              <span>Next</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+        </footer>
       </section>
     </div>
 
@@ -823,7 +956,7 @@ export class SellerProductsComponent {
   presetFilter = '';
   typeFilter = '';
   sortValue = 'created_at:desc';
-  perPage = 12;
+  perPage = 10;
   bulkPercent = 10;
 
   selection = signal<Set<number>>(new Set());
@@ -910,6 +1043,48 @@ export class SellerProductsComponent {
   hasActiveFilters(): boolean {
     return !!(this.searchTerm || this.storeFilter || this.categoryFilter || this.presetFilter
       || this.typeFilter || this.statusFilter() || this.stockFilter() || this.featuredOnly());
+  }
+
+  activeFilterCount = computed(() => {
+    let count = 0;
+    if (this.searchTerm.trim()) count++;
+    if (this.storeFilter) count++;
+    if (this.categoryFilter) count++;
+    if (this.presetFilter) count++;
+    if (this.typeFilter) count++;
+    if (this.statusFilter()) count++;
+    if (this.stockFilter()) count++;
+    if (this.featuredOnly()) count++;
+    return count;
+  });
+
+  pagesList = computed<(number | string)[]>(() => {
+    const current = this.page();
+    const last = this.lastPage();
+    if (last <= 1) return [1];
+    if (last <= 7) {
+      return Array.from({ length: last }, (_, i) => i + 1);
+    }
+    if (current <= 3) {
+      return [1, 2, 3, 4, '…', last];
+    }
+    if (current >= last - 2) {
+      return [1, '…', last - 3, last - 2, last - 1, last];
+    }
+    return [1, '…', current - 1, current, current + 1, '…', last];
+  });
+
+  showingRange = computed(() => {
+    const total = this.total();
+    if (!total) return '0 products';
+    const start = (this.page() - 1) * this.perPage + 1;
+    const end = Math.min(this.page() * this.perPage, total);
+    return `${start}–${end} of ${total}`;
+  });
+
+  onPerPageChange(): void {
+    this.page.set(1);
+    this.load();
   }
 
   // --------------------------------------------------------------- loading

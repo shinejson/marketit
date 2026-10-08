@@ -809,6 +809,20 @@ type StorePageTab = 'home' | 'shop' | 'about' | 'contact' | string;
             <a routerLink="/" class="market-brand-link">Back to MarketHub Marketplace →</a>
           </div>
         </footer>
+
+        <!-- Floating Back to Top Button -->
+        <button
+          type="button"
+          class="float-top-btn"
+          [class.visible]="showScrollTop()"
+          (click)="scrollToTop()"
+          aria-label="Back to top"
+          title="Back to top"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 19V5M5 12l7-7 7 7"/>
+          </svg>
+        </button>
       </div>
     } @else {
       <div class="loading">
@@ -844,6 +858,7 @@ export class StoreComponent implements OnInit {
   // Navigation, Profile & Currency UI states
   profileOpen = signal(false);
   mobileMenuOpen = signal(false);
+  showScrollTop = signal(false);
 
   userInitials = computed(() => {
     const name = this.auth.user()?.name ?? '';
@@ -1074,6 +1089,19 @@ export class StoreComponent implements OnInit {
   onEscape() {
     this.closeProfile();
     this.closeMobileMenu();
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    if (typeof window !== 'undefined') {
+      this.showScrollTop.set(window.scrollY > 350);
+    }
+  }
+
+  scrollToTop(): void {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   setPage(page: StorePageTab) {

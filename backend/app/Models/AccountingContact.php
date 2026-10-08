@@ -36,4 +36,10 @@ class AccountingContact extends Model
     {
         return $this->hasMany(PurchaseOrder::class, 'vendor_id');
     }
+
+    /** Bills raised against this contact (vendor side of the relationship). */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(AccountingExpense::class, 'vendor_id');
+    }
 }

@@ -1002,11 +1002,25 @@ interface FaqItem {
           <a routerLink="/" class="back-to-market">Visit Public Market Square →</a>
         </div>
       </footer>
+
+      <!-- Floating Back to Top Button -->
+      <button
+        type="button"
+        class="float-top-btn"
+        [class.visible]="showScrollTop()"
+        (click)="scrollToTop()"
+        aria-label="Back to top"
+        title="Back to top"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 19V5M5 12l7-7 7 7"/>
+        </svg>
+      </button>
     </div>
   `,
   styles: [`
     :host { display: block; background: #fafaf7; color: #1e241f; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .saas-page { min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+    .saas-page { min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; padding-top: 72px; }
     .wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; box-sizing: border-box; width: 100%; }
     .text-center { text-align: center; }
 
@@ -1032,8 +1046,10 @@ interface FaqItem {
 
     /* SAAS TOPNAV */
     .saas-header {
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 0;
+      right: 0;
       z-index: 90;
       width: 100%;
       background: rgba(250, 250, 247, 0.96);
@@ -1386,12 +1402,69 @@ interface FaqItem {
       .nav-actions .nav-cta { display: none; }
     }
 
+    /* FLOATING BACK TO TOP BUTTON */
+    .float-top-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #1f4b3a;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 10px 25px -4px rgba(20, 48, 32, 0.38), 0 4px 10px -2px rgba(0, 0, 0, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 85;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(16px) scale(0.9);
+      transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s, background 0.15s;
+    }
+    .float-top-btn.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+    .float-top-btn:hover {
+      background: #163b2d;
+      transform: translateY(-3px) scale(1.06);
+      box-shadow: 0 14px 30px -4px rgba(20, 48, 32, 0.48), 0 6px 14px -2px rgba(0, 0, 0, 0.18);
+    }
+    .float-top-btn:active {
+      transform: translateY(0) scale(0.96);
+    }
+    .float-top-btn svg {
+      width: 20px;
+      height: 20px;
+      transition: transform 0.2s ease;
+    }
+    .float-top-btn:hover svg {
+      transform: translateY(-2px);
+    }
+    @media (max-width: 768px) {
+      .float-top-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 44px;
+        height: 44px;
+      }
+      .float-top-btn svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
     /* Anchor targets clear the sticky topnav when jumping in-page */
     .saas-page section[id] { scroll-margin-top: 88px; }
   `],
   host: {
     '(document:click)': 'onDocClick()',
     '(document:keydown.escape)': 'onEscape()',
+    '(window:scroll)': 'onWindowScroll()',
   },
 })
 export class SaasLandingComponent implements OnInit {
@@ -1405,6 +1478,7 @@ export class SaasLandingComponent implements OnInit {
   openMenu = signal<'product' | 'solutions' | null>(null);
   mobileOpen = signal(false);
   mobileGroup = signal<string | null>('product');
+  showScrollTop = signal(false);
 
   productLinks = [
     { id: 'builder', icon: '🎨', title: 'Page Builder', desc: 'Drag-and-drop visual editor — no code required' },
@@ -1420,8 +1494,26 @@ export class SaasLandingComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    if (typeof window !== 'undefined' && window.location.hash) {
-      setTimeout(() => this.scrollTo(window.location.hash), 300);
+    if (typeof window !== 'undefined') {
+      this.onWindowScroll();
+      if (window.location.hash) {
+        setTimeout(() => this.scrollTo(window.location.hash), 300);
+      }
+    }
+  }
+
+  onWindowScroll(): void {
+    if (typeof window !== 'undefined') {
+      this.showScrollTop.set(window.scrollY > 350);
+    }
+  }
+
+  scrollToTop(): void {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (window.history && window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
     }
   }
 

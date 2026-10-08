@@ -69,6 +69,8 @@ POST   /api/tenant/accounting/expenses
 POST   /api/tenant/accounting/expenses/{expense}/pay
 GET    /api/tenant/accounting/contacts
 POST   /api/tenant/accounting/contacts
+PATCH  /api/tenant/accounting/contacts/{contact}
+DELETE /api/tenant/accounting/contacts/{contact}
 GET    /api/tenant/accounting/purchase-orders
 POST   /api/tenant/accounting/purchase-orders
 PATCH  /api/tenant/accounting/purchase-orders/{purchaseOrder}

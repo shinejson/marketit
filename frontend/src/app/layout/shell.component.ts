@@ -306,6 +306,20 @@ interface ActionLink {
       </div>
     </footer>
 
+    <!-- Floating Back to Top Button -->
+    <button
+      type="button"
+      class="float-top-btn"
+      [class.visible]="showScrollTop()"
+      (click)="scrollTop()"
+      aria-label="Back to top"
+      title="Back to top"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 19V5M5 12l7-7 7 7"/>
+      </svg>
+    </button>
+
     <!-- Shared nav icon -->
     <ng-template #navIcon let-name>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -608,6 +622,7 @@ export class ShellComponent {
   private router = inject(Router);
   menuOpen = signal(false);
   profileOpen = signal(false);
+  showScrollTop = signal(false);
 
   /** Switch the storefront's display currency (persisted per browser). */
   onCurrencyChange(event: Event): void {
@@ -692,9 +707,18 @@ export class ShellComponent {
   /** Footer copyright year — rendered once so it can't drift mid-session. */
   readonly year = new Date().getFullYear();
 
-  /** "Back to top" control in the site footer. */
+  /** "Back to top" control in the site footer & floating button. */
   scrollTop(): void {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    if (typeof window !== 'undefined') {
+      this.showScrollTop.set(window.scrollY > 350);
+    }
   }
 
   toggleMenu() {

@@ -292,6 +292,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/expenses/{expense}/pay', [AccountingController::class, 'payExpense']);
             Route::get('/contacts', [AccountingController::class, 'contacts']);
             Route::post('/contacts', [AccountingController::class, 'storeContact']);
+            Route::patch('/contacts/{contact}', [AccountingController::class, 'updateContact']);
+            Route::delete('/contacts/{contact}', [AccountingController::class, 'destroyContact']);
             Route::get('/purchase-orders', [AccountingController::class, 'purchaseOrders']);
             Route::post('/purchase-orders', [AccountingController::class, 'storePurchaseOrder']);
             Route::patch('/purchase-orders/{purchaseOrder}', [AccountingController::class, 'updatePurchaseOrder']);

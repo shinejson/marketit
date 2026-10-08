@@ -101,7 +101,7 @@ class SalesSeeder extends Seeder
                 ['customer' => 3, 'lead' => null, 'title' => 'Tema Corp event catering supply', 'stage' => 'lost', 'value' => 2900.00, 'created' => 60, 'closed' => 38, 'closeIn' => -35, 'lost' => 'Chose incumbent supplier'],
             ];
 
-            $opportunities = collect($opportunityBlueprints)->map(function (array $row, int $i) use ($tenant, $ownerId, $currency, $customers) {
+            $opportunities = collect($opportunityBlueprints)->map(function (array $row, int $i) use ($tenant, $ownerId, $currency, $customers, $suffix) {
                 $closedAt = $row['closed'] !== null ? now()->subDays($row['closed']) : null;
 
                 return SalesOpportunity::withoutGlobalScopes()->create([

@@ -398,9 +398,61 @@ class AccountingController extends Controller
             'tenant_id' => $request->user()->tenantId(),
             'currency' => strtoupper($data['currency'] ?? 'USD'),
             'payment_terms' => $data['payment_terms'] ?? 30,
+            'is_active' => true,
         ]);
 
         return response()->json(['data' => $contact], 201);
+    }
+
+    /**
+     * Full profile edit for a contact. The active flag rides along so a
+     * contact that carries history (and therefore cannot be deleted) can be
+     * archived instead of removed.
+     */
+    public function updateContact(Request $request, AccountingContact $contact): JsonResponse
+    {
+        $data = $request->validate([
+            'type' => ['sometimes', Rule::in(AccountingContact::TYPES)],
+            'name' => ['sometimes', 'required', 'string', 'max:180'],
+            'email' => ['nullable', 'email', 'max:180'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'tax_id' => ['nullable', 'string', 'max:80'],
+            'address' => ['nullable', 'string', 'max:1000'],
+            'currency' => ['nullable', 'string', 'size:3'],
+            'payment_terms' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'opening_balance' => ['nullable', 'numeric'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        if (! empty($data['currency'])) {
+            $data['currency'] = strtoupper($data['currency']);
+        }
+        $contact->update($data);
+
+        return response()->json(['data' => $contact->fresh()]);
+    }
+
+    /**
+     * Invoices, bills and purchase orders reference contacts with a
+     * nullOnDelete FK — removing the row would silently orphan that audit
+     * trail, so a contact with history must be archived (is_active = false)
+     * instead. Clean contacts delete outright.
+     */
+    public function destroyContact(AccountingContact $contact): JsonResponse
+    {
+        $inUse = $contact->invoices()->exists()
+            || $contact->purchaseOrders()->exists()
+            || $contact->expenses()->exists();
+
+        if ($inUse) {
+            throw ValidationException::withMessages([
+                'contact' => 'This contact already has invoices, bills or purchase orders. Mark it inactive instead of deleting so the history stays intact.',
+            ]);
+        }
+
+        $contact->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
     }
 
     public function purchaseOrders(Request $request): JsonResponse

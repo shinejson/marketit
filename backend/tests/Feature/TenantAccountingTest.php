@@ -206,4 +206,75 @@ class TenantAccountingTest extends TestCase
             ->patchJson('/api/tenant/accounting/purchase-orders/'.$po['id'], ['status' => 'received'])
             ->assertUnprocessable();
     }
+
+    public function test_contacts_can_be_created_updated_and_deleted(): void
+    {
+        $seller = User::query()->where('email', 'seller1@markethub.test')->firstOrFail();
+
+        $contact = $this->actingAs($seller, 'sanctum')
+            ->postJson('/api/tenant/accounting/contacts', [
+                'type' => 'vendor',
+                'name' => 'Blue Ridge Supplies',
+                'email' => 'billing@blueridge.test',
+                'payment_terms' => 14,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.type', 'vendor')
+            ->assertJsonPath('data.is_active', true)
+            ->json('data');
+
+        $this->actingAs($seller, 'sanctum')
+            ->patchJson('/api/tenant/accounting/contacts/'.$contact['id'], [
+                'name' => 'Blue Ridge Supply Co',
+                'payment_terms' => 45,
+                'is_active' => false,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Blue Ridge Supply Co')
+            ->assertJsonPath('data.payment_terms', 45)
+            ->assertJsonPath('data.is_active', false);
+
+        $this->assertDatabaseHas('accounting_contacts', [
+            'id' => $contact['id'], 'name' => 'Blue Ridge Supply Co', 'is_active' => false,
+        ]);
+
+        $this->actingAs($seller, 'sanctum')
+            ->deleteJson('/api/tenant/accounting/contacts/'.$contact['id'])
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true);
+
+        $this->assertDatabaseMissing('accounting_contacts', ['id' => $contact['id']]);
+    }
+
+    public function test_contacts_with_history_are_protected_and_scoped_to_their_tenant(): void
+    {
+        $north = User::query()->where('email', 'seller1@markethub.test')->firstOrFail();
+        $kente = User::query()->where('email', 'seller2@markethub.test')->firstOrFail();
+
+        // Pick a seeded contact that already carries invoices.
+        $used = collect($this->actingAs($north, 'sanctum')
+            ->getJson('/api/tenant/accounting/contacts?per_page=100')
+            ->assertOk()
+            ->json('data'))->first(fn (array $row) => ($row['invoices_count'] ?? 0) > 0);
+        $this->assertNotNull($used);
+
+        // History keeps the row: delete is refused until it is archived instead.
+        $this->actingAs($north, 'sanctum')
+            ->deleteJson('/api/tenant/accounting/contacts/'.$used['id'])
+            ->assertUnprocessable();
+
+        $this->actingAs($north, 'sanctum')
+            ->patchJson('/api/tenant/accounting/contacts/'.$used['id'], ['is_active' => false])
+            ->assertOk()
+            ->assertJsonPath('data.is_active', false);
+
+        // Another tenant cannot see or mutate the contact at all (404 scope).
+        $this->actingAs($kente, 'sanctum')
+            ->patchJson('/api/tenant/accounting/contacts/'.$used['id'], ['name' => 'Hijacked Ltd'])
+            ->assertNotFound();
+
+        $this->actingAs($kente, 'sanctum')
+            ->deleteJson('/api/tenant/accounting/contacts/'.$used['id'])
+            ->assertNotFound();
+    }
 }

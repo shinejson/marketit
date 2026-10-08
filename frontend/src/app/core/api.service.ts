@@ -353,6 +353,14 @@ export class ApiService {
     return this.http.post<{ data: AccountingContact }>('/api/tenant/accounting/contacts', payload);
   }
 
+  updateAccountingContact(id: number, payload: Record<string, unknown>) {
+    return this.http.patch<{ data: AccountingContact }>(`/api/tenant/accounting/contacts/${id}`, payload);
+  }
+
+  deleteAccountingContact(id: number) {
+    return this.http.delete<{ data: { deleted: boolean } }>(`/api/tenant/accounting/contacts/${id}`);
+  }
+
   purchaseOrders(params: Record<string, string | number> = {}) {
     return this.http.get<Paginated<PurchaseOrder[]>>('/api/tenant/accounting/purchase-orders', { params });
   }
