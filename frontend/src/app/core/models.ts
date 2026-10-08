@@ -113,7 +113,7 @@ export interface AccountingExpense {
   category: string; description: string; expense_date: string; due_date?: string | null;
   amount: string | number; tax_amount: string | number; total: string | number;
   currency: string; status: 'draft' | 'pending' | 'paid' | 'overdue' | 'void';
-  receipt_reference?: string | null; vendor?: Pick<AccountingContact, 'id' | 'name'> | null;
+  receipt_reference?: string | null; notes?: string | null; vendor?: Pick<AccountingContact, 'id' | 'name'> | null;
 }
 
 export interface PurchaseOrder {

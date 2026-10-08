@@ -11,24 +11,25 @@ The finance department has been promoted from a read-only KPI dashboard into an 
    - Six-month cash-flow comparison, receivables aging, recent accounting activity, and quick-create actions.
 2. **Accounts receivable**
    - Multi-line invoices with dates, tax per line, discounts, notes, draft/sent/partial/paid/overdue/void lifecycle, and customer balances.
-   - Partial and full payment recording with overpayment prevention.
+   - Draft invoices can be edited or deleted; marking one sent locks the source entry. Partial and full payment recording prevents overpayment.
 3. **Cash ledger**
-   - One incoming/outgoing payment register linked back to invoices and supplier bills.
-   - Bank transfer, card, cash, mobile money, cheque, and other payment methods.
+   - One incoming/outgoing payment register linked back to invoices and supplier bills, with payment details for audit review.
+   - Bank transfer, card, cash, mobile money, cheque, and other payment methods. Posted cash movements are immutable and corrections are recorded as separate entries.
 4. **Accounts payable**
-   - Supplier bills and expenses with category, base amount, tax, due date, receipt reference, notes, and pending/overdue/paid state.
-   - Paying a bill creates an immutable outgoing payment record.
+   - Supplier bills and expenses with category, base amount, tax, due date, receipt reference, notes, and draft/pending/overdue/paid state.
+   - Draft bills can be edited or deleted; submission posts the payable. Paying a bill creates an immutable outgoing payment record.
 5. **Procurement**
-   - Reusable customers and vendors with tax and payment-term data.
-   - Multi-line purchase orders and a controlled draft → pending approval → approved → ordered → received workflow.
+   - Reusable customers and vendors with tax and payment-term data; clean contacts can be deleted while contacts with history are archived.
+   - Multi-line purchase orders with editable/deletable drafts and a controlled draft → pending approval → approved → ordered → received workflow.
    - Invalid workflow jumps are rejected by the API.
 6. **General ledger and reporting**
-   - Tenant-specific chart of accounts with protected system accounts and optional custom accounts.
+   - Tenant-specific chart of accounts with protected system accounts and optional custom accounts; custom accounts can be edited, archived, or deleted when unused.
    - Automatic balanced postings for sent invoices, customer receipts, supplier bills, and supplier payments.
-   - Manual draft or immediately posted journals with strict debit/credit equality checks.
+   - Manual draft journals can be edited or deleted before posting; posted journals are immutable and must balance.
    - Live profit and loss, balance sheet, and trial balance reports over selectable dates.
 7. **Bank reconciliation**
    - Multiple bank-account register, imported/manual statement activity, statement balances, and reconciliation progress.
+   - Unmatched statement lines can be edited or deleted; matched/excluded lines must be undone before editing or removal.
    - Exact signed-amount matching to incoming and outgoing payments, with excluded and undo workflows.
 8. **Tenant controls**
    - All accounting records carry `tenant_id`, use the existing tenant global scope, and are covered by cross-tenant feature tests.
@@ -61,26 +62,36 @@ All endpoints are under `auth:sanctum`, tenant context, and the built-in tenant 
 GET    /api/tenant/accounting/dashboard
 GET    /api/tenant/accounting/invoices
 POST   /api/tenant/accounting/invoices
-PATCH  /api/tenant/accounting/invoices/{invoice}
+GET    /api/tenant/accounting/invoices/{invoice}
+PATCH  /api/tenant/accounting/invoices/{invoice}  (draft only)
+DELETE /api/tenant/accounting/invoices/{invoice}  (draft only)
 POST   /api/tenant/accounting/invoices/{invoice}/payments
 GET    /api/tenant/accounting/payments
-GET    /api/tenant/accounting/expenses
-POST   /api/tenant/accounting/expenses
+GET    /api/tenant/accounting/payments/{payment}  (read-only detail)
+GET|POST /api/tenant/accounting/expenses
+PATCH  /api/tenant/accounting/expenses/{expense}  (draft only)
+DELETE /api/tenant/accounting/expenses/{expense}  (draft only)
 POST   /api/tenant/accounting/expenses/{expense}/pay
-GET    /api/tenant/accounting/contacts
-POST   /api/tenant/accounting/contacts
+GET|POST /api/tenant/accounting/contacts
 PATCH  /api/tenant/accounting/contacts/{contact}
 DELETE /api/tenant/accounting/contacts/{contact}
-GET    /api/tenant/accounting/purchase-orders
-POST   /api/tenant/accounting/purchase-orders
+GET|POST /api/tenant/accounting/purchase-orders
 PATCH  /api/tenant/accounting/purchase-orders/{purchaseOrder}
+DELETE /api/tenant/accounting/purchase-orders/{purchaseOrder}  (draft only)
 GET|POST /api/tenant/accounting/accounts
+PATCH  /api/tenant/accounting/accounts/{account}
+DELETE /api/tenant/accounting/accounts/{account}  (unused custom accounts only)
 GET|POST /api/tenant/accounting/journals
+PATCH  /api/tenant/accounting/journals/{journal}  (draft only)
+DELETE /api/tenant/accounting/journals/{journal}  (draft only)
 POST   /api/tenant/accounting/journals/{journal}/post
 GET    /api/tenant/accounting/reports
 GET|POST /api/tenant/accounting/bank-accounts
+PATCH  /api/tenant/accounting/bank-accounts/{bankAccount}
+DELETE /api/tenant/accounting/bank-accounts/{bankAccount}  (no statement history)
 GET|POST /api/tenant/accounting/bank-transactions
 PATCH  /api/tenant/accounting/bank-transactions/{bankTransaction}
+DELETE /api/tenant/accounting/bank-transactions/{bankTransaction}  (unmatched only)
 ```
 
 List endpoints accept `search`, `status`, `page`, and `per_page` where applicable.

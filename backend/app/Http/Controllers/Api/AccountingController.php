@@ -211,21 +211,74 @@ class AccountingController extends Controller
 
     public function updateInvoice(Request $request, AccountingInvoice $invoice): JsonResponse
     {
-        $data = $request->validate([
-            'status' => ['required', Rule::in(['draft', 'sent', 'void'])],
-        ]);
-        if ($invoice->status !== 'draft' && $data['status'] !== $invoice->status) {
-            throw ValidationException::withMessages(['status' => 'A sent invoice cannot be changed without a credit-note workflow.']);
+        if ($invoice->status !== 'draft') {
+            throw ValidationException::withMessages(['invoice' => 'Only draft invoices can be edited. Sent invoices are audit-locked.']);
         }
-        if ($data['status'] === 'void' && (float) $invoice->amount_paid > 0) {
-            throw ValidationException::withMessages(['status' => 'An invoice with payments cannot be voided.']);
+        if ($invoice->payments()->exists() || (float) $invoice->amount_paid > 0) {
+            throw ValidationException::withMessages(['invoice' => 'An invoice with payments cannot be edited.']);
         }
 
-        $invoice->update([
-            'status' => $data['status'],
-            'sent_at' => $data['status'] === 'sent' ? ($invoice->sent_at ?? now()) : $invoice->sent_at,
+        $tenantId = (int) $request->user()->tenantId();
+        $data = $request->validate([
+            'status' => ['sometimes', 'required', Rule::in(['draft', 'sent'])],
+            'contact_id' => ['sometimes', 'nullable', Rule::exists('accounting_contacts', 'id')->where('tenant_id', $tenantId)],
+            'customer_name' => ['sometimes', 'required', 'string', 'max:180'],
+            'customer_email' => ['sometimes', 'nullable', 'email', 'max:180'],
+            'issue_date' => ['sometimes', 'required', 'date'],
+            'due_date' => ['sometimes', 'required', 'date'],
+            'currency' => ['sometimes', 'nullable', 'string', 'size:3'],
+            'discount_total' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:3000'],
+            'items' => ['sometimes', 'required', 'array', 'min:1', 'max:100'],
+            'items.*.description' => ['required_with:items', 'string', 'max:255'],
+            'items.*.quantity' => ['required_with:items', 'numeric', 'gt:0'],
+            'items.*.unit_price' => ['required_with:items', 'numeric', 'min:0'],
+            'items.*.tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
-        if ($data['status'] === 'sent') {
+
+        $issueDate = $data['issue_date'] ?? $invoice->issue_date->toDateString();
+        $dueDate = $data['due_date'] ?? $invoice->due_date->toDateString();
+        if ($dueDate < $issueDate) {
+            throw ValidationException::withMessages(['due_date' => 'The due date must be on or after the issue date.']);
+        }
+
+        $itemsChanged = array_key_exists('items', $data);
+        if ($itemsChanged) {
+            [$subtotal, $tax, $items] = $this->lineTotals($data['items'], 'unit_price');
+        } else {
+            $subtotal = (float) $invoice->subtotal;
+            $tax = (float) $invoice->tax_total;
+            $items = [];
+        }
+        $discount = min((float) ($data['discount_total'] ?? $invoice->discount_total), $subtotal + $tax);
+        $total = round($subtotal + $tax - $discount, 2);
+        $status = $data['status'] ?? 'draft';
+
+        DB::transaction(function () use ($invoice, $data, $itemsChanged, $items, $subtotal, $tax, $discount, $total, $status) {
+            $attributes = array_intersect_key($data, array_flip([
+                'contact_id', 'customer_name', 'customer_email', 'issue_date', 'due_date', 'currency', 'notes',
+            ]));
+            if (! empty($attributes['currency'])) {
+                $attributes['currency'] = strtoupper($attributes['currency']);
+            }
+            $invoice->update([
+                ...$attributes,
+                'discount_total' => $discount,
+                'subtotal' => $subtotal,
+                'tax_total' => $tax,
+                'total' => $total,
+                'amount_paid' => 0,
+                'balance_due' => $total,
+                'status' => $status,
+                'sent_at' => $status === 'sent' ? ($invoice->sent_at ?? now()) : $invoice->sent_at,
+            ]);
+            if ($itemsChanged) {
+                $invoice->items()->delete();
+                $invoice->items()->createMany($items);
+            }
+        });
+
+        if ($status === 'sent') {
             $this->posting->postInvoice($invoice->fresh(), $request->user()->id);
         }
 
@@ -286,9 +339,21 @@ class AccountingController extends Controller
         $query = AccountingPayment::query()
             ->with(['invoice:id,number,customer_name', 'expense:id,number,vendor_name,description'])
             ->latest('paid_on');
-        $this->applySearchAndStatus($query, $request, ['reference', 'method'], 'direction');
+        $this->applySearchAndStatus($query, $request, ['reference', 'method'], 'direction', false);
+        if ($direction = $request->string('direction')->trim()->toString()) {
+            $query->where('direction', $direction);
+        }
 
         return $this->paginated($query, $request);
+    }
+
+    /** Cash movements are immutable after posting; this endpoint supports the ledger detail view. */
+    public function showPayment(AccountingPayment $payment): JsonResponse
+    {
+        return response()->json(['data' => $payment->load([
+            'invoice:id,number,customer_name,customer_email,total,amount_paid,balance_due,currency',
+            'expense:id,number,vendor_name,description,total,currency,status',
+        ])]);
     }
 
     public function expenses(Request $request): JsonResponse
@@ -347,6 +412,69 @@ class AccountingController extends Controller
         return response()->json(['data' => $expense->load('vendor:id,name')], 201);
     }
 
+    /** Only unposted draft bills are editable; posted payables remain audit-safe. */
+    public function updateExpense(Request $request, AccountingExpense $expense): JsonResponse
+    {
+        if ($expense->status !== 'draft' || $expense->payments()->exists()) {
+            throw ValidationException::withMessages(['expense' => 'Only unpaid draft bills can be edited.']);
+        }
+
+        $tenantId = (int) $request->user()->tenantId();
+        $data = $request->validate([
+            'vendor_id' => ['sometimes', 'nullable', Rule::exists('accounting_contacts', 'id')->where('tenant_id', $tenantId)],
+            'vendor_name' => ['sometimes', 'nullable', 'string', 'max:180'],
+            'category' => ['sometimes', 'required', Rule::in(AccountingExpense::CATEGORIES)],
+            'description' => ['sometimes', 'required', 'string', 'max:255'],
+            'expense_date' => ['sometimes', 'required', 'date'],
+            'due_date' => ['sometimes', 'nullable', 'date'],
+            'amount' => ['sometimes', 'required', 'numeric', 'gt:0'],
+            'tax_amount' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'currency' => ['sometimes', 'nullable', 'string', 'size:3'],
+            'status' => ['sometimes', Rule::in(['draft', 'pending'])],
+            'receipt_reference' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
+        ]);
+
+        $expenseDate = $data['expense_date'] ?? $expense->expense_date->toDateString();
+        $dueDate = $data['due_date'] ?? $expense->due_date?->toDateString();
+        if ($dueDate && $dueDate < $expenseDate) {
+            throw ValidationException::withMessages(['due_date' => 'The due date must be on or after the expense date.']);
+        }
+        $amount = (float) ($data['amount'] ?? $expense->amount);
+        $tax = round((float) ($data['tax_amount'] ?? $expense->tax_amount), 2);
+        $attributes = array_intersect_key($data, array_flip([
+            'vendor_id', 'vendor_name', 'category', 'description', 'expense_date', 'due_date', 'currency', 'receipt_reference', 'notes',
+        ]));
+        if (! empty($attributes['currency'])) {
+            $attributes['currency'] = strtoupper($attributes['currency']);
+        }
+
+        $status = $data['status'] ?? 'draft';
+        $expense->update([
+            ...$attributes,
+            'amount' => round($amount, 2),
+            'tax_amount' => $tax,
+            'total' => round($amount + $tax, 2),
+            'status' => $status,
+        ]);
+        if ($status === 'pending') {
+            $this->posting->postExpense($expense->fresh(), $request->user()->id);
+        }
+
+        return response()->json(['data' => $expense->fresh()->load('vendor:id,name')]);
+    }
+
+    public function destroyExpense(AccountingExpense $expense): JsonResponse
+    {
+        if ($expense->status !== 'draft' || $expense->payments()->exists()) {
+            throw ValidationException::withMessages(['expense' => 'Only unpaid draft bills can be deleted. Submitted bills must stay in the accounting history.']);
+        }
+
+        $expense->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
+    }
+
     public function payExpense(Request $request, AccountingExpense $expense): JsonResponse
     {
         if (in_array($expense->status, ['paid', 'void'], true)) {
@@ -356,11 +484,12 @@ class AccountingController extends Controller
             'paid_on' => ['required', 'date'],
             'method' => ['required', Rule::in(AccountingPayment::METHODS)],
             'reference' => ['nullable', 'string', 'max:60'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $payment = DB::transaction(function () use ($expense, $data, $request) {
             $expense->update(['status' => 'paid', 'paid_at' => now()]);
-            return $this->createExpensePayment($expense, $request->user()->id, $data['method'], $data['paid_on'], $data['reference'] ?? null);
+            return $this->createExpensePayment($expense, $request->user()->id, $data['method'], $data['paid_on'], $data['reference'] ?? null, $data['notes'] ?? null);
         });
 
         $this->posting->postExpense($expense->fresh(), $request->user()->id);
@@ -508,20 +637,86 @@ class AccountingController extends Controller
 
     public function updatePurchaseOrder(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
     {
-        $data = $request->validate(['status' => ['required', Rule::in(PurchaseOrder::STATUSES)]]);
-        if (! $purchaseOrder->canTransitionTo($data['status'])) {
-            throw ValidationException::withMessages(['status' => "Cannot move {$purchaseOrder->status} purchase order to {$data['status']}."]);
+        $tenantId = (int) $request->user()->tenantId();
+        $data = $request->validate([
+            'status' => ['sometimes', 'required', Rule::in(PurchaseOrder::STATUSES)],
+            'vendor_id' => ['sometimes', 'nullable', Rule::exists('accounting_contacts', 'id')->where('tenant_id', $tenantId)],
+            'vendor_name' => ['sometimes', 'required', 'string', 'max:180'],
+            'order_date' => ['sometimes', 'required', 'date'],
+            'expected_date' => ['sometimes', 'nullable', 'date'],
+            'currency' => ['sometimes', 'nullable', 'string', 'size:3'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:3000'],
+            'submit_for_approval' => ['sometimes', 'boolean'],
+            'items' => ['sometimes', 'required', 'array', 'min:1', 'max:100'],
+            'items.*.description' => ['required_with:items', 'string', 'max:255'],
+            'items.*.sku' => ['nullable', 'string', 'max:100'],
+            'items.*.quantity' => ['required_with:items', 'numeric', 'gt:0'],
+            'items.*.unit_cost' => ['required_with:items', 'numeric', 'min:0'],
+            'items.*.tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $contentKeys = ['vendor_id', 'vendor_name', 'order_date', 'expected_date', 'currency', 'notes', 'items', 'submit_for_approval'];
+        $hasContentChanges = count(array_intersect($contentKeys, array_keys($data))) > 0;
+        if ($hasContentChanges && $purchaseOrder->status !== 'draft') {
+            throw ValidationException::withMessages(['purchase_order' => 'Only draft purchase orders can be edited. Return the request to draft before making changes.']);
         }
-        $updates = ['status' => $data['status']];
-        if ($data['status'] === 'approved') {
-            $updates += ['approved_by' => $request->user()->id, 'approved_at' => now()];
+
+        $expectedDate = $data['expected_date'] ?? $purchaseOrder->expected_date?->toDateString();
+        $orderDate = $data['order_date'] ?? $purchaseOrder->order_date->toDateString();
+        if ($expectedDate && $expectedDate < $orderDate) {
+            throw ValidationException::withMessages(['expected_date' => 'The expected date must be on or after the order date.']);
         }
-        if ($data['status'] === 'received') {
-            $updates += ['received_at' => now()];
+
+        $itemsChanged = array_key_exists('items', $data);
+        if ($itemsChanged) {
+            [$subtotal, $tax, $items] = $this->lineTotals($data['items'], 'unit_cost');
+        } else {
+            $subtotal = (float) $purchaseOrder->subtotal;
+            $tax = (float) $purchaseOrder->tax_total;
+            $items = [];
         }
-        $purchaseOrder->update($updates);
+        $targetStatus = $data['status'] ?? (! empty($data['submit_for_approval']) ? 'pending_approval' : null);
+        if ($targetStatus && $targetStatus !== $purchaseOrder->status && ! $purchaseOrder->canTransitionTo($targetStatus)) {
+            throw ValidationException::withMessages(['status' => "Cannot move {$purchaseOrder->status} purchase order to {$targetStatus}."]);
+        }
+
+        $attributes = array_intersect_key($data, array_flip([
+            'vendor_id', 'vendor_name', 'order_date', 'expected_date', 'currency', 'notes',
+        ]));
+        if (! empty($attributes['currency'])) {
+            $attributes['currency'] = strtoupper($attributes['currency']);
+        }
+        $updates = [...$attributes, 'subtotal' => $subtotal, 'tax_total' => $tax, 'total' => round($subtotal + $tax, 2)];
+        if ($targetStatus) {
+            $updates['status'] = $targetStatus;
+            if ($targetStatus === 'approved') {
+                $updates += ['approved_by' => $request->user()->id, 'approved_at' => now()];
+            }
+            if ($targetStatus === 'received') {
+                $updates['received_at'] = now();
+            }
+        }
+
+        DB::transaction(function () use ($purchaseOrder, $updates, $itemsChanged, $items) {
+            $purchaseOrder->update($updates);
+            if ($itemsChanged) {
+                $purchaseOrder->items()->delete();
+                $purchaseOrder->items()->createMany($items);
+            }
+        });
 
         return response()->json(['data' => $purchaseOrder->fresh()->load(['vendor:id,name,email', 'items'])]);
+    }
+
+    public function destroyPurchaseOrder(PurchaseOrder $purchaseOrder): JsonResponse
+    {
+        if ($purchaseOrder->status !== 'draft') {
+            throw ValidationException::withMessages(['purchase_order' => 'Only draft purchase orders can be deleted. Move the order through its workflow or cancel it to preserve its history.']);
+        }
+
+        $purchaseOrder->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
     }
 
     private function lineTotals(array $rows, string $priceKey): array
@@ -546,7 +741,7 @@ class AccountingController extends Controller
         return [round($subtotal, 2), round($tax, 2), $items];
     }
 
-    private function createExpensePayment(AccountingExpense $expense, int $userId, string $method, string $paidOn, ?string $reference = null): AccountingPayment
+    private function createExpensePayment(AccountingExpense $expense, int $userId, string $method, string $paidOn, ?string $reference = null, ?string $notes = null): AccountingPayment
     {
         return AccountingPayment::query()->create([
             'tenant_id' => $expense->tenant_id,
@@ -558,6 +753,7 @@ class AccountingController extends Controller
             'amount' => $expense->total,
             'currency' => $expense->currency,
             'paid_on' => $paidOn,
+            'notes' => $notes,
         ]);
     }
 
