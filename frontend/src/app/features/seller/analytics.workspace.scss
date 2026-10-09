@@ -8,7 +8,8 @@
 // Full tenant reporting workspace (/tenant/reports).
 // Matches the multi-category accordion sidebar, 2-column filter grid,
 // scrollable options/columns selectors, help guide, KPI cards, and print/PDF export.
-app-seller-analytics {
+app-seller-analytics,
+app-admin-reports {
   @include kit.base;
 
   .reports-hub-shell {

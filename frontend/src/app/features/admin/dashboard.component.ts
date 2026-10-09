@@ -19,6 +19,9 @@ import { MoneyPipe } from '../../shared/money.pipe';
         @for (r of ranges; track r) {
           <button type="button" class="tab" [class.on]="days() === r" (click)="setRange(r)">{{ r }}d</button>
         }
+        <a routerLink="/admin/reports" class="tab" style="display:inline-flex; align-items:center; gap:5px; text-decoration:none;" title="Open Super Admin Report Center">
+          <span aria-hidden="true">📊</span> Reports
+        </a>
       </div>
     </header>
 

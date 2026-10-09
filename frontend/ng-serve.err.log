@@ -8,3 +8,570 @@ computer. Using a different host than the one passed to the "--host" flag might 
 websocket connection issues. You might need to use "--disable-host-check" if that's the
 case.
     
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:68:55:
+[37m      68 │ ...      <div class="nav-group-wrapper" [class.open]="[32mtenantsOpen[37m()">
+         ╵                                                       [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:72:28:
+[37m      72 │               [class.open]="[32mtenantsOpen[37m()"
+         ╵                             [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:75:36:
+[37m      75 │               [attr.aria-expanded]="[32mtenantsOpen[37m()"
+         ╵                                     [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:73:23:
+[37m      73 │               (click)="[32mtoggleSection[37m('tenants')"
+         ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:84:46:
+[37m      84 │             <div class="subnav" [class.open]="[32mtenantsOpen[37m()">
+         ╵                                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsItems' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:86:28:
+[37m      86 │               @for (item of [32mtenantsItems[37m; track item.key) {
+         ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:97:55:
+[37m      97 │ ...     <div class="nav-group-wrapper" [class.open]="[32mcommerceOpen[37m()">
+         ╵                                                      [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:101:28:
+[37m      101 │               [class.open]="[32mcommerceOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:104:36:
+[37m      104 │               [attr.aria-expanded]="[32mcommerceOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:102:23:
+[37m      102 │               (click)="[32mtoggleSection[37m('commerce')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:113:46:
+[37m      113 │             <div class="subnav" [class.open]="[32mcommerceOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:126:55:
+[37m      126 │ ...     <div class="nav-group-wrapper" [class.open]="[32mfinanceOpen[37m()">
+          ╵                                                      [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:130:28:
+[37m      130 │               [class.open]="[32mfinanceOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:133:36:
+[37m      133 │               [attr.aria-expanded]="[32mfinanceOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:131:23:
+[37m      131 │               (click)="[32mtoggleSection[37m('finance')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:142:46:
+[37m      142 │             <div class="subnav" [class.open]="[32mfinanceOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeItems' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:144:28:
+[37m      144 │               @for (item of [32mfinanceItems[37m; track item.key) {
+          ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:155:55:
+[37m      155 │ ...     <div class="nav-group-wrapper" [class.open]="[32msupportOpen[37m()">
+          ╵                                                      [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:159:28:
+[37m      159 │               [class.open]="[32msupportOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:162:36:
+[37m      162 │               [attr.aria-expanded]="[32msupportOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:160:23:
+[37m      160 │               (click)="[32mtoggleSection[37m('support')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:171:46:
+[37m      171 │             <div class="subnav" [class.open]="[32msupportOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:184:72:
+[37m      184 │ ...av-group-wrapper nav-group-bottom" [class.open]="[32mplatformOpen[37m()">
+          ╵                                                     [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:188:28:
+[37m      188 │               [class.open]="[32mplatformOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:191:36:
+[37m      191 │               [attr.aria-expanded]="[32mplatformOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:189:23:
+[37m      189 │               (click)="[32mtoggleSection[37m('platform')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:200:46:
+[37m      200 │             <div class="subnav" [class.open]="[32mplatformOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:68:55:
+[37m      68 │ ...      <div class="nav-group-wrapper" [class.open]="[32mtenantsOpen[37m()">
+         ╵                                                       [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:72:28:
+[37m      72 │               [class.open]="[32mtenantsOpen[37m()"
+         ╵                             [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:75:36:
+[37m      75 │               [attr.aria-expanded]="[32mtenantsOpen[37m()"
+         ╵                                     [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:73:23:
+[37m      73 │               (click)="[32mtoggleSection[37m('tenants')"
+         ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:84:46:
+[37m      84 │             <div class="subnav" [class.open]="[32mtenantsOpen[37m()">
+         ╵                                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsItems' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:86:28:
+[37m      86 │               @for (item of [32mtenantsItems[37m; track item.key) {
+         ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:97:55:
+[37m      97 │ ...     <div class="nav-group-wrapper" [class.open]="[32mcommerceOpen[37m()">
+         ╵                                                      [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:101:28:
+[37m      101 │               [class.open]="[32mcommerceOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:104:36:
+[37m      104 │               [attr.aria-expanded]="[32mcommerceOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:102:23:
+[37m      102 │               (click)="[32mtoggleSection[37m('commerce')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:113:46:
+[37m      113 │             <div class="subnav" [class.open]="[32mcommerceOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:126:55:
+[37m      126 │ ...     <div class="nav-group-wrapper" [class.open]="[32mfinanceOpen[37m()">
+          ╵                                                      [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:130:28:
+[37m      130 │               [class.open]="[32mfinanceOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:133:36:
+[37m      133 │               [attr.aria-expanded]="[32mfinanceOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:131:23:
+[37m      131 │               (click)="[32mtoggleSection[37m('finance')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:142:46:
+[37m      142 │             <div class="subnav" [class.open]="[32mfinanceOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeItems' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:144:28:
+[37m      144 │               @for (item of [32mfinanceItems[37m; track item.key) {
+          ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:155:55:
+[37m      155 │ ...     <div class="nav-group-wrapper" [class.open]="[32msupportOpen[37m()">
+          ╵                                                      [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:159:28:
+[37m      159 │               [class.open]="[32msupportOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:162:36:
+[37m      162 │               [attr.aria-expanded]="[32msupportOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:160:23:
+[37m      160 │               (click)="[32mtoggleSection[37m('support')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:171:46:
+[37m      171 │             <div class="subnav" [class.open]="[32msupportOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:184:72:
+[37m      184 │ ...av-group-wrapper nav-group-bottom" [class.open]="[32mplatformOpen[37m()">
+          ╵                                                     [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:188:28:
+[37m      188 │               [class.open]="[32mplatformOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:191:36:
+[37m      191 │               [attr.aria-expanded]="[32mplatformOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:189:23:
+[37m      189 │               (click)="[32mtoggleSection[37m('platform')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:200:46:
+[37m      200 │             <div class="subnav" [class.open]="[32mplatformOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:70:55:
+[37m      70 │ ...      <div class="nav-group-wrapper" [class.open]="[32mtenantsOpen[37m()">
+         ╵                                                       [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:74:28:
+[37m      74 │               [class.open]="[32mtenantsOpen[37m()"
+         ╵                             [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:77:36:
+[37m      77 │               [attr.aria-expanded]="[32mtenantsOpen[37m()"
+         ╵                                     [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:75:23:
+[37m      75 │               (click)="[32mtoggleSection[37m('tenants')"
+         ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:86:46:
+[37m      86 │             <div class="subnav" [class.open]="[32mtenantsOpen[37m()">
+         ╵                                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tenantsItems' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:88:28:
+[37m      88 │               @for (item of [32mtenantsItems[37m; track item.key) {
+         ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:99:55:
+[37m      99 │ ...     <div class="nav-group-wrapper" [class.open]="[32mcommerceOpen[37m()">
+         ╵                                                      [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:103:28:
+[37m      103 │               [class.open]="[32mcommerceOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:106:36:
+[37m      106 │               [attr.aria-expanded]="[32mcommerceOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:104:23:
+[37m      104 │               (click)="[32mtoggleSection[37m('commerce')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'commerceOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:115:46:
+[37m      115 │             <div class="subnav" [class.open]="[32mcommerceOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:128:55:
+[37m      128 │ ...     <div class="nav-group-wrapper" [class.open]="[32mfinanceOpen[37m()">
+          ╵                                                      [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:132:28:
+[37m      132 │               [class.open]="[32mfinanceOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:135:36:
+[37m      135 │               [attr.aria-expanded]="[32mfinanceOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:133:23:
+[37m      133 │               (click)="[32mtoggleSection[37m('finance')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:144:46:
+[37m      144 │             <div class="subnav" [class.open]="[32mfinanceOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'financeItems' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:146:28:
+[37m      146 │               @for (item of [32mfinanceItems[37m; track item.key) {
+          ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:157:55:
+[37m      157 │ ...     <div class="nav-group-wrapper" [class.open]="[32msupportOpen[37m()">
+          ╵                                                      [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:161:28:
+[37m      161 │               [class.open]="[32msupportOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:164:36:
+[37m      164 │               [attr.aria-expanded]="[32msupportOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:162:23:
+[37m      162 │               (click)="[32mtoggleSection[37m('support')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'supportOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:173:46:
+[37m      173 │             <div class="subnav" [class.open]="[32msupportOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:186:72:
+[37m      186 │ ...av-group-wrapper nav-group-bottom" [class.open]="[32mplatformOpen[37m()">
+          ╵                                                     [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:190:28:
+[37m      190 │               [class.open]="[32mplatformOpen[37m()"
+          ╵                             [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:193:36:
+[37m      193 │               [attr.aria-expanded]="[32mplatformOpen[37m()"
+          ╵                                     [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'toggleSection' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:191:23:
+[37m      191 │               (click)="[32mtoggleSection[37m('platform')"
+          ╵                        [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'platformOpen' does not exist on type 'AdminShellComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/layout/admin-shell.component.ts:202:46:
+[37m      202 │             <div class="subnav" [class.open]="[32mplatformOpen[37m()">
+          ╵                                               [32m~~~~~~~~~~~~[0m
+
+

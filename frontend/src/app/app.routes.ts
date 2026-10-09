@@ -129,24 +129,28 @@ export const routes: Routes = [
   {
     path: 'tenant',
     canActivate: [roleGuard('tenant_owner', 'store_staff')],
+    canActivateChild: [roleGuard('tenant_owner', 'store_staff')],
     loadComponent: () => import('./layout/seller-shell.component').then((m) => m.SellerShellComponent),
     children: tenantConsoleChildren,
   },
   {
     path: 'tenants',
     canActivate: [roleGuard('tenant_owner', 'store_staff')],
+    canActivateChild: [roleGuard('tenant_owner', 'store_staff')],
     loadComponent: () => import('./layout/seller-shell.component').then((m) => m.SellerShellComponent),
     children: tenantConsoleChildren,
   },
   {
     path: 'seller',
     canActivate: [roleGuard('tenant_owner', 'store_staff')],
+    canActivateChild: [roleGuard('tenant_owner', 'store_staff')],
     loadComponent: () => import('./layout/seller-shell.component').then((m) => m.SellerShellComponent),
     children: tenantConsoleChildren,
   },
   {
     path: 'admin',
     canActivate: [roleGuard('super_admin')],
+    canActivateChild: [roleGuard('super_admin')],
     loadComponent: () => import('./layout/admin-shell.component').then((m) => m.AdminShellComponent),
     children: [
       { path: '', loadComponent: () => import('./features/admin/dashboard.component').then((m) => m.AdminDashboardComponent) },
@@ -175,6 +179,7 @@ export const routes: Routes = [
       { path: 'audit', loadComponent: () => import('./features/admin/audit.component').then((m) => m.AdminAuditComponent) },
       { path: 'logs', redirectTo: 'audit', pathMatch: 'full' },
       { path: 'analytics', loadComponent: () => import('./features/admin/analytics.component').then((m) => m.AdminAnalyticsComponent) },
+      { path: 'reports', loadComponent: () => import('./features/admin/reports.component').then((m) => m.AdminReportsComponent) },
       { path: 'domains', loadComponent: () => import('./features/admin/domains.component').then((m) => m.AdminDomainsComponent) },
       { path: 'ads', loadComponent: () => import('./features/admin/ads.component').then((m) => m.AdminAdsComponent) },
       {

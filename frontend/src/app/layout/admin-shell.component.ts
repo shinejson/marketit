@@ -8,7 +8,7 @@ import { CurrencyService } from '../core/currency.service';
 import { ThemeService } from '../core/theme.service';
 
 type IconName =
-  | 'dashboard' | 'analytics' | 'tenants' | 'stores' | 'store' | 'users' | 'subscriptions' | 'orders'
+  | 'dashboard' | 'analytics' | 'reports' | 'tenants' | 'stores' | 'store' | 'users' | 'subscriptions' | 'orders'
   | 'domains' | 'ads' | 'audit' | 'settings' | 'shield' | 'logout' | 'search' | 'bell'
   | 'sun' | 'moon' | 'chevron' | 'menu'
   | 'lifebuoy' | 'ticket' | 'chat' | 'tasks' | 'guides'
@@ -30,6 +30,8 @@ interface SearchEntry {
 
 const SIDEBAR_KEY = 'mh_admin_sidebar_collapsed';
 const MOBILE_BREAKPOINT = 900;
+
+type AdminSidebarSection = 'tenants' | 'commerce' | 'finance' | 'support' | 'platform';
 
 @Component({
   selector: 'app-admin-shell',
@@ -63,39 +65,150 @@ const MOBILE_BREAKPOINT = 900;
             </a>
           }
 
-          <p class="section-label label-text">Manage</p>
-          @for (m of manageItems; track m.key) {
-            <a [routerLink]="adminLink(m.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? m.label : ''">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: m.icon }" />
-              <span class="label-text">{{ m.label }}</span>
-            </a>
-          }
+          <!-- Tenants & Accounts Group -->
+          <p class="section-label label-text">Tenants &amp; Accounts</p>
+          <div class="nav-group-wrapper" [class.open]="tenantsOpen()">
+            <button
+              type="button"
+              class="nav-group"
+              [class.open]="tenantsOpen()"
+              (click)="toggleSection('tenants')"
+              aria-label="Toggle tenants and accounts menu"
+              [attr.aria-expanded]="tenantsOpen()"
+              [title]="collapsed() ? 'Tenants & Accounts' : ''"
+            >
+              <span class="nav-group-copy">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'tenants' }" />
+                <span class="label-text">Tenants &amp; Accounts</span>
+              </span>
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+            </button>
+            <div class="subnav" [class.open]="tenantsOpen()">
+              <div class="flyout-header">Tenants &amp; Accounts</div>
+              @for (item of tenantsItems; track item.key) {
+                <a [routerLink]="adminLink(item.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
+                  <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
+                  <span>{{ item.label }}</span>
+                </a>
+              }
+            </div>
+          </div>
 
-          @if (commerceItems.length) {
-            <p class="section-label label-text">Commerce</p>
-            @for (c of commerceItems; track c.key) {
-              <a [routerLink]="adminLink(c.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? c.label : ''">
-                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: c.icon }" />
-                <span class="label-text">{{ c.label }}</span>
-              </a>
-            }
-          }
+          <!-- Marketplace Commerce Group -->
+          <p class="section-label label-text">Commerce &amp; Catalog</p>
+          <div class="nav-group-wrapper" [class.open]="commerceOpen()">
+            <button
+              type="button"
+              class="nav-group"
+              [class.open]="commerceOpen()"
+              (click)="toggleSection('commerce')"
+              aria-label="Toggle commerce and catalog menu"
+              [attr.aria-expanded]="commerceOpen()"
+              [title]="collapsed() ? 'Commerce & Catalog' : ''"
+            >
+              <span class="nav-group-copy">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'catalog' }" />
+                <span class="label-text">Commerce &amp; Catalog</span>
+              </span>
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+            </button>
+            <div class="subnav" [class.open]="commerceOpen()">
+              <div class="flyout-header">Commerce &amp; Catalog</div>
+              @for (item of commerceItems; track item.key) {
+                <a [routerLink]="adminLink(item.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
+                  <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
+                  <span>{{ item.label }}</span>
+                </a>
+              }
+            </div>
+          </div>
 
-          <p class="section-label label-text">Service desk</p>
-          @for (s of supportItems; track s.key) {
-            <a [routerLink]="adminLink(s.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: !!s.exact }" (click)="onNavigate()" [title]="collapsed() ? s.label : ''">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: s.icon }" />
-              <span class="label-text">{{ s.label }}</span>
-            </a>
-          }
+          <!-- Finance & Settlements Group -->
+          <p class="section-label label-text">Finance &amp; Payouts</p>
+          <div class="nav-group-wrapper" [class.open]="financeOpen()">
+            <button
+              type="button"
+              class="nav-group"
+              [class.open]="financeOpen()"
+              (click)="toggleSection('finance')"
+              aria-label="Toggle finance and payouts menu"
+              [attr.aria-expanded]="financeOpen()"
+              [title]="collapsed() ? 'Finance & Payouts' : ''"
+            >
+              <span class="nav-group-copy">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'payout' }" />
+                <span class="label-text">Finance &amp; Payouts</span>
+              </span>
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+            </button>
+            <div class="subnav" [class.open]="financeOpen()">
+              <div class="flyout-header">Finance &amp; Payouts</div>
+              @for (item of financeItems; track item.key) {
+                <a [routerLink]="adminLink(item.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
+                  <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
+                  <span>{{ item.label }}</span>
+                </a>
+              }
+            </div>
+          </div>
 
-          <p class="section-label label-text">Platform</p>
-          @for (p of platformItems; track p.key) {
-            <a [routerLink]="adminLink(p.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? p.label : ''">
-              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: p.icon }" />
-              <span class="label-text">{{ p.label }}</span>
-            </a>
-          }
+          <!-- Service Desk Group -->
+          <p class="section-label label-text">Service Desk</p>
+          <div class="nav-group-wrapper" [class.open]="supportOpen()">
+            <button
+              type="button"
+              class="nav-group"
+              [class.open]="supportOpen()"
+              (click)="toggleSection('support')"
+              aria-label="Toggle service desk menu"
+              [attr.aria-expanded]="supportOpen()"
+              [title]="collapsed() ? 'Service Desk' : ''"
+            >
+              <span class="nav-group-copy">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'lifebuoy' }" />
+                <span class="label-text">Service Desk</span>
+              </span>
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+            </button>
+            <div class="subnav" [class.open]="supportOpen()">
+              <div class="flyout-header">Service Desk</div>
+              @for (item of supportItems; track item.key) {
+                <a [routerLink]="adminLink(item.key)" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: !!item.exact }" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
+                  <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
+                  <span>{{ item.label }}</span>
+                </a>
+              }
+            </div>
+          </div>
+
+          <!-- Platform & Governance Group -->
+          <p class="section-label label-text">Platform &amp; Governance</p>
+          <div class="nav-group-wrapper nav-group-bottom" [class.open]="platformOpen()">
+            <button
+              type="button"
+              class="nav-group"
+              [class.open]="platformOpen()"
+              (click)="toggleSection('platform')"
+              aria-label="Toggle platform governance menu"
+              [attr.aria-expanded]="platformOpen()"
+              [title]="collapsed() ? 'Platform & Governance' : ''"
+            >
+              <span class="nav-group-copy">
+                <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'settings' }" />
+                <span class="label-text">Platform &amp; Governance</span>
+              </span>
+              <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'chevron' }" />
+            </button>
+            <div class="subnav" [class.open]="platformOpen()">
+              <div class="flyout-header">Platform &amp; Governance</div>
+              @for (item of platformItems; track item.key) {
+                <a [routerLink]="adminLink(item.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? item.label : ''">
+                  <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: item.icon }" />
+                  <span>{{ item.label }}</span>
+                </a>
+              }
+            </div>
+          </div>
         </nav>
 
         <button class="btn ghost logout" (click)="auth.logout()" [title]="collapsed() ? 'Log out' : ''">
@@ -226,6 +339,9 @@ const MOBILE_BREAKPOINT = 900;
           }
           @case ('analytics') {
             <line x1="4" y1="20" x2="20" y2="20" /><rect x="6" y="11" width="3" height="7" /><rect x="13" y="7" width="3" height="11" /><rect x="17.5" y="13" width="3" height="5" />
+          }
+          @case ('reports') {
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><line x1="10" y1="9" x2="8" y2="9" />
           }
           @case ('tenants') {
             <path d="M3 9l1.5-5h15L21 9" /><path d="M5 9v11h14V9" /><path d="M9.5 20v-5.5h5V20" />
@@ -385,6 +501,39 @@ const MOBILE_BREAKPOINT = 900;
     nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
     nav a.on { background: var(--accent); color: #fff; }
     nav a.on svg { opacity: 1; }
+
+    .nav-group-wrapper { position: relative; width: 100%; }
+    .nav-group {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 9px 12px; border: 0; border-radius: 12px; background: transparent; color: #dfd7c9;
+      font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+      transition: background .15s ease, color .15s ease;
+    }
+    .nav-group:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .nav-group-copy { display: flex; align-items: center; gap: 11px; }
+    .nav-group svg { width: 18px; height: 18px; flex: none; opacity: .88; }
+    .nav-group > svg { width: 13px; height: 13px; transition: transform .18s ease; opacity: .7; }
+    .nav-group.open > svg { transform: rotate(180deg); }
+    .subnav {
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      margin: 2px 0 6px 16px;
+      padding-left: 12px;
+      border-left: 1px solid rgba(255,255,255,.14);
+    }
+    .subnav.open { display: flex; }
+    .flyout-header { display: none; }
+    .subnav a {
+      min-height: 32px; padding: 7px 10px; gap: 9px; border-radius: 10px;
+      color: #b8af9f; font-size: 13px; font-weight: 500; display: flex; align-items: center;
+      text-decoration: none; transition: background .15s ease, color .15s ease;
+    }
+    .subnav a:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .subnav a.on { background: var(--accent); color: #fff; font-weight: 600; }
+    .subnav a.on svg { opacity: 1; }
+    .subnav a svg { width: 15px; height: 15px; flex: none; opacity: .8; }
+
     .logout {
       display: flex; align-items: center; gap: 10px; justify-content: flex-start;
       background: transparent; color: #dfd7c9; border: 1px solid rgba(255,255,255,.14);
@@ -395,13 +544,48 @@ const MOBILE_BREAKPOINT = 900;
 
     /* Collapsed = icon-only rail (desktop) */
     @media (min-width: 901px) {
-      aside.collapsed { width: 76px; padding-left: 14px; padding-right: 14px; }
+      aside.collapsed { width: 76px; padding-left: 14px; padding-right: 14px; overflow: visible; z-index: 30; }
       aside.collapsed .label-text { display: none; }
       aside.collapsed .brand { justify-content: center; }
       aside.collapsed nav a { justify-content: center; padding: 10px; }
-      aside.collapsed nav { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
-      aside.collapsed .section-label { text-align: center; }
+      aside.collapsed nav { margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; overflow: visible; }
+      aside.collapsed .section-label { display: none; }
       aside.collapsed .logout { justify-content: center; }
+      aside.collapsed .nav-group-wrapper { position: relative; width: 100%; }
+      aside.collapsed .nav-group { justify-content: center; padding: 10px; border-radius: 12px; }
+      aside.collapsed .nav-group > svg { display: none; }
+      aside.collapsed .nav-group-copy { justify-content: center; }
+      aside.collapsed .subnav { display: none !important; }
+      aside.collapsed .nav-group-wrapper:hover .nav-group { background: rgba(255,255,255,.12); color: #fff; }
+      aside.collapsed .nav-group-wrapper:hover .subnav {
+        display: flex !important;
+        flex-direction: column;
+        position: absolute;
+        left: calc(100% + 8px);
+        top: 0;
+        min-width: 230px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        background: #1c1914;
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 14px;
+        box-shadow: 0 14px 36px rgba(0,0,0,0.55);
+        padding: 8px;
+        margin: 0;
+        z-index: 1000;
+      }
+      aside.collapsed .nav-group-wrapper.nav-group-bottom:hover .subnav { top: auto; bottom: 0; }
+      aside.collapsed .nav-group-wrapper:hover .subnav::before {
+        content: ''; position: absolute; top: 0; bottom: 0; left: -12px; width: 12px;
+      }
+      aside.collapsed .nav-group-wrapper .flyout-header {
+        display: block; padding: 6px 10px 8px; font-size: 11px; font-weight: 700;
+        letter-spacing: .08em; text-transform: uppercase; color: #a89f8f;
+        border-bottom: 1px solid rgba(255,255,255,.12); margin-bottom: 4px;
+      }
+      aside.collapsed .nav-group-wrapper .subnav a {
+        justify-content: flex-start !important; padding: 8px 10px !important;
+      }
     }
 
     /* Collapsed = hidden off-canvas drawer (mobile) */
@@ -630,41 +814,80 @@ export class AdminShellComponent {
 
   readonly overviewItems: NavEntry[] = [
     { key: '', label: 'Dashboard', icon: 'dashboard', exact: true },
-    { key: 'analytics', label: 'Analytics', icon: 'analytics' },
+    { key: 'analytics', label: 'Analytics & Trends', icon: 'analytics' },
+    { key: 'reports', label: 'Enterprise Reports', icon: 'reports' },
   ];
 
-  readonly manageItems: NavEntry[] = [
-    { key: 'tenants', label: 'Tenants', icon: 'tenants' },
-    { key: 'stores', label: 'Stores', icon: 'store' },
-    { key: 'users', label: 'Customers & users', icon: 'users' },
+  readonly tenantsItems: NavEntry[] = [
+    { key: 'tenants', label: 'Tenants Directory', icon: 'tenants' },
+    { key: 'stores', label: 'Storefronts', icon: 'store' },
+    { key: 'users', label: 'Customers & Users', icon: 'users' },
+    { key: 'subscriptions', label: 'Plans & Billing', icon: 'subscriptions' },
+  ];
+
+  readonly commerceItems: NavEntry[] = [
+    { key: 'orders', label: 'Orders Registry', icon: 'orders' },
     { key: 'catalog', label: 'Catalog & Moderation', icon: 'catalog' },
-    { key: 'templates', label: 'Templates & categories', icon: 'catalog' },
-    { key: 'orders', label: 'Orders', icon: 'orders' },
-    { key: 'subscriptions', label: 'Plans & billing', icon: 'subscriptions' },
-    { key: 'reviews', label: 'Reviews', icon: 'star' },
-    { key: 'commissions', label: 'Commissions', icon: 'percent' },
-    { key: 'payouts', label: 'Payouts', icon: 'payout' },
-    { key: 'disputes', label: 'Disputes & Refunds', icon: 'gavel' },
-    { key: 'coupons', label: 'Coupons', icon: 'tag' },
+    { key: 'templates', label: 'Templates & Themes', icon: 'catalog' },
+    { key: 'reviews', label: 'Reviews Moderation', icon: 'star' },
+    { key: 'coupons', label: 'Promotions & Coupons', icon: 'tag' },
   ];
 
-  readonly commerceItems: NavEntry[] = [];
+  readonly financeItems: NavEntry[] = [
+    { key: 'commissions', label: 'Commissions Engine', icon: 'percent' },
+    { key: 'payouts', label: 'Seller Payouts', icon: 'payout' },
+    { key: 'disputes', label: 'Disputes & Refunds', icon: 'gavel' },
+  ];
 
   readonly supportItems: NavEntry[] = [
-    { key: 'support', label: 'Support overview', icon: 'lifebuoy', exact: true },
+    { key: 'support', label: 'Service Desk Overview', icon: 'lifebuoy', exact: true },
     { key: 'support/tickets', label: 'Tickets', icon: 'ticket' },
-    { key: 'support/chats', label: 'Live chat', icon: 'chat' },
-    { key: 'support/tasks', label: 'Service tasks', icon: 'tasks' },
-    { key: 'support/guides', label: 'Help & guides', icon: 'guides' },
+    { key: 'support/chats', label: 'Live Chat', icon: 'chat' },
+    { key: 'support/tasks', label: 'Service Tasks', icon: 'tasks' },
+    { key: 'support/guides', label: 'Help & Guides', icon: 'guides' },
   ];
 
   readonly platformItems: NavEntry[] = [
-    { key: 'domains', label: 'Domains', icon: 'domains' },
-    { key: 'ads', label: 'Ads & Marketing', icon: 'ads' },
-    { key: 'audit', label: 'Audit log', icon: 'audit' },
-    { key: 'security', label: 'Security', icon: 'shield' },
-    { key: 'settings', label: 'Settings', icon: 'settings' },
+    { key: 'domains', label: 'Custom Domains', icon: 'domains' },
+    { key: 'ads', label: 'Ads & Campaigns', icon: 'ads' },
+    { key: 'audit', label: 'Audit Log', icon: 'audit' },
+    { key: 'security', label: 'Security & Access', icon: 'shield' },
+    { key: 'settings', label: 'Platform Settings', icon: 'settings' },
   ];
+
+  activeSection = signal<AdminSidebarSection | null>(this.initialSection());
+
+  tenantsOpen = computed(() => this.activeSection() === 'tenants');
+  commerceOpen = computed(() => this.activeSection() === 'commerce');
+  financeOpen = computed(() => this.activeSection() === 'finance');
+  supportOpen = computed(() => this.activeSection() === 'support');
+  platformOpen = computed(() => this.activeSection() === 'platform');
+
+  toggleSection(section: AdminSidebarSection) {
+    this.activeSection.update((current) => (current === section ? null : section));
+  }
+
+  private initialSection(): AdminSidebarSection | null {
+    if (typeof window === 'undefined') return 'tenants';
+    const url = window.location.pathname || this.router.url;
+    if (url === '/admin' || url.includes('/analytics') || url.includes('/reports')) return null;
+    if (url.includes('/tenants') || url.includes('/stores') || url.includes('/users') || url.includes('/subscriptions')) {
+      return 'tenants';
+    }
+    if (url.includes('/orders') || url.includes('/catalog') || url.includes('/templates') || url.includes('/reviews') || url.includes('/coupons')) {
+      return 'commerce';
+    }
+    if (url.includes('/commissions') || url.includes('/payouts') || url.includes('/disputes') || url.includes('/refunds')) {
+      return 'finance';
+    }
+    if (url.includes('/support')) {
+      return 'support';
+    }
+    if (url.includes('/domains') || url.includes('/ads') || url.includes('/audit') || url.includes('/logs') || url.includes('/security') || url.includes('/settings')) {
+      return 'platform';
+    }
+    return 'tenants';
+  }
 
   /** Sidebar collapse state */
   collapsed = signal(this.initialCollapsed());
@@ -680,23 +903,29 @@ export class AdminShellComponent {
     for (const o of this.overviewItems) {
       items.push({ label: o.label, path: this.adminLink(o.key), icon: o.icon, section: 'Overview' });
     }
-    for (const m of this.manageItems) {
-      items.push({ label: m.label, path: this.adminLink(m.key), icon: m.icon, section: 'Manage' });
+    for (const t of this.tenantsItems) {
+      items.push({ label: t.label, path: this.adminLink(t.key), icon: t.icon, section: 'Tenants & Accounts' });
     }
     for (const c of this.commerceItems) {
-      items.push({ label: c.label, path: this.adminLink(c.key), icon: c.icon, section: 'Commerce' });
+      items.push({ label: c.label, path: this.adminLink(c.key), icon: c.icon, section: 'Commerce & Catalog' });
+    }
+    for (const f of this.financeItems) {
+      items.push({ label: f.label, path: this.adminLink(f.key), icon: f.icon, section: 'Finance & Payouts' });
     }
     for (const s of this.supportItems) {
-      items.push({ label: s.label, path: this.adminLink(s.key), icon: s.icon, section: 'Service desk' });
+      items.push({ label: s.label, path: this.adminLink(s.key), icon: s.icon, section: 'Service Desk' });
     }
     for (const p of this.platformItems) {
-      items.push({ label: p.label, path: this.adminLink(p.key), icon: p.icon, section: 'Platform' });
+      items.push({ label: p.label, path: this.adminLink(p.key), icon: p.icon, section: 'Platform & Governance' });
     }
     // Search aliases for instant discovery of nested sub-features
     items.push(
-      { label: 'Moderation', path: this.adminLink('catalog'), icon: 'catalog', section: 'Manage' },
-      { label: 'Disputes', path: this.adminLink('disputes'), icon: 'gavel', section: 'Manage' },
-      { label: 'Refunds', path: this.adminLink('disputes'), icon: 'gavel', section: 'Manage' }
+      { label: 'Reports', path: this.adminLink('reports'), icon: 'reports', section: 'Overview' },
+      { label: 'Enterprise Reports', path: this.adminLink('reports'), icon: 'reports', section: 'Overview' },
+      { label: 'Moderation', path: this.adminLink('catalog'), icon: 'catalog', section: 'Commerce' },
+      { label: 'Disputes', path: this.adminLink('disputes'), icon: 'gavel', section: 'Finance' },
+      { label: 'Refunds', path: this.adminLink('disputes'), icon: 'gavel', section: 'Finance' },
+      { label: 'Plans & Pricing', path: this.adminLink('subscriptions'), icon: 'subscriptions', section: 'Tenants' }
     );
     return items;
   });
