@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Tenant catalog API.
@@ -30,6 +31,9 @@ use Illuminate\Validation\Rule;
  */
 class ProductController extends Controller
 {
+    /** The storefront gallery supports a compact, four-image carousel. */
+    protected const MAX_PRODUCT_IMAGES = 4;
+
     /** Columns safe to sort the catalog by. */
     protected const SORTABLE_COLUMNS = ['id', 'name', 'price', 'created_at', 'updated_at', 'status'];
 
@@ -239,7 +243,9 @@ class ProductController extends Controller
                 ]);
             }
 
-            foreach ($product->images as $image) {
+            // Keep duplicated listings within the storefront gallery limit,
+            // including copies of older listings that may predate the limit.
+            foreach ($product->images->take(self::MAX_PRODUCT_IMAGES) as $image) {
                 ProductImage::query()->create([
                     'tenant_id' => $copy->tenant_id,
                     'product_id' => $copy->id,
@@ -417,17 +423,36 @@ class ProductController extends Controller
             'image' => ['required', 'file', 'image', 'max:5120'],
             'is_primary' => ['sometimes', 'boolean'],
         ]);
-        $path = $request->file('image')->store('tenants/'.$product->tenant_id.'/products/'.$product->id, 'public');
-        if ($request->boolean('is_primary')) {
-            $product->images()->update(['is_primary' => false]);
-        }
-        $image = ProductImage::query()->create([
-            'tenant_id' => $product->tenant_id,
-            'product_id' => $product->id,
-            'path' => $path,
-            'position' => (int) $product->images()->max('position') + 1,
-            'is_primary' => $request->boolean('is_primary') || $product->images()->count() === 0,
-        ]);
+
+        // The client also prevents a fifth selection, but the API is the
+        // source of truth: imports and direct requests must obey the same cap.
+        $image = DB::transaction(function () use ($request, $product) {
+            // Lock the parent product so concurrent uploads cannot both claim
+            // the final gallery slot.
+            $lockedProduct = Product::query()->lockForUpdate()->findOrFail($product->id);
+            $imageCount = $lockedProduct->images()->count();
+            if ($imageCount >= self::MAX_PRODUCT_IMAGES) {
+                throw ValidationException::withMessages([
+                    'image' => ['A product can have up to '.self::MAX_PRODUCT_IMAGES.' images. Remove one before adding another.'],
+                ]);
+            }
+
+            $path = $request->file('image')->store(
+                'tenants/'.$lockedProduct->tenant_id.'/products/'.$lockedProduct->id,
+                'public',
+            );
+            if ($request->boolean('is_primary')) {
+                $lockedProduct->images()->update(['is_primary' => false]);
+            }
+
+            return ProductImage::query()->create([
+                'tenant_id' => $lockedProduct->tenant_id,
+                'product_id' => $lockedProduct->id,
+                'path' => $path,
+                'position' => (int) $lockedProduct->images()->max('position') + 1,
+                'is_primary' => $request->boolean('is_primary') || $imageCount === 0,
+            ]);
+        });
 
         return response()->json(['data' => $image], 201);
     }
@@ -449,8 +474,8 @@ class ProductController extends Controller
     {
         $this->authorize('update', $product);
         $data = $request->validate([
-            'order' => ['required', 'array'],
-            'order.*' => ['integer'],
+            'order' => ['required', 'array', 'max:'.self::MAX_PRODUCT_IMAGES],
+            'order.*' => ['integer', 'distinct'],
         ]);
         foreach ($data['order'] as $pos => $id) {
             ProductImage::query()->where('product_id', $product->id)->whereKey($id)->update(['position' => $pos]);
@@ -543,7 +568,9 @@ class ProductController extends Controller
             'variants.*.location' => ['nullable', 'string', 'max:64'],
             'variants.*.status' => ['nullable', Rule::in(['active', 'inactive'])],
 
-            'image_urls' => ['nullable', 'array'],
+            // A product gallery is intentionally compact: the customer page
+            // presents these in a four-slide carousel.
+            'image_urls' => ['nullable', 'array', 'max:'.self::MAX_PRODUCT_IMAGES],
             'image_urls.*' => ['string', 'max:2048'],
         ];
     }
