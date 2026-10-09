@@ -1043,6 +1043,14 @@ export class ApiService {
     return this.http.get<{ data: TenantAnalyticsReport }>('/api/tenant/analytics', { params });
   }
 
+  tenantReportCatalog() {
+    return this.http.get<{ data: { categories: any[] } }>('/api/tenant/reports/catalog');
+  }
+
+  generateTenantReport(params: Record<string, any> = {}) {
+    return this.http.get<{ data: any }>('/api/tenant/reports/generate', { params });
+  }
+
   adminAnalytics(days = 30) {
     return this.http.get<{ data: AdminAnalytics }>('/api/admin/analytics', { params: { days } });
   }

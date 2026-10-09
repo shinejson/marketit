@@ -61,6 +61,17 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
             <span class="label-text">Dashboard</span>
           </a>
 
+          <p class="section-label label-text">Reports</p>
+          <a
+            [routerLink]="tenantLink('reports')"
+            routerLinkActive="on"
+            (click)="onNavigate()"
+            [title]="collapsed() ? 'Reports' : ''"
+          >
+            <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'analytics' }" />
+            <span class="label-text">Reports</span>
+          </a>
+
           @if (canViewAccounting()) {
           <p class="section-label label-text">Accounting</p>
           <div class="nav-group-wrapper" [class.open]="accountingOpen()">
@@ -990,6 +1001,8 @@ export class SellerShellComponent {
   searchIndex = computed<SearchEntry[]>(() => {
     const items: SearchEntry[] = [
       { label: 'Dashboard', path: this.tenantLink(), icon: 'home', section: 'Overview' },
+      { label: 'Reports', path: this.tenantLink('reports'), icon: 'analytics', section: 'Reports' },
+      { label: 'Tenant report center', path: this.tenantLink('reports'), icon: 'analytics', section: 'Reports' },
       { label: 'My profile & activity', path: this.tenantLink('profile'), icon: 'users', section: 'Account' },
       { label: 'Notifications', path: this.tenantLink('notifications'), icon: 'bell', section: 'Account' },
     ];
@@ -1093,6 +1106,7 @@ export class SellerShellComponent {
   private initialSection(): SidebarSection | null {
     if (typeof window === 'undefined') return 'commerce';
     const url = window.location.pathname || this.router.url;
+    if (url.includes('/reports') || url.includes('/analytics')) return null;
     if (url.includes('/accounting') || url.includes('/departments/finance')) return 'accounting';
     if (url.includes('/sales') || url.includes('/departments/sales')) return 'sales';
     if (url.includes('/operations') || url.includes('/departments/operations')) return 'operations';

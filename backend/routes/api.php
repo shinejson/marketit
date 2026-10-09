@@ -62,6 +62,7 @@ use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\TenantPageController;
 use App\Http\Controllers\Api\TenantTemplateController;
 use App\Http\Controllers\Api\TenantReviewController;
+use App\Http\Controllers\Api\TenantReportController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Route;
@@ -409,6 +410,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/ai/usage', [AiController::class, 'usage']);
 
         Route::get('/analytics', [AnalyticsController::class, 'tenant']);
+        Route::get('/reports/generate', [TenantReportController::class, 'generate']);
+        Route::get('/reports/catalog', [TenantReportController::class, 'catalog']);
 
         // Tenant help centre: tickets, live chat, assigned tasks and guides.
         Route::prefix('support')->group(function () {

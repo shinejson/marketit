@@ -5,294 +5,483 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { AnalyticsKpi, TenantAnalyticsReport } from '../../core/models';
 import { MoneyPipe } from '../../shared/money.pipe';
 
-type MetricKey = 'gmv' | 'orders' | 'views';
+export interface ReportItemMeta {
+  key: string;
+  label: string;
+  favorite: boolean;
+}
 
-const STATUS_LABELS: Record<string, string> = {
-  awaiting_fulfillment: 'Awaiting fulfillment',
-  processing: 'Processing',
-  shipped: 'Shipped',
-  delivered: 'Delivered',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-  refunded: 'Refunded',
-};
+export interface ReportCategoryMeta {
+  name: string;
+  icon: string;
+  open?: boolean;
+  reports: ReportItemMeta[];
+}
 
-const STATUS_TONES: Record<string, string> = {
-  awaiting_fulfillment: '#c98a2e',
-  processing: '#385c8c',
-  shipped: '#6b3f73',
-  delivered: '#2f6b4f',
-  completed: '#2f6b4f',
-  cancelled: '#9b2c2c',
-  refunded: '#9b2c2c',
-};
+export interface ReportColumnMeta {
+  key: string;
+  label: string;
+  type: 'text' | 'date' | 'number' | 'money' | 'status';
+  selected: boolean;
+}
+
+export interface ReportKpiMeta {
+  label: string;
+  value: number;
+  format: 'money' | 'number' | 'percent';
+  tone?: 'gold' | 'blue' | 'green' | 'danger' | 'slate';
+}
 
 @Component({
   selector: 'app-seller-analytics',
   imports: [FormsModule, MoneyPipe, DecimalPipe, DatePipe, RouterLink],
   template: `
-    <div class="analytics-shell">
-      <header class="page-head">
+    <div class="reports-hub-shell">
+      <!-- Top header with breadcrumbs and fast action controls -->
+      <header class="page-head no-print">
         <div>
           <div class="breadcrumbs"><a routerLink="/tenant">Workspace</a><span>/</span><span>Reports</span></div>
-          <p class="eyebrow">Tenant reporting</p>
-          <h1>Full tenant report</h1>
+          <p class="eyebrow">Enterprise reporting</p>
+          <h1>Tenant Report Center</h1>
           <p class="intro">
-            A complete view of sales, customers, products, stores, fulfilment and advertising,
-            based on this tenant's live marketplace data for the selected period.
+            Comprehensive operational, financial, inventory and sales reporting suite for your tenant workspace.
+            Configure custom parameters, pick reporting columns, preview live metrics, and generate clean PDF or CSV reports.
           </p>
         </div>
         <div class="head-actions">
-          <select class="toolbar-select" [(ngModel)]="storeFilter" (change)="load()" aria-label="Filter by store">
-            <option value="">All stores</option>
-            @for (s of report()?.stores || []; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
-          </select>
-          <select class="toolbar-select" [(ngModel)]="days" (change)="load()" aria-label="Reporting window">
-            <option [ngValue]="7">Last 7 days</option>
-            <option [ngValue]="30">Last 30 days</option>
-            <option [ngValue]="90">Last 90 days</option>
-            <option [ngValue]="365">Last 12 months</option>
-          </select>
-          <button class="btn ghost" type="button" (click)="exportCsv()" [disabled]="!report() || loading() || refreshing()" aria-label="Export report data as CSV">⇩ Export CSV</button>
-          <button class="btn primary" type="button" (click)="exportPdf()" [disabled]="!report() || loading() || refreshing()" title="Opens the print dialog. Choose Save as PDF to download a PDF report.">
-            <span aria-hidden="true">⇩</span> Export PDF
+          <button class="btn ghost" type="button" (click)="exportCsv()" [disabled]="loading() || !reportData()?.rows?.length" title="Download report as CSV spreadsheet">
+            <span aria-hidden="true">⇩</span> Export CSV
           </button>
-          <button class="btn ghost" type="button" (click)="load()" [disabled]="loading() || refreshing()">
-            <span class="spin-icon" [class.spinning]="refreshing()">⟳</span> Refresh
+          <button class="btn primary" type="button" (click)="generatePdf()" [disabled]="loading() || !reportData()?.rows?.length" title="Generate printable PDF report">
+            <span aria-hidden="true">🖨</span> Generate PDF
+          </button>
+          <button class="btn ghost" type="button" (click)="loadReport()" [disabled]="loading()">
+            <span class="spin-icon" [class.spinning]="loading()">⟳</span> Refresh
           </button>
         </div>
       </header>
 
       @if (error()) {
-        <div class="error-banner"><span>!</span><p>{{ error() }}</p><button type="button" (click)="error.set('')">Dismiss</button></div>
+        <div class="error-banner no-print">
+          <span>!</span>
+          <p>{{ error() }}</p>
+          <button type="button" (click)="error.set('')">Dismiss</button>
+        </div>
       }
 
-      @if (loading()) {
-        <div class="skeletons">@for (i of [1,2,3,4,5,6]; track i) { <div class="skeleton-row"></div> }</div>
-      } @else if (report(); as r) {
-        <section class="report-facts" aria-label="Report details">
-          <div class="report-fact">
-            <span>Prepared for</span>
-            <strong>{{ tenantName() }}</strong>
-            <small>@if (tenantId()) { Tenant ID #{{ tenantId() }} } @else { Tenant workspace }</small>
-          </div>
-          <div class="report-fact">
-            <span>Reporting period</span>
-            <strong>{{ r.range.start | date:'mediumDate' }} – {{ r.range.end | date:'mediumDate' }}</strong>
-            <small>Compared with {{ r.range.previous_start | date:'mediumDate' }} – {{ r.range.previous_end | date:'mediumDate' }}</small>
-          </div>
-          <div class="report-fact">
-            <span>Scope &amp; generated</span>
-            <strong>{{ selectedStoreName() }}</strong>
-            <small>{{ generatedAt() | date:'medium' }}</small>
-          </div>
-        </section>
-
-        <section class="kpi-grid">
-          <article class="metric-card value">
-            <div class="metric-top"><span class="metric-icon gold">◈</span><span class="trend" [class.up]="r.kpis.gmv.direction === 'up'" [class.down]="r.kpis.gmv.direction === 'down'">{{ deltaChip(r.kpis.gmv) }}</span></div>
-            <p>Revenue</p><h2>{{ r.kpis.gmv.value | money:'':'symbol':'1.0-0' }}</h2>
-            <small>Previous {{ r.kpis.gmv.previous | money:'':'symbol':'1.0-0' }}</small>
-          </article>
-          <article class="metric-card">
-            <div class="metric-top"><span class="metric-icon blue">▦</span><span class="trend" [class.up]="r.kpis.orders.direction === 'up'" [class.down]="r.kpis.orders.direction === 'down'">{{ deltaChip(r.kpis.orders) }}</span></div>
-            <p>Orders</p><h2>{{ r.kpis.orders.value | number }}</h2>
-            <small>{{ r.kpis.units.value | number }} units sold</small>
-          </article>
-          <article class="metric-card">
-            <div class="metric-top"><span class="metric-icon slate">⌀</span><span class="trend" [class.up]="r.kpis.aov.direction === 'up'" [class.down]="r.kpis.aov.direction === 'down'">{{ deltaChip(r.kpis.aov) }}</span></div>
-            <p>Average order value</p><h2>{{ r.kpis.aov.value | money }}</h2>
-            <small>Previous {{ r.kpis.aov.previous | money }}</small>
-          </article>
-          <article class="metric-card">
-            <div class="metric-top"><span class="metric-icon plum">👥</span><span class="trend" [class.up]="r.kpis.customers.direction === 'up'" [class.down]="r.kpis.customers.direction === 'down'">{{ deltaChip(r.kpis.customers) }}</span></div>
-            <p>Buyers</p><h2>{{ r.kpis.customers.value | number }}</h2>
-            <small>{{ r.customers.repeat_rate | number:'1.0-1' }}% bought more than once</small>
-          </article>
-          <article class="metric-card">
-            <div class="metric-top"><span class="metric-icon green">↗</span><span class="trend" [class.up]="r.kpis.conversion.direction === 'up'" [class.down]="r.kpis.conversion.direction === 'down'">{{ deltaChip(r.kpis.conversion) }}</span></div>
-            <p>Conversion</p><h2>{{ r.kpis.conversion.value | number:'1.0-2' }}%</h2>
-            <small>{{ r.kpis.views.value | number }} product views</small>
-          </article>
-        </section>
-
-        @if (r.highlights.length) {
-          <section class="highlights">
-            @for (h of r.highlights; track h.title) {
-              <article [class]="'highlight ' + h.tone">
-                <strong>{{ h.title }}</strong>
-                <p>{{ h.detail }}</p>
-              </article>
-            }
-          </section>
-        }
-
-        <section class="panel chart-panel">
-          <div class="panel-head">
-            <div><p class="overline">Trend</p><h3>{{ metricLabel() }} over time</h3></div>
-            <div class="metric-switch" role="group" aria-label="Chart metric">
-              @for (m of metricOptions; track m.key) {
-                <button type="button" [class.on]="metric() === m.key" (click)="metric.set(m.key)">{{ m.label }}</button>
-              }
+      <!-- Main Two-Column Layout (Matching Images) -->
+      <div class="reports-layout">
+        <!-- LEFT SIDEBAR: Search + Accordion Categories (Image 1 & 2) -->
+        <aside class="reports-sidebar no-print">
+          <div class="sidebar-search-box">
+            <div class="search-input-wrap">
+              <span class="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search report..."
+                [(ngModel)]="searchQuery"
+                (ngModelChange)="onSearchChange()"
+                aria-label="Search reports"
+              />
             </div>
+            <button
+              type="button"
+              class="star-filter-btn"
+              [class.active]="showOnlyStarred()"
+              (click)="toggleOnlyStarred()"
+              title="Show only starred / favorite reports"
+            >
+              {{ showOnlyStarred() ? '★' : '☆' }}
+            </button>
           </div>
-          @if (!hasSeries()) {
-            <div class="empty-state small">
-              <span class="empty-glyph">📈</span>
-              <h3>Nothing to plot yet</h3>
-              <p>Once orders and storefront visits come in, this chart fills with your daily trend.</p>
-            </div>
-          } @else {
-            <div class="chart">
-              <svg viewBox="0 0 320 130" preserveAspectRatio="none" role="img" [attr.aria-label]="metricLabel() + ' trend'">
-                <polygon [attr.points]="areaPoints()" fill="url(#analyticsFade)" />
-                <polyline [attr.points]="linePoints()" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linejoin="round" />
-                <defs>
-                  <linearGradient id="analyticsFade" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stop-color="var(--accent-2)" stop-opacity="0.26" />
-                    <stop offset="100%" stop-color="var(--accent-2)" stop-opacity="0" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div class="axis">
-                <span>{{ r.series[0].day | date:'MMM d' }}</span>
-                <span>Peak {{ peakLabel() }}</span>
-                <span>{{ r.series[r.series.length - 1].day | date:'MMM d' }}</span>
-              </div>
-            </div>
-          }
-        </section>
 
-        <div class="split">
-          <section class="panel">
-            <div class="panel-head"><div><p class="overline">Journey</p><h3>Conversion funnel</h3></div></div>
-            <div class="funnel">
-              @for (step of r.funnel.steps; track step.key) {
-                <div class="funnel-step">
-                  <div class="funnel-label"><span>{{ step.label }}</span><b>{{ step.value | number }}</b></div>
-                  <div class="funnel-bar"><i [style.width.%]="step.rate"></i></div>
-                  <small>{{ step.rate | number:'1.0-1' }}% of views</small>
-                </div>
-              }
-              <p class="funnel-note">Cart abandonment <b>{{ r.funnel.cart_abandonment | number:'1.0-1' }}%</b></p>
-            </div>
-          </section>
+          <div class="accordion-list">
+            @for (category of filteredCategories(); track category.name) {
+              <div class="accordion-category" [class.open]="category.open">
+                <button
+                  type="button"
+                  class="category-header"
+                  (click)="toggleCategory(category)"
+                  [attr.aria-expanded]="category.open"
+                >
+                  <span class="cat-title">{{ category.name }}</span>
+                  <span class="cat-chevron" [class.rotated]="category.open">❯</span>
+                </button>
 
-          <section class="panel">
-            <div class="panel-head"><div><p class="overline">Fulfillment</p><h3>Order status mix</h3></div></div>
-            @if (!r.status_mix.length) {
-              <p class="muted pad">No orders in this window.</p>
-            } @else {
-              <div class="mix">
-                @for (s of r.status_mix; track s.status) {
-                  <div class="mix-row">
-                    <span class="dot" [style.background]="statusTone(s.status)"></span>
-                    <span class="mix-label">{{ statusLabel(s.status) }}</span>
-                    <div class="mix-bar"><i [style.width.%]="sharePercent(s.count)" [style.background]="statusTone(s.status)"></i></div>
-                    <b>{{ s.count }}</b>
-                    <span class="muted">{{ s.gmv | money:'':'symbol':'1.0-0' }}</span>
-                  </div>
+                @if (category.open) {
+                  <ul class="report-items">
+                    @for (report of category.reports; track report.key) {
+                      <li [class.active]="activeReportKey() === report.key">
+                        <button
+                          type="button"
+                          class="report-item-btn"
+                          (click)="selectReport(report.key)"
+                        >
+                          <span class="item-bullet">•</span>
+                          <span class="item-label">{{ report.label }}</span>
+                        </button>
+                        <button
+                          type="button"
+                          class="item-star-btn"
+                          [class.starred]="isStarred(report.key)"
+                          (click)="toggleStar(report.key, $event)"
+                          [title]="isStarred(report.key) ? 'Remove from favorites' : 'Add to favorites'"
+                        >
+                          {{ isStarred(report.key) ? '★' : '☆' }}
+                        </button>
+                      </li>
+                    }
+                  </ul>
                 }
               </div>
+            } @empty {
+              <div class="sidebar-empty">
+                <p>No reports match "{{ searchQuery }}"</p>
+                <button type="button" class="btn ghost btn-sm" (click)="resetSearch()">Clear filter</button>
+              </div>
             }
-          </section>
-        </div>
+          </div>
+        </aside>
 
-        <div class="split">
-          <section class="panel">
-            <div class="panel-head">
-              <div><p class="overline">Catalog</p><h3>Best sellers</h3></div>
-              <a routerLink="/tenant/products">Open catalog →</a>
+        <!-- RIGHT MAIN CONTENT: Configuration Form, Help Guide & Generated Report (Image 2) -->
+        <main class="reports-main">
+          <!-- Active Tab Header with Blue Indicator Line -->
+          <div class="active-tab-strip no-print">
+            <div class="tab-item active">
+              <span>{{ activeReportName() }}</span>
             </div>
-            @if (!r.top_products.length) {
-              <p class="muted pad">No products sold in this window yet.</p>
-            } @else {
-              <div class="table-wrap">
-                <table>
-                  <thead><tr><th>Product</th><th class="right">Units</th><th class="right">Orders</th><th class="right">Revenue</th></tr></thead>
+          </div>
+
+          <!-- Configuration & Filter Form (Image 2) -->
+          <section class="filter-card panel no-print" aria-label="Report configuration parameters">
+            <div class="filter-grid">
+              <!-- Row 1: Date Range & Quick Presets -->
+              <div class="filter-cell date-range-cell">
+                <label>Date Range (From – To)</label>
+                <div class="date-pickers-row">
+                  <input type="date" [(ngModel)]="startDate" aria-label="Start date" />
+                  <span class="to-separator">To</span>
+                  <input type="date" [(ngModel)]="endDate" aria-label="End date" />
+                </div>
+                <div class="preset-chips">
+                  <button type="button" [class.on]="preset() === 'today'" (click)="applyPreset('today')">Today</button>
+                  <button type="button" [class.on]="preset() === '7d'" (click)="applyPreset('7d')">Last 7d</button>
+                  <button type="button" [class.on]="preset() === '30d'" (click)="applyPreset('30d')">Last 30d</button>
+                  <button type="button" [class.on]="preset() === 'month'" (click)="applyPreset('month')">This Month</button>
+                  <button type="button" [class.on]="preset() === 'ytd'" (click)="applyPreset('ytd')">YTD</button>
+                </div>
+              </div>
+
+              <!-- Row 2: Store Scope -->
+              <div class="filter-cell">
+                <label>Storefront</label>
+                <select [(ngModel)]="storeFilter" aria-label="Store selection">
+                  <option value="">-- All Stores --</option>
+                  @for (s of storesList(); track s.id) {
+                    <option [value]="s.id">{{ s.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Row 3: Status Filter -->
+              <div class="filter-cell">
+                <label>Status</label>
+                <select [(ngModel)]="statusFilter" aria-label="Status filter">
+                  <option value="">-- All Statuses --</option>
+                  <option value="completed">Completed / Settled</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="processing">Processing</option>
+                  <option value="awaiting_fulfillment">Awaiting fulfillment</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="refunded">Refunded</option>
+                </select>
+              </div>
+
+              <!-- Row 4: Category / Department -->
+              <div class="filter-cell">
+                <label>Category / Segment</label>
+                <select [(ngModel)]="categoryFilter" aria-label="Category filter">
+                  <option value="">-- All Categories --</option>
+                  @for (cat of categoriesList(); track cat.id) {
+                    <option [value]="cat.id">{{ cat.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Row 5: Amount Range -->
+              <div class="filter-cell">
+                <label>Value Range (From – To)</label>
+                <div class="amount-range-row">
+                  <input type="number" placeholder="Min $" [(ngModel)]="amountMin" min="0" step="10" />
+                  <span>–</span>
+                  <input type="number" placeholder="Max $" [(ngModel)]="amountMax" min="0" step="10" />
+                </div>
+              </div>
+
+              <!-- Row 6: Flag Options -->
+              <div class="filter-cell checkbox-cell">
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="taxInclusive" />
+                  <span>Tax Inclusive Rates / Figures</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Scrollable Options / Remarks Box (Image 2) -->
+            <div class="options-box-row">
+              <div class="options-box-col">
+                <label class="section-sublabel">Report Inclusions &amp; Options</label>
+                <div class="scrollable-checklist">
+                  <label class="check-item select-all">
+                    <input type="checkbox" [checked]="allOptionsChecked()" (change)="toggleAllOptions($event)" />
+                    <b>Select All</b>
+                  </label>
+                  <label class="check-item">
+                    <input type="checkbox" [(ngModel)]="options.discounts" />
+                    <span>Include Discounts &amp; Coupons</span>
+                  </label>
+                  <label class="check-item">
+                    <input type="checkbox" [(ngModel)]="options.shipping" />
+                    <span>Include Delivery &amp; Shipping Fees</span>
+                  </label>
+                  <label class="check-item">
+                    <input type="checkbox" [(ngModel)]="options.tax" />
+                    <span>Include Sales Tax Details</span>
+                  </label>
+                  <label class="check-item">
+                    <input type="checkbox" [(ngModel)]="options.cancelled" />
+                    <span>Include Cancelled &amp; Refunded</span>
+                  </label>
+                  <label class="check-item">
+                    <input type="checkbox" [(ngModel)]="options.drafts" />
+                    <span>Include Draft Bills &amp; Invoices</span>
+                  </label>
+                  <label class="check-item">
+                    <input type="checkbox" [(ngModel)]="options.storeBreakdown" />
+                    <span>Include Storefront Channel Name</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Select Columns (Image 2: "Select Column (Any 5)") -->
+              <div class="options-box-col">
+                <label class="section-sublabel">Select Columns to Display</label>
+                <div class="columns-checkbox-wrap">
+                  @for (col of activeColumns(); track col.key) {
+                    <label class="column-pill" [class.checked]="col.selected">
+                      <input
+                        type="checkbox"
+                        [checked]="col.selected"
+                        (change)="toggleColumn(col.key)"
+                      />
+                      <span>{{ col.label }}</span>
+                    </label>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons (Bottom Right, matching Image 2) -->
+            <div class="form-action-bar">
+              <button class="btn dark-navy" type="button" (click)="exportCsv()" [disabled]="loading()">
+                Export
+              </button>
+              <button class="btn primary-blue" type="button" (click)="loadReport()" [disabled]="loading()">
+                @if (loading()) { <span class="spin-icon spinning">⟳</span> } @else { Report }
+              </button>
+              <button class="btn ghost-light" type="button" (click)="resetFilters()" [disabled]="loading()">
+                Reset
+              </button>
+            </div>
+          </section>
+
+          <!-- Help Guide Section (Directly underneath form, Image 2) -->
+          <section class="help-guide-panel panel no-print" aria-label="Report help guide and instructions">
+            <h2 class="help-title">Help Guide</h2>
+            <p class="help-summary">
+              {{ reportHelp()?.summary }}
+            </p>
+
+            <h3 class="help-subtitle">{{ reportHelp()?.compare_heading || 'How can you compare the report data with other reports?' }}</h3>
+            <ol class="help-points">
+              @for (point of reportHelp()?.points || []; track point) {
+                <li>{{ point }}</li>
+              }
+            </ol>
+          </section>
+
+          <!-- PRINT / PDF EXCLUSIVE HEADER (Rendered cleanly during PDF generation) -->
+          <div class="pdf-print-header print-only">
+            <div class="print-brand-row">
+              <div class="brand-left">
+                <span class="print-mark">MarketHub</span>
+                <h2>{{ reportData()?.report_name || activeReportName() }}</h2>
+                <p class="print-tenant">Tenant: <b>{{ tenantName() }}</b> (ID #{{ tenantId() || '1' }})</p>
+              </div>
+              <div class="brand-right">
+                <span class="print-badge">Official Report</span>
+                <p>Period: <b>{{ reportData()?.range?.start }}</b> to <b>{{ reportData()?.range?.end }}</b></p>
+                <p>Scope: <b>{{ selectedStoreName() }}</b></p>
+                <p>Generated: <b>{{ generatedAt() | date:'medium' }}</b></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- GENERATED REPORT VIEW: Metrics Cards, Data Table & Pagination -->
+          @if (reportData(); as r) {
+            <!-- Executive Summary KPI Cards -->
+            <section class="report-kpi-strip" aria-label="Key summary metrics">
+              @for (kpi of r.kpis || []; track kpi.label) {
+                <div class="report-kpi-card" [class]="'tone-' + (kpi.tone || 'blue')">
+                  <span class="kpi-label">{{ kpi.label }}</span>
+                  <strong class="kpi-value">
+                    @if (kpi.format === 'money') {
+                      {{ kpi.value | money:r.currency:'symbol':'1.0-2' }}
+                    } @else if (kpi.format === 'percent') {
+                      {{ kpi.value | number:'1.0-1' }}%
+                    } @else {
+                      {{ kpi.value | number }}
+                    }
+                  </strong>
+                </div>
+              }
+            </section>
+
+            <!-- Results Data Table -->
+            <section class="report-results-panel panel">
+              <div class="results-toolbar no-print">
+                <div class="results-count">
+                  <strong>{{ filteredRows().length }}</strong> records found
+                  @if (searchTableText) {
+                    <span class="filter-indicator">(filtered from {{ r.rows.length }})</span>
+                  }
+                </div>
+                <div class="toolbar-right">
+                  <div class="table-search">
+                    <span>⌕</span>
+                    <input
+                      type="text"
+                      placeholder="Filter results..."
+                      [(ngModel)]="searchTableText"
+                      (ngModelChange)="tablePage.set(1)"
+                      aria-label="Filter results table"
+                    />
+                  </div>
+                  <button type="button" class="btn ghost btn-sm" (click)="generatePdf()">
+                    <span>🖨</span> Print / PDF
+                  </button>
+                </div>
+              </div>
+
+              <!-- Table Element -->
+              <div class="table-scroll-wrap">
+                <table class="report-data-table">
+                  <thead>
+                    <tr>
+                      @for (col of visibleColumns(); track col.key) {
+                        <th [class.right]="col.type === 'money' || col.type === 'number'">
+                          {{ col.label }}
+                        </th>
+                      }
+                    </tr>
+                  </thead>
                   <tbody>
-                    @for (p of r.top_products; track p.name + p.sku) {
+                    @for (row of paginatedRows(); track (row.id || row.date || $index)) {
                       <tr>
-                        <td><strong>{{ p.name }}</strong>@if (p.sku) { <small class="mono">{{ p.sku }}</small> }</td>
-                        <td class="right">{{ p.units | number }}</td>
-                        <td class="right">{{ p.orders | number }}</td>
-                        <td class="right"><strong>{{ p.revenue | money }}</strong></td>
+                        @for (col of visibleColumns(); track col.key) {
+                          <td [class.right]="col.type === 'money' || col.type === 'number'">
+                            @if (col.type === 'money') {
+                              <strong>{{ row[col.key] | money:r.currency }}</strong>
+                            } @else if (col.type === 'number') {
+                              {{ row[col.key] | number }}
+                            } @else if (col.type === 'date') {
+                              <span class="mono-date">{{ row[col.key] }}</span>
+                            } @else if (col.type === 'status') {
+                              <span [class]="'status-badge ' + (row[col.key] || 'default')">
+                                {{ prettyStatus(row[col.key]) }}
+                              </span>
+                            } @else {
+                              <span>{{ row[col.key] }}</span>
+                            }
+                          </td>
+                        }
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td [attr.colspan]="visibleColumns().length">
+                          <div class="empty-results-box">
+                            <span class="empty-glyph">📊</span>
+                            <h3>No records match the current parameters</h3>
+                            <p>Try widening your date range, clearing filters, or choosing "All Statuses".</p>
+                          </div>
+                        </td>
                       </tr>
                     }
                   </tbody>
-                </table>
-              </div>
-            }
-          </section>
 
-          <section class="panel">
-            <div class="panel-head"><div><p class="overline">Channels</p><h3>Store performance</h3></div></div>
-            @if (!r.stores.length) {
-              <p class="muted pad">No store revenue in this window.</p>
-            } @else {
-              <div class="table-wrap">
-                <table>
-                  <thead><tr><th>Store</th><th class="right">Orders</th><th class="right">Revenue</th><th class="right">Net payout</th></tr></thead>
-                  <tbody>
-                    @for (s of r.stores; track s.id) {
+                  <!-- Grand Totals Row -->
+                  @if (r.totals && filteredRows().length > 0) {
+                    <tfoot class="report-totals-foot">
                       <tr>
-                        <td><strong>{{ s.name }}</strong><small>{{ s.currency }}</small></td>
-                        <td class="right">{{ s.orders | number }}</td>
-                        <td class="right">{{ s.gmv | money }}</td>
-                        <td class="right"><strong>{{ s.net | money }}</strong></td>
+                        @for (col of visibleColumns(); track col.key; let first = $first) {
+                          <td [class.right]="col.type === 'money' || col.type === 'number'">
+                            @if (first) {
+                              <strong>Grand Total</strong>
+                            } @else if (r.totals[col.key] !== undefined) {
+                              @if (col.type === 'money') {
+                                <strong>{{ r.totals[col.key] | money:r.currency }}</strong>
+                              } @else if (col.type === 'number') {
+                                <strong>{{ r.totals[col.key] | number }}</strong>
+                              } @else {
+                                <span>{{ r.totals[col.key] }}</span>
+                              }
+                            } @else {
+                              <span>—</span>
+                            }
+                          </td>
+                        }
                       </tr>
-                    }
-                  </tbody>
+                    </tfoot>
+                  }
                 </table>
               </div>
-            }
-          </section>
-        </div>
 
-        <div class="split">
-          <section class="panel">
-            <div class="panel-head">
-              <div><p class="overline">Paid media</p><h3>Advertising</h3></div>
-              <a routerLink="/tenant/ads">Manage ads →</a>
-            </div>
-            <div class="stat-grid">
-              <div><p>Impressions</p><strong>{{ r.ads.impressions | number }}</strong></div>
-              <div><p>Clicks</p><strong>{{ r.ads.clicks | number }}</strong></div>
-              <div><p>CTR</p><strong>{{ r.ads.ctr | number:'1.0-2' }}%</strong></div>
-              <div><p>Spend</p><strong>{{ r.ads.spend | money }}</strong></div>
-              <div><p>Avg CPC</p><strong>{{ r.ads.avg_cpc | money:'':'symbol':'1.2-4' }}</strong></div>
-              <div><p>Cost of revenue</p><strong>{{ adShare() }}%</strong></div>
-            </div>
-          </section>
+              <!-- Pagination Footer -->
+              <div class="table-pagination-foot no-print">
+                <span class="pagination-info">
+                  Showing {{ paginationRange() }} of {{ filteredRows().length }} rows · Page {{ tablePage() }} of {{ totalTablePages() }}
+                </span>
+                <div class="pagination-nav">
+                  <button
+                    type="button"
+                    [disabled]="tablePage() <= 1"
+                    (click)="prevPage()"
+                  >
+                    ← Previous
+                  </button>
+                  <span class="page-num-indicator">{{ tablePage() }} / {{ totalTablePages() }}</span>
+                  <button
+                    type="button"
+                    [disabled]="tablePage() >= totalTablePages()"
+                    (click)="nextPage()"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            </section>
+          }
 
-          <section class="panel">
-            <div class="panel-head"><div><p class="overline">Loyalty</p><h3>Customers</h3></div></div>
-            <div class="stat-grid">
-              <div><p>Buyers</p><strong>{{ r.customers.buyers | number }}</strong></div>
-              <div><p>Repeat buyers</p><strong>{{ r.customers.repeat_buyers | number }}</strong></div>
-              <div><p>Repeat rate</p><strong>{{ r.customers.repeat_rate | number:'1.0-1' }}%</strong></div>
-              <div><p>Revenue per buyer</p><strong>{{ r.customers.revenue_per_buyer | money }}</strong></div>
-              <div><p>Commission</p><strong>{{ r.kpis.commission.value | money }}</strong></div>
-              <div><p>Net settlement</p><strong>{{ r.kpis.net.value | money }}</strong></div>
-            </div>
-          </section>
-        </div>
-
-        @if (report()?.lifetime; as lifetime) {
-          <p class="lifetime-note">
-            All time: <b>{{ +lifetime.gmv | money }}</b> revenue across {{ lifetime.orders }} orders ·
-            commission {{ +lifetime.commission | money }} ({{ lifetime.take_rate }}% take rate).
-          </p>
-        }
-
-        <footer class="report-footer">
-          <span>MarketHub tenant report · Figures reflect the selected reporting window and store scope.</span>
-          <span>{{ tenantName() }} · {{ generatedAt() | date:'mediumDate' }}</span>
-        </footer>
-      }
+          <!-- PRINT / PDF FOOTER (Rendered cleanly on paper/PDF) -->
+          <footer class="pdf-print-footer print-only">
+            <span>MarketHub Enterprise Reporting System · Generated for {{ tenantName() }}</span>
+            <span>Document ID: MH-{{ activeReportKey() }}-{{ startDate }}-{{ endDate }} · Page 1</span>
+          </footer>
+        </main>
+      </div>
     </div>
   `,
 })
@@ -300,192 +489,458 @@ export class SellerAnalyticsComponent {
   private api = inject(ApiService);
   private auth = inject(AuthService);
 
-  tenantName = computed(() => this.auth.user()?.tenant_name?.trim() || this.auth.user()?.name || 'Tenant workspace');
+  tenantName = computed(() => this.auth.user()?.tenant_name?.trim() || this.auth.user()?.name || 'Tenant Workspace');
   tenantId = computed(() => this.auth.user()?.tenant_id ?? null);
-  generatedAt = signal<Date | null>(null);
+  generatedAt = signal<Date>(new Date());
 
-  readonly metricOptions: { key: MetricKey; label: string }[] = [
-    { key: 'gmv', label: 'Revenue' },
-    { key: 'orders', label: 'Orders' },
-    { key: 'views', label: 'Views' },
-  ];
-
-  report = signal<TenantAnalyticsReport | null>(null);
-  loading = signal(true);
-  refreshing = signal(false);
+  // State signals
+  loading = signal(false);
   error = signal('');
-  metric = signal<MetricKey>('gmv');
+  activeReportKey = signal<string>('sales_summary');
+  preset = signal<string>('30d');
 
-  days = 30;
+  // Filter models
+  startDate = this.formatDate(new Date(Date.now() - 29 * 86400000));
+  endDate = this.formatDate(new Date());
   storeFilter = '';
+  statusFilter = '';
+  categoryFilter = '';
+  amountMin: number | null = null;
+  amountMax: number | null = null;
+  taxInclusive = true;
 
-  series = computed(() => this.report()?.series ?? []);
-  hasSeries = computed(() => this.series().some((d) => d.gmv > 0 || d.orders > 0 || d.views > 0));
+  // Search & Starred filters
+  searchQuery = '';
+  showOnlyStarred = signal(false);
+  starredKeys = signal<Set<string>>(new Set(['sales_summary', 'orders_master', 'inventory_stock', 'low_stock_alerts', 'invoices_breakdown', 'pnl_statement']));
+
+  // Options checklist
+  options = {
+    discounts: true,
+    shipping: true,
+    tax: true,
+    cancelled: false,
+    drafts: false,
+    storeBreakdown: false,
+  };
+
+  // Table pagination & search
+  searchTableText = '';
+  tablePage = signal(1);
+  readonly tablePageSize = 15;
+
+  // Stores & Categories dropdown lists
+  storesList = signal<{ id: number; name: string }[]>([]);
+  categoriesList = signal<{ id: number; name: string }[]>([]);
+
+  // Raw report catalog from backend or fallback
+  categories = signal<ReportCategoryMeta[]>([
+    {
+      name: 'Sales & Orders Reports',
+      icon: 'orders',
+      open: true,
+      reports: [
+        { key: 'sales_summary', label: 'Sales Summary Report', favorite: true },
+        { key: 'orders_master', label: 'Orders Master List', favorite: true },
+        { key: 'orders_by_status', label: 'Orders by Status Breakdown', favorite: false },
+        { key: 'orders_cancelled', label: 'Cancelled & Refunded Orders', favorite: false },
+        { key: 'fulfillment_delivery', label: 'Fulfillment & Delivery List', favorite: false },
+        { key: 'discounts_coupons', label: 'Discounts & Coupon Redemptions', favorite: false },
+        { key: 'geographic_sales', label: 'Geographic & Regional Sales', favorite: false },
+      ],
+    },
+    {
+      name: 'Catalog & Inventory Reports',
+      icon: 'inventory',
+      open: true,
+      reports: [
+        { key: 'inventory_stock', label: 'Stock On Hand & Availability', favorite: true },
+        { key: 'low_stock_alerts', label: 'Low Stock & Reorder Alerts', favorite: true },
+        { key: 'inventory_valuation', label: 'Inventory Valuation Report', favorite: false },
+        { key: 'best_sellers', label: 'Best-Selling Products', favorite: false },
+        { key: 'slow_moving_stock', label: 'Slow Moving & Aging Stock', favorite: false },
+        { key: 'category_performance', label: 'Category & Collection Performance', favorite: false },
+      ],
+    },
+    {
+      name: 'Finance & Accounting Reports',
+      icon: 'finance',
+      open: false,
+      reports: [
+        { key: 'invoices_breakdown', label: 'Customer Invoices Breakdown', favorite: true },
+        { key: 'expenses_bills', label: 'Bills & Operating Expenses', favorite: false },
+        { key: 'payments_ledger', label: 'Payments & Cash Movement Ledger', favorite: false },
+        { key: 'pnl_statement', label: 'Profit & Loss Statement (P&L)', favorite: true },
+        { key: 'tax_summary', label: 'Tax Summary & Collected Liability', favorite: false },
+        { key: 'settlements_payouts', label: 'Platform Settlements & Payouts', favorite: false },
+      ],
+    },
+    {
+      name: 'Customers & Vendors Reports',
+      icon: 'users',
+      open: false,
+      reports: [
+        { key: 'customers_directory', label: 'Customer Directory & Spending', favorite: false },
+        { key: 'repeat_buyers', label: 'Repeat Buyers & Customer Retention', favorite: false },
+        { key: 'vendor_payables', label: 'Vendor & Supplier Directory', favorite: false },
+      ],
+    },
+    {
+      name: 'Marketing & Advertising Reports',
+      icon: 'ads',
+      open: false,
+      reports: [
+        { key: 'ads_performance', label: 'Ad Campaign Performance & ROI', favorite: false },
+        { key: 'traffic_funnel', label: 'Storefront Traffic & Funnel', favorite: false },
+        { key: 'store_comparison', label: 'Multi-Store Performance Comparison', favorite: false },
+      ],
+    },
+    {
+      name: 'Audit & Operations Reports',
+      icon: 'activity',
+      open: false,
+      reports: [
+        { key: 'audit_trail', label: 'Tenant Activity Audit Trail', favorite: false },
+      ],
+    },
+  ]);
+
+  // Current loaded report response data
+  reportData = signal<any | null>(null);
+
+  // Active columns configuration
+  activeColumns = signal<ReportColumnMeta[]>([]);
+
+  // Computed helper for report name
+  activeReportName = computed(() => {
+    for (const cat of this.categories()) {
+      for (const rep of cat.reports) {
+        if (rep.key === this.activeReportKey()) return rep.label;
+      }
+    }
+    return 'Sales Summary Report';
+  });
+
+  reportHelp = computed(() => this.reportData()?.help);
+
+  visibleColumns = computed(() => this.activeColumns().filter((c) => c.selected));
+
+  filteredCategories = computed(() => {
+    const q = this.searchQuery.trim().toLowerCase();
+    const onlyStars = this.showOnlyStarred();
+    const stars = this.starredKeys();
+
+    return this.categories().map((cat) => {
+      const reports = cat.reports.filter((r) => {
+        const matchesQuery = !q || r.label.toLowerCase().includes(q) || r.key.toLowerCase().includes(q);
+        const matchesStar = !onlyStars || stars.has(r.key);
+        return matchesQuery && matchesStar;
+      });
+      return {
+        ...cat,
+        open: q ? true : cat.open,
+        reports,
+      };
+    }).filter((cat) => cat.reports.length > 0);
+  });
+
+  filteredRows = computed(() => {
+    const data = this.reportData()?.rows || [];
+    const query = this.searchTableText.trim().toLowerCase();
+    if (!query) return data;
+
+    return data.filter((row: any) =>
+      Object.values(row).some((val) => String(val ?? '').toLowerCase().includes(query))
+    );
+  });
+
+  totalTablePages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredRows().length / this.tablePageSize))
+  );
+
+  paginatedRows = computed(() => {
+    const start = (this.tablePage() - 1) * this.tablePageSize;
+    return this.filteredRows().slice(start, start + this.tablePageSize);
+  });
+
+  paginationRange = computed(() => {
+    const total = this.filteredRows().length;
+    if (!total) return '0';
+    const start = (this.tablePage() - 1) * this.tablePageSize + 1;
+    const end = Math.min(this.tablePage() * this.tablePageSize, total);
+    return `${start}–${end}`;
+  });
 
   constructor() {
-    this.load();
+    this.restoreFavorites();
+    this.loadStoresAndCategories();
+    this.loadReport();
   }
 
-  load(): void {
+  // ---------------------------------------------------------------------------
+  // Data Loading
+  // ---------------------------------------------------------------------------
+
+  loadReport(): void {
+    this.loading.set(true);
     this.error.set('');
-    if (this.report()) this.refreshing.set(true);
-    const params: Record<string, string | number> = { days: this.days };
+
+    const params: Record<string, any> = {
+      report: this.activeReportKey(),
+      start_date: this.startDate,
+      end_date: this.endDate,
+    };
+
     if (this.storeFilter) params['store_id'] = this.storeFilter;
-    this.api
-      .sellerAnalytics(params)
-      .pipe(finalize(() => {
-        this.loading.set(false);
-        this.refreshing.set(false);
-      }))
+    if (this.statusFilter) params['status'] = this.statusFilter;
+    if (this.categoryFilter) params['category_id'] = this.categoryFilter;
+    if (this.amountMin !== null && this.amountMin !== undefined) params['amount_min'] = this.amountMin;
+    if (this.amountMax !== null && this.amountMax !== undefined) params['amount_max'] = this.amountMax;
+
+    this.api.generateTenantReport(params)
+      .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
-          this.report.set(res.data);
+          this.reportData.set(res.data);
           this.generatedAt.set(new Date());
+          this.activeColumns.set((res.data.columns || []).map((col: any) => ({
+            ...col,
+            selected: col.selected !== false,
+          })));
+          this.tablePage.set(1);
         },
         error: (err) => {
-          this.error.set(err?.error?.message || 'We could not load your tenant report. Please try again.');
+          this.error.set(err?.error?.message || 'Unable to generate tenant report. Please try again.');
         },
       });
   }
 
-  // ----------------------------------------------------------------- chart
+  loadStoresAndCategories(): void {
+    this.api.sellerStores().subscribe({
+      next: (res: any) => {
+        const list = (res.data || []).map((s: any) => ({ id: s.id, name: s.name }));
+        this.storesList.set(list);
+      },
+    });
 
-  private values(): number[] {
-    const key = this.metric();
-    return this.series().map((d) => (key === 'gmv' ? d.gmv : key === 'orders' ? d.orders : d.views));
+    this.api.sellerCategories().subscribe({
+      next: (res: any) => {
+        const list = (res.data || []).map((c: any) => ({ id: c.id, name: c.name }));
+        this.categoriesList.set(list);
+      },
+    });
   }
 
-  linePoints(): string {
-    const values = this.values();
-    if (!values.length) return '';
-    const max = Math.max(...values, 1);
-    const step = values.length > 1 ? 320 / (values.length - 1) : 320;
-    return values.map((v, i) => `${(i * step).toFixed(1)},${(124 - (v / max) * 112).toFixed(1)}`).join(' ');
+  // ---------------------------------------------------------------------------
+  // Interactions & State
+  // ---------------------------------------------------------------------------
+
+  selectReport(key: string): void {
+    if (this.activeReportKey() === key) return;
+    this.activeReportKey.set(key);
+    this.searchTableText = '';
+    this.tablePage.set(1);
+    this.loadReport();
   }
 
-  areaPoints(): string {
-    const line = this.linePoints();
-    if (!line) return '';
-    return `0,130 ${line} 320,130`;
+  toggleCategory(category: ReportCategoryMeta): void {
+    category.open = !category.open;
   }
 
-  metricLabel(): string {
-    return this.metricOptions.find((m) => m.key === this.metric())?.label ?? 'Revenue';
+  toggleStar(key: string, event: MouseEvent): void {
+    event.stopPropagation();
+    const set = new Set(this.starredKeys());
+    if (set.has(key)) {
+      set.delete(key);
+    } else {
+      set.add(key);
+    }
+    this.starredKeys.set(set);
+    this.saveFavorites();
   }
 
-  selectedStoreName(): string {
-    if (!this.storeFilter) return 'All stores';
-    return this.report()?.stores.find((store) => store.id === Number(this.storeFilter))?.name ?? 'Selected store';
+  isStarred(key: string): boolean {
+    return this.starredKeys().has(key);
   }
 
-  peakLabel(): string {
-    const values = this.values();
-    if (!values.length) return '—';
-    const peak = Math.max(...values);
-    return this.metric() === 'gmv' ? peak.toFixed(0) : String(peak);
+  toggleOnlyStarred(): void {
+    this.showOnlyStarred.update((v) => !v);
   }
 
-  // --------------------------------------------------------------- helpers
-
-  /** "+12.4%" style chip text; the tone class is applied by `deltaClass`. */
-  deltaChip(kpi: AnalyticsKpi): string {
-    const sign = kpi.delta_percent > 0 ? '+' : '';
-    return `${sign}${kpi.delta_percent}%`;
+  onSearchChange(): void {
+    // If searching, auto-expand categories that have results
+    if (this.searchQuery.trim()) {
+      for (const cat of this.categories()) {
+        cat.open = true;
+      }
+    }
   }
 
-  sharePercent(count: number): number {
-    const total = (this.report()?.status_mix ?? []).reduce((sum, s) => sum + s.count, 0);
-    return total > 0 ? Math.round((count / total) * 100) : 0;
+  resetSearch(): void {
+    this.searchQuery = '';
+    this.showOnlyStarred.set(false);
   }
 
-  /** Ad spend as a share of revenue — the simplest efficiency read. */
-  adShare(): string {
-    const r = this.report();
-    if (!r || !r.kpis.gmv.value) return '0.00';
-    return ((r.ads.spend / r.kpis.gmv.value) * 100).toFixed(2);
+  applyPreset(type: string): void {
+    this.preset.set(type);
+    const now = new Date();
+    const end = this.formatDate(now);
+
+    if (type === 'today') {
+      this.startDate = end;
+      this.endDate = end;
+    } else if (type === '7d') {
+      this.startDate = this.formatDate(new Date(Date.now() - 6 * 86400000));
+      this.endDate = end;
+    } else if (type === '30d') {
+      this.startDate = this.formatDate(new Date(Date.now() - 29 * 86400000));
+      this.endDate = end;
+    } else if (type === 'month') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      this.startDate = this.formatDate(firstDay);
+      this.endDate = end;
+    } else if (type === 'ytd') {
+      const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+      this.startDate = this.formatDate(firstDayOfYear);
+      this.endDate = end;
+    }
+
+    this.loadReport();
   }
 
-  statusLabel(status: string): string {
-    return STATUS_LABELS[status] ?? status.replace(/_/g, ' ');
+  toggleColumn(key: string): void {
+    this.activeColumns.update((cols) =>
+      cols.map((col) => col.key === key ? { ...col, selected: !col.selected } : col)
+    );
   }
 
-  statusTone(status: string): string {
-    return STATUS_TONES[status] ?? '#8a8070';
+  allOptionsChecked(): boolean {
+    return Object.values(this.options).every(Boolean);
   }
 
-  /** Opens the browser print dialog; choose "Save as PDF" for a clean report file. */
-  exportPdf(): void {
-    const r = this.report();
+  toggleAllOptions(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.options = {
+      discounts: checked,
+      shipping: checked,
+      tax: checked,
+      cancelled: checked,
+      drafts: checked,
+      storeBreakdown: checked,
+    };
+  }
+
+  resetFilters(): void {
+    this.startDate = this.formatDate(new Date(Date.now() - 29 * 86400000));
+    this.endDate = this.formatDate(new Date());
+    this.storeFilter = '';
+    this.statusFilter = '';
+    this.categoryFilter = '';
+    this.amountMin = null;
+    this.amountMax = null;
+    this.taxInclusive = true;
+    this.preset.set('30d');
+    this.loadReport();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Export & PDF Generation
+  // ---------------------------------------------------------------------------
+
+  generatePdf(): void {
+    const r = this.reportData();
     if (!r || typeof window === 'undefined') return;
 
-    const safeName = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tenant';
-    const tenantSlug = safeName(this.tenantName());
-    const scopeSlug = safeName(this.selectedStoreName());
-    const previousTitle = document.title;
-    document.title = `${tenantSlug}-report-${scopeSlug}-${r.range.start}-to-${r.range.end}`;
-    window.addEventListener('afterprint', () => { document.title = previousTitle; }, { once: true });
+    const safe = (val: string) => val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'report';
+    const tenantSlug = safe(this.tenantName());
+    const reportSlug = safe(this.activeReportName());
+    const prevTitle = document.title;
+
+    document.title = `${tenantSlug}-${reportSlug}-${this.startDate}-to-${this.endDate}`;
+    window.addEventListener('afterprint', () => { document.title = prevTitle; }, { once: true });
+
     try {
       window.print();
     } catch {
-      document.title = previousTitle;
+      document.title = prevTitle;
     }
   }
 
   exportCsv(): void {
-    const r = this.report();
-    if (!r) return;
-    const rows: (string | number)[][] = [
-      ['Tenant report', this.tenantName()],
-      ['Tenant ID', this.tenantId() ?? ''],
-      ['Reporting period', r.range.start, r.range.end],
-      ['Comparison period', r.range.previous_start, r.range.previous_end],
-      ['Store scope', this.selectedStoreName()],
-      ['Generated at', this.generatedAt()?.toISOString() ?? new Date().toISOString()],
-      [],
-      ['Summary metrics'],
-      ['Metric', 'Current period', 'Previous period', 'Change (%)'],
-      ...Object.entries(r.kpis).map(([key, value]) => [key, value.value, value.previous, value.delta_percent]),
-      [],
-      ['Daily performance'],
-      ['Day', 'Revenue', 'Orders', 'Product views'],
-      ...r.series.map((d) => [d.day, d.gmv, d.orders, d.views]),
-      [],
-      ['Conversion funnel'],
-      ['Step', 'Events', 'Rate (%)'],
-      ...r.funnel.steps.map((step) => [step.label, step.value, step.rate]),
-      ['Cart abandonment', '', r.funnel.cart_abandonment],
-      [],
-      ['Order status mix'],
-      ['Status', 'Orders', 'Revenue'],
-      ...r.status_mix.map((status) => [status.status, status.count, status.gmv]),
-      [],
-      ['Best sellers'],
-      ['Product', 'SKU', 'Units', 'Orders', 'Revenue'],
-      ...r.top_products.map((p) => [p.name, p.sku || '', p.units, p.orders, p.revenue]),
-      [],
-      ['Stores'],
-      ['Store', 'Currency', 'Orders', 'Revenue', 'Net payout'],
-      ...r.stores.map((store) => [store.name, store.currency, store.orders, store.gmv, store.net]),
-      [],
-      ['Customers'],
-      ['Buyers', 'Repeat buyers', 'Repeat rate (%)', 'Revenue per buyer'],
-      [r.customers.buyers, r.customers.repeat_buyers, r.customers.repeat_rate, r.customers.revenue_per_buyer],
-      [],
-      ['Advertising'],
-      ['Impressions', 'Clicks', 'CTR (%)', 'Spend', 'Average CPC'],
-      [r.ads.impressions, r.ads.clicks, r.ads.ctr, r.ads.spend, r.ads.avg_cpc],
-    ];
-    if (r.lifetime) {
-      rows.push([], ['Lifetime'], ['Revenue', 'Orders', 'Commission', 'Take rate (%)']);
-      rows.push([r.lifetime.gmv, r.lifetime.orders, r.lifetime.commission, r.lifetime.take_rate]);
-    }
-    const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = url;
-    const scopeSlug = this.selectedStoreName().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'all-stores';
-    link.download = `tenant-report-${scopeSlug}-${r.range.start}-to-${r.range.end}.csv`;
-    link.click();
+    const r = this.reportData();
+    if (!r || !r.rows || !r.rows.length) return;
+
+    const cols = this.visibleColumns();
+    const headers = cols.map((c) => c.label);
+
+    const rowsData = this.filteredRows().map((row: any) => {
+      return cols.map((col) => {
+        let val = row[col.key];
+        if (col.type === 'money') val = typeof val === 'number' ? val.toFixed(2) : val;
+        return `"${String(val ?? '').replace(/"/g, '""')}"`;
+      }).join(',');
+    });
+
+    const csvContent = [headers.map((h) => `"${h}"`).join(','), ...rowsData].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${this.activeReportKey()}-${this.startDate}-to-${this.endDate}.csv`;
+    a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pagination
+  // ---------------------------------------------------------------------------
+
+  prevPage(): void {
+    if (this.tablePage() > 1) this.tablePage.update((p) => p - 1);
+  }
+
+  nextPage(): void {
+    if (this.tablePage() < this.totalTablePages()) this.tablePage.update((p) => p + 1);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Formatters & Storage Helpers
+  // ---------------------------------------------------------------------------
+
+  prettyStatus(status: string): string {
+    if (!status) return 'Active';
+    return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  selectedStoreName(): string {
+    if (!this.storeFilter) return 'All Stores';
+    const store = this.storesList().find((s) => s.id === +this.storeFilter);
+    return store?.name || 'Selected Store';
+  }
+
+  private formatDate(date: Date): string {
+    return date.toISOString().slice(0, 10);
+  }
+
+  private restoreFavorites(): void {
+    try {
+      const stored = localStorage.getItem('mh_tenant_starred_reports');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          this.starredKeys.set(new Set(parsed));
+        }
+      }
+    } catch {
+      // Ignore localStorage read errors
+    }
+  }
+
+  private saveFavorites(): void {
+    try {
+      localStorage.setItem('mh_tenant_starred_reports', JSON.stringify(Array.from(this.starredKeys())));
+    } catch {
+      // Ignore localStorage write errors
+    }
   }
 }
