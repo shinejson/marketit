@@ -575,3 +575,17 @@ case.
           ╵                                               [32m~~~~~~~~~~~~[0m
 
 
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo matching export in "src/app/core/auth.guard.ts" for import "permissionGuard"[0m
+
+    src/app/app.routes.ts:2:42:
+[37m      2 │ ...d, marketingPortalGuard, [32mpermissionGuard[37m, roleGuard } from './co...
+        ╵                             [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2305: Module '"./core/auth.guard"' has no exported member 'permissionGuard'.[0m [1m[35m[plugin angular-compiler][0m
+
+    C:/xampp/htdocs/market/frontend/src/app/app.routes.ts:2:42:
+[37m      2 │ ...d, marketingPortalGuard, [32mpermissionGuard[37m, roleGuard } from './co...
+        ╵                             [32m~~~~~~~~~~~~~~~[0m
+
+
