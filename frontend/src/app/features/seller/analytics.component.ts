@@ -11,6 +11,10 @@ export interface ReportItemMeta {
   key: string;
   label: string;
   favorite: boolean;
+  /** Tenant permission the API required to include this report. */
+  permission?: string;
+  /** False while the report has no generator yet; the console locks those. */
+  available?: boolean;
 }
 
 export interface ReportCategoryMeta {
@@ -51,12 +55,14 @@ export interface ReportKpiMeta {
           </p>
         </div>
         <div class="head-actions">
-          <button class="btn ghost" type="button" (click)="exportCsv()" [disabled]="loading() || !reportData()?.rows?.length" title="Download report as CSV spreadsheet">
-            <span aria-hidden="true">⇩</span> Export CSV
-          </button>
-          <button class="btn primary" type="button" (click)="generatePdf()" [disabled]="loading() || !reportData()?.rows?.length" title="Generate printable PDF report">
-            <span aria-hidden="true">🖨</span> Generate PDF
-          </button>
+          @if (canExport()) {
+            <button class="btn ghost" type="button" (click)="exportCsv()" [disabled]="loading() || !reportData()?.rows?.length" title="Download report as CSV spreadsheet">
+              <span aria-hidden="true">⇩</span> Export CSV
+            </button>
+            <button class="btn primary" type="button" (click)="generatePdf()" [disabled]="loading() || !reportData()?.rows?.length" title="Generate printable PDF report">
+              <span aria-hidden="true">🖨</span> Generate PDF
+            </button>
+          }
           <button class="btn ghost" type="button" (click)="loadReport()" [disabled]="loading()">
             <span class="spin-icon" [class.spinning]="loading()">⟳</span> Refresh
           </button>
@@ -98,6 +104,14 @@ export interface ReportKpiMeta {
           </div>
 
           <div class="accordion-list">
+            @if (catalogLoading()) {
+              <div class="sidebar-empty"><p>Loading the reports your role can open…</p></div>
+            } @else if (categories().length === 0) {
+              <div class="sidebar-empty">
+                <p>No reports are available to your role yet.</p>
+                <p class="muted">Ask a workspace administrator to grant a reporting permission.</p>
+              </div>
+            } @else {
             @for (category of filteredCategories(); track category.name) {
               <div class="accordion-category" [class.open]="category.open">
                 <button
@@ -117,10 +131,15 @@ export interface ReportKpiMeta {
                         <button
                           type="button"
                           class="report-item-btn"
+                          [disabled]="report.available === false"
                           (click)="selectReport(report.key)"
+                          [title]="report.available === false ? 'Not available in your workspace yet' : report.label"
                         >
                           <span class="item-bullet">•</span>
                           <span class="item-label">{{ report.label }}</span>
+                          @if (report.available === false) {
+                            <span class="item-lock" aria-hidden="true">🔒</span>
+                          }
                         </button>
                         <button
                           type="button"
@@ -141,6 +160,7 @@ export interface ReportKpiMeta {
                 <p>No reports match "{{ searchQuery }}"</p>
                 <button type="button" class="btn ghost btn-sm" (click)="resetSearch()">Clear filter</button>
               </div>
+            }
             }
           </div>
         </aside>
@@ -496,7 +516,11 @@ export class SellerAnalyticsComponent {
   // State signals
   loading = signal(false);
   error = signal('');
-  activeReportKey = signal<string>('sales_summary');
+  catalogLoading = signal(true);
+  /** `reports.export`: the permission that unlocks the CSV and PDF downloads. */
+  canExport = signal(false);
+  /** Empty until the API answers — never a client-side guess at the catalogue. */
+  activeReportKey = signal<string>('');
   preset = signal<string>('30d');
 
   // Filter models
@@ -533,77 +557,12 @@ export class SellerAnalyticsComponent {
   storesList = signal<{ id: number; name: string }[]>([]);
   categoriesList = signal<{ id: number; name: string }[]>([]);
 
-  // Raw report catalog from backend or fallback
-  categories = signal<ReportCategoryMeta[]>([
-    {
-      name: 'Sales & Orders Reports',
-      icon: 'orders',
-      open: true,
-      reports: [
-        { key: 'sales_summary', label: 'Sales Summary Report', favorite: true },
-        { key: 'orders_master', label: 'Orders Master List', favorite: true },
-        { key: 'orders_by_status', label: 'Orders by Status Breakdown', favorite: false },
-        { key: 'orders_cancelled', label: 'Cancelled & Refunded Orders', favorite: false },
-        { key: 'fulfillment_delivery', label: 'Fulfillment & Delivery List', favorite: false },
-        { key: 'discounts_coupons', label: 'Discounts & Coupon Redemptions', favorite: false },
-        { key: 'geographic_sales', label: 'Geographic & Regional Sales', favorite: false },
-      ],
-    },
-    {
-      name: 'Catalog & Inventory Reports',
-      icon: 'inventory',
-      open: true,
-      reports: [
-        { key: 'inventory_stock', label: 'Stock On Hand & Availability', favorite: true },
-        { key: 'low_stock_alerts', label: 'Low Stock & Reorder Alerts', favorite: true },
-        { key: 'inventory_valuation', label: 'Inventory Valuation Report', favorite: false },
-        { key: 'best_sellers', label: 'Best-Selling Products', favorite: false },
-        { key: 'slow_moving_stock', label: 'Slow Moving & Aging Stock', favorite: false },
-        { key: 'category_performance', label: 'Category & Collection Performance', favorite: false },
-      ],
-    },
-    {
-      name: 'Finance & Accounting Reports',
-      icon: 'finance',
-      open: false,
-      reports: [
-        { key: 'invoices_breakdown', label: 'Customer Invoices Breakdown', favorite: true },
-        { key: 'expenses_bills', label: 'Bills & Operating Expenses', favorite: false },
-        { key: 'payments_ledger', label: 'Payments & Cash Movement Ledger', favorite: false },
-        { key: 'pnl_statement', label: 'Profit & Loss Statement (P&L)', favorite: true },
-        { key: 'tax_summary', label: 'Tax Summary & Collected Liability', favorite: false },
-        { key: 'settlements_payouts', label: 'Platform Settlements & Payouts', favorite: false },
-      ],
-    },
-    {
-      name: 'Customers & Vendors Reports',
-      icon: 'users',
-      open: false,
-      reports: [
-        { key: 'customers_directory', label: 'Customer Directory & Spending', favorite: false },
-        { key: 'repeat_buyers', label: 'Repeat Buyers & Customer Retention', favorite: false },
-        { key: 'vendor_payables', label: 'Vendor & Supplier Directory', favorite: false },
-      ],
-    },
-    {
-      name: 'Marketing & Advertising Reports',
-      icon: 'ads',
-      open: false,
-      reports: [
-        { key: 'ads_performance', label: 'Ad Campaign Performance & ROI', favorite: false },
-        { key: 'traffic_funnel', label: 'Storefront Traffic & Funnel', favorite: false },
-        { key: 'store_comparison', label: 'Multi-Store Performance Comparison', favorite: false },
-      ],
-    },
-    {
-      name: 'Audit & Operations Reports',
-      icon: 'activity',
-      open: false,
-      reports: [
-        { key: 'audit_trail', label: 'Tenant Activity Audit Trail', favorite: false },
-      ],
-    },
-  ]);
+  /**
+   * The report catalogue as the API filtered it for this user. Reports their
+   * role does not carry are simply absent, so the sidebar can only ever offer
+   * something the backend will actually serve.
+   */
+  categories = signal<ReportCategoryMeta[]>([]);
 
   // Current loaded report response data
   reportData = signal<any | null>(null);
@@ -618,7 +577,7 @@ export class SellerAnalyticsComponent {
         if (rep.key === this.activeReportKey()) return rep.label;
       }
     }
-    return 'Sales Summary Report';
+    return this.activeReportKey() ? this.activeReportKey() : 'Select a report';
   });
 
   reportHelp = computed(() => this.reportData()?.help);
@@ -674,14 +633,52 @@ export class SellerAnalyticsComponent {
   constructor() {
     this.restoreFavorites();
     this.loadStoresAndCategories();
-    this.loadReport();
+    this.loadCatalog();
   }
 
   // ---------------------------------------------------------------------------
   // Data Loading
   // ---------------------------------------------------------------------------
 
+  /**
+   * Ask the API which reports this person may open, then open the first one.
+   * The response is already permission-filtered, so nothing here re-decides
+   * access — it only picks a sensible starting point.
+   */
+  loadCatalog(): void {
+    this.catalogLoading.set(true);
+
+    this.api.tenantReportCatalog().subscribe({
+      next: (res) => {
+        const categories = (res.data?.categories || []).map((cat, index) => ({ ...cat, open: index === 0 }));
+        this.categories.set(categories);
+        this.canExport.set(!!res.meta?.permissions?.can_export);
+        this.catalogLoading.set(false);
+
+        const first = this.firstAvailableKey();
+        if (!first) return;
+        this.activeReportKey.set(first);
+        this.loadReport();
+      },
+      error: () => {
+        this.catalogLoading.set(false);
+        this.error.set('We could not load your report catalogue. Refresh to try again.');
+      },
+    });
+  }
+
+  /** First report the caller may open that the workspace can actually build. */
+  private firstAvailableKey(): string | null {
+    for (const cat of this.categories()) {
+      for (const report of cat.reports) {
+        if (report.available !== false) return report.key;
+      }
+    }
+    return null;
+  }
+
   loadReport(): void {
+    if (!this.activeReportKey()) return;
     this.loading.set(true);
     this.error.set('');
 
@@ -737,6 +734,10 @@ export class SellerAnalyticsComponent {
 
   selectReport(key: string): void {
     if (this.activeReportKey() === key) return;
+    // Locked entries are disabled in the template; this keeps a programmatic
+    // call from asking the API for a report it will refuse anyway.
+    const requested = this.categories().flatMap((cat) => cat.reports).find((r) => r.key === key);
+    if (!requested || requested.available === false) return;
     this.activeReportKey.set(key);
     this.searchTableText = '';
     this.tablePage.set(1);
@@ -848,6 +849,7 @@ export class SellerAnalyticsComponent {
   // ---------------------------------------------------------------------------
 
   generatePdf(): void {
+    if (!this.canExport()) return;
     const r = this.reportData();
     if (!r || typeof window === 'undefined') return;
 
@@ -867,6 +869,7 @@ export class SellerAnalyticsComponent {
   }
 
   exportCsv(): void {
+    if (!this.canExport()) return;
     const r = this.reportData();
     if (!r || !r.rows || !r.rows.length) return;
 

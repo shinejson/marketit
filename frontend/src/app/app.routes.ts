@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
-import { authGuard, marketingPortalGuard, roleGuard } from './core/auth.guard';
+import { authGuard, marketingPortalGuard, permissionGuard, roleGuard } from './core/auth.guard';
+import { REPORT_VIEW_PERMISSIONS } from './core/tenant-permissions';
 
 const tenantConsoleChildren: Routes = [
   { path: '', loadComponent: () => import('./features/seller/dashboard.component').then((m) => m.SellerDashboardComponent) },
@@ -15,7 +16,13 @@ const tenantConsoleChildren: Routes = [
   { path: 'api-keys', loadComponent: () => import('./features/seller/api-keys.component').then((m) => m.SellerApiKeysComponent) },
   { path: 'webhooks', loadComponent: () => import('./features/seller/webhooks.component').then((m) => m.SellerWebhooksComponent) },
   { path: 'ai', loadComponent: () => import('./features/seller/ai.component').then((m) => m.SellerAiComponent) },
-  { path: 'reports', loadComponent: () => import('./features/seller/analytics.component').then((m) => m.SellerAnalyticsComponent) },
+  {
+    path: 'reports',
+    // Opens only for roles that carry at least one report permission; the
+    // API trims the catalogue itself once the page loads.
+    canActivate: [permissionGuard(...REPORT_VIEW_PERMISSIONS)],
+    loadComponent: () => import('./features/seller/analytics.component').then((m) => m.SellerAnalyticsComponent),
+  },
   // Backwards-compatible route for saved links to the earlier Analytics page.
   { path: 'analytics', redirectTo: 'reports', pathMatch: 'full' },
   { path: 'departments/finance', loadComponent: () => import('./features/seller/accounting.component').then((m) => m.SellerAccountingComponent), data: { page: 'overview' } },

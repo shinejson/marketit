@@ -113,6 +113,24 @@ export class AuthService {
     return !!role && roles.includes(role);
   }
 
+  /**
+   * Tenant permission keys held by the signed-in user, e.g. `finance.view` or
+   * `orders.view`. `null` means the session predates the API returning them, so
+   * callers that only hide navigation should treat it as "unknown" and let the
+   * API answer — the server enforces every permission regardless.
+   */
+  readonly permissions = computed<string[] | null>(() => this.userSignal()?.permissions ?? null);
+
+  /** True once the API has told us which permissions this session holds. */
+  readonly permissionsKnown = computed(() => Array.isArray(this.userSignal()?.permissions));
+
+  /** Does this user's tenant role carry any of the given permissions? */
+  hasPermission(...permissions: string[]): boolean {
+    const held = this.userSignal()?.permissions;
+    if (!held) return false;
+    return held.some((key) => permissions.includes(key));
+  }
+
   private persist(data: AuthResponse) {
     try {
       sessionStorage.setItem(TOKEN_KEY, data.token);
