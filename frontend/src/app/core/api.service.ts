@@ -82,6 +82,7 @@ import {
   PermissionGroup,
   TenantCustomer,
   TenantCustomersResponse,
+  TenantReportCatalogResponse,
   TenantRoleSummary,
   TenantSystemUser,
   TenantSystemUsersResponse,
@@ -1043,8 +1044,9 @@ export class ApiService {
     return this.http.get<{ data: TenantAnalyticsReport }>('/api/tenant/analytics', { params });
   }
 
+  /** Catalogue of the reports the signed-in user's role may open. */
   tenantReportCatalog() {
-    return this.http.get<{ data: { categories: any[] } }>('/api/tenant/reports/catalog');
+    return this.http.get<TenantReportCatalogResponse>('/api/tenant/reports/catalog');
   }
 
   generateTenantReport(params: Record<string, any> = {}) {

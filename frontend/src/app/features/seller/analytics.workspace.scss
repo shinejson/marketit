@@ -264,6 +264,22 @@ app-seller-analytics {
             line-height: 1.35;
             white-space: normal;
           }
+
+          .item-lock {
+            margin-left: auto;
+            font-size: 10px;
+            opacity: 0.6;
+          }
+
+          // Reports the workspace cannot build yet: visible, but not openable.
+          &:disabled {
+            cursor: not-allowed;
+            color: var(--muted);
+
+            .item-bullet {
+              color: color-mix(in srgb, var(--muted) 45%, transparent);
+            }
+          }
         }
 
         .item-star-btn {

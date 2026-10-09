@@ -11,6 +11,13 @@ export interface User {
   department?: string | null;
   avatar_url?: string | null;
   roles: { role: string; tenant_id: number | null; store_id: number | null; department?: string | null }[];
+  /**
+   * Tenant permission keys this person holds (`finance.view`, `orders.view`, …),
+   * as resolved by the API from their assigned tenant role. Undefined on
+   * sessions created before the field shipped — treat that as "unknown", never
+   * as "denied"; the API remains the authority on every request.
+   */
+  permissions?: string[];
 }
 
 export interface ChartSeries {
@@ -154,6 +161,36 @@ export interface AccountingReport {
   assets?: AccountingReportRow[]; liabilities?: AccountingReportRow[]; equity?: AccountingReportRow[];
   total_assets?: number; total_liabilities?: number; total_equity?: number; difference?: number;
   accounts?: AccountingReportRow[]; total_debit?: number; total_credit?: number;
+}
+
+/** One report in the tenant Report Center catalogue. */
+export interface TenantReportItem {
+  key: string;
+  label: string;
+  favorite: boolean;
+  /** Tenant permission the API required to include this report. */
+  permission: string;
+  /** False until the report has a generator; the console locks those. */
+  available: boolean;
+}
+
+export interface TenantReportCategory {
+  name: string;
+  icon: string;
+  reports: TenantReportItem[];
+}
+
+/**
+ * `/tenant/reports/catalog` already trims itself to the caller's permissions,
+ * so a category that is missing here is one this person may not open.
+ */
+export interface TenantReportCatalogResponse {
+  data: { categories: TenantReportCategory[] };
+  meta: {
+    total: number;
+    accessible: number;
+    permissions: { can_export: boolean };
+  };
 }
 
 export interface AccountingBankAccount {

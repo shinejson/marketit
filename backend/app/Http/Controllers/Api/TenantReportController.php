@@ -6,32 +6,51 @@ use App\Http\Controllers\Controller;
 use App\Models\AccountingExpense;
 use App\Models\AccountingInvoice;
 use App\Models\AccountingPayment;
-use App\Models\AdCampaign;
 use App\Models\AuditLog;
-use App\Models\Category;
-use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Models\Store;
 use App\Models\Tenant;
-use App\Models\User;
+use App\Models\TenantRole;
+use App\Support\TenantReportCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
- * Tenant Report Center: Handles enterprise report generation, multi-category catalogs,
- * dynamic column selections, filtering, and PDF/CSV export rollups.
+ * Tenant Report Center: enterprise report generation, the permission-filtered
+ * catalogue, dynamic column selection, filtering and CSV/PDF rollups.
+ *
+ * Access model: the route group already proves the caller belongs to a tenant
+ * workspace (`tenant` + `role:tenant`). This controller then answers two more
+ * questions before any row is read — is this person allowed to open *this*
+ * report, and are they allowed to see every column it returns. Both answers
+ * come from the permission list the tenant admin assigned, resolved through
+ * TenantReportCatalog.
  */
 class TenantReportController extends Controller
 {
-    /** Catalog of all available tenant report types grouped by category. */
-    public function catalog(): JsonResponse
+    /**
+     * Catalogue of the reports the caller may open, grouped by category.
+     *
+     * Reports the caller's role does not carry are absent rather than flagged,
+     * so the console never advertises data this person is not entitled to.
+     */
+    public function catalog(Request $request): JsonResponse
     {
+        $permissions = $this->permissionsFor($request);
+        $categories = TenantReportCatalog::categoriesFor($permissions);
+
         return response()->json([
             'data' => [
-                'categories' => $this->reportCategories(),
+                'categories' => $categories,
+            ],
+            'meta' => [
+                'total' => count(TenantReportCatalog::flat()),
+                'accessible' => count(TenantReportCatalog::accessibleKeys($permissions)),
+                'permissions' => [
+                    'can_export' => TenantReportCatalog::canExport($permissions),
+                ],
             ],
         ]);
     }
@@ -39,18 +58,54 @@ class TenantReportController extends Controller
     /** Generates the requested report dataset with summary KPIs, columns, and data rows. */
     public function generate(Request $request): JsonResponse
     {
-        $tenantId = (int) ($request->user()?->tenantId() ?? 0);
-        if ($tenantId <= 0) {
-            $tenantId = (int) ($request->user()?->ownedTenants()->value('id') ?? 1);
-        }
-        $reportKey = $request->string('report', 'sales_summary')->toString();
-        $startDate = $request->filled('start_date') ? Carbon::parse($request->input('start_date'))->startOfDay() : now()->subDays(29)->startOfDay();
-        $endDate = $request->filled('end_date') ? Carbon::parse($request->input('end_date'))->endOfDay() : now()->endOfDay();
-        $storeId = $request->filled('store_id') && is_numeric($request->input('store_id')) ? (int) $request->input('store_id') : null;
-        $status = $request->string('status')->trim()->toString();
-        $categoryId = $request->filled('category_id') && is_numeric($request->input('category_id')) ? (int) $request->input('category_id') : null;
-        $amountMin = $request->filled('amount_min') ? (float) $request->input('amount_min') : null;
-        $amountMax = $request->filled('amount_max') ? (float) $request->input('amount_max') : null;
+        $user = $request->user();
+
+        // No fallback tenant id: a workspace we cannot resolve must produce no
+        // rows at all, rather than somebody else's.
+        $tenantId = (int) ($user?->tenantId() ?? 0);
+        abort_if($tenantId <= 0, 403, 'This account is not linked to a tenant workspace.');
+
+        $permissions = $this->permissionsFor($request);
+
+        $validated = $request->validate([
+            'report' => ['sometimes', 'string', 'max:64'],
+            'start_date' => ['sometimes', 'nullable', 'date'],
+            'end_date' => ['sometimes', 'nullable', 'date'],
+            'store_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'category_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'status' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'amount_min' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'amount_max' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+        ]);
+
+        $reportKey = (string) ($validated['report'] ?? 'sales_summary');
+
+        abort_unless(
+            TenantReportCatalog::isKnown($reportKey),
+            422,
+            'Unknown report. Pick one from the report catalogue.'
+        );
+        abort_unless(
+            TenantReportCatalog::canAccess($permissions, $reportKey),
+            403,
+            'Your role does not include access to this report. Ask a workspace administrator if you need it.'
+        );
+
+        $generator = TenantReportCatalog::generatorFor($reportKey);
+        abort_unless(
+            $generator !== null && method_exists($this, $generator),
+            501,
+            'This report is not available in your workspace yet.'
+        );
+
+        $reportMeta = TenantReportCatalog::definition($reportKey);
+        [$startDate, $endDate] = $this->resolveRange($validated);
+
+        $storeId = isset($validated['store_id']) ? (int) $validated['store_id'] : null;
+        $categoryId = isset($validated['category_id']) ? (int) $validated['category_id'] : null;
+        $status = isset($validated['status']) ? trim((string) $validated['status']) : '';
+        $amountMin = isset($validated['amount_min']) ? (float) $validated['amount_min'] : null;
+        $amountMax = isset($validated['amount_max']) ? (float) $validated['amount_max'] : null;
 
         $tenant = Tenant::query()->find($tenantId);
         $tenantName = $tenant?->name ?? 'Tenant Workspace';
@@ -62,18 +117,14 @@ class TenantReportController extends Controller
             }
         }
 
-        $reportMeta = $this->findReportMeta($reportKey);
-        $generatorMethod = 'generate' . str_replace(' ', '', ucwords(str_replace('_', ' ', $reportKey)));
-
-        if (method_exists($this, $generatorMethod)) {
-            $result = $this->$generatorMethod($tenantId, $startDate, $endDate, $storeId, $status, $categoryId, $amountMin, $amountMax, $request);
-        } else {
-            $result = $this->generateSalesSummary($tenantId, $startDate, $endDate, $storeId, $status, $categoryId, $amountMin, $amountMax, $request);
-        }
+        // The generator name comes from the server-side catalogue, never from
+        // the request, so this dispatch cannot be steered by a caller.
+        $result = $this->{$generator}($tenantId, $startDate, $endDate, $storeId, $status, $categoryId, $amountMin, $amountMax, $request);
+        $result = $this->applyColumnRestrictions($result, $reportKey, $permissions);
 
         return response()->json([
             'data' => array_merge([
-                'report_key' => $reportMeta['key'],
+                'report_key' => $reportKey,
                 'report_name' => $reportMeta['label'],
                 'category' => $reportMeta['category'],
                 'generated_at' => now()->toIso8601String(),
@@ -83,11 +134,116 @@ class TenantReportController extends Controller
                 'range' => [
                     'start' => $startDate->toDateString(),
                     'end' => $endDate->toDateString(),
-                    'days' => $startDate->diffInDays($endDate) + 1,
+                    'days' => (int) abs($startDate->diffInDays($endDate)) + 1,
                 ],
-                'help' => $this->reportHelpGuide($reportMeta['key']),
+                'help' => $this->reportHelpGuide($reportKey),
+                'permissions' => [
+                    'can_export' => TenantReportCatalog::canExport($permissions),
+                ],
             ], $result),
         ]);
+    }
+
+    // --------------------------------------------------------------------------
+    // Access helpers
+    // --------------------------------------------------------------------------
+
+    /**
+     * The caller's tenant permissions, resolved against their own workspace.
+     *
+     * @return string[]
+     */
+    protected function permissionsFor(Request $request): array
+    {
+        $user = $request->user();
+        $tenantId = (int) ($user?->tenantId() ?? 0);
+
+        if ($tenantId <= 0) {
+            return [];
+        }
+
+        // TenantAccess already resolves an owner to the whole catalogue; the
+        // explicit union keeps that true even if their role row is ever edited
+        // into something narrower, so an owner is never locked out of their own
+        // reports.
+        return $user->isTenantOwner($tenantId)
+            ? array_values(array_unique(array_merge($user->tenantPermissions($tenantId), TenantRole::permissionKeys())))
+            : $user->tenantPermissions($tenantId);
+    }
+
+    /**
+     * Validate and bound the reporting window. Dates arrive pre-validated, so
+     * this only normalises the edges and refuses windows that are inverted or
+     * wide enough to fan a query out into a denial of service.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    protected function resolveRange(array $validated): array
+    {
+        $start = filled($validated['start_date'] ?? null)
+            ? Carbon::parse($validated['start_date'])->startOfDay()
+            : now()->subDays(29)->startOfDay();
+        $end = filled($validated['end_date'] ?? null)
+            ? Carbon::parse($validated['end_date'])->endOfDay()
+            : now()->endOfDay();
+
+        abort_if($end->lessThan($start), 422, 'The end date must be on or after the start date.');
+        abort_if(
+            abs($start->diffInDays($end)) > TenantReportCatalog::MAX_RANGE_DAYS,
+            422,
+            'Reporting windows are limited to '.TenantReportCatalog::MAX_RANGE_DAYS.' days. Narrow the range and run the report again.'
+        );
+
+        return [$start, $end];
+    }
+
+    /**
+     * Mask the columns whose contents belong to a permission the caller does
+     * not hold — buyer contact details on an orders report, for example, stay
+     * with people who may open the customer directory.
+     *
+     * @param  array<string, mixed>  $result
+     * @param  string[]  $permissions
+     * @return array<string, mixed>
+     */
+    protected function applyColumnRestrictions(array $result, string $reportKey, array $permissions): array
+    {
+        $restricted = TenantReportCatalog::restrictedColumns($reportKey);
+        if ($restricted === []) {
+            return $result;
+        }
+
+        $blocked = array_keys(array_filter(
+            $restricted,
+            fn (string $permission) => ! in_array($permission, $permissions, true)
+        ));
+
+        if ($blocked === []) {
+            return $result;
+        }
+
+        foreach ($result['rows'] ?? [] as $index => $row) {
+            foreach ($blocked as $column) {
+                if (array_key_exists($column, $row)) {
+                    $result['rows'][$index][$column] = 'Restricted';
+                }
+            }
+        }
+
+        foreach ($result['columns'] ?? [] as $index => $column) {
+            if (in_array($column['key'] ?? null, $blocked, true)) {
+                $result['columns'][$index]['selected'] = false;
+                $result['columns'][$index]['restricted'] = true;
+                $result['columns'][$index]['label'] = ($column['label'] ?? $column['key']).' (restricted)';
+            }
+        }
+
+        foreach ($blocked as $column) {
+            unset($result['totals'][$column]);
+        }
+
+        return $result;
     }
 
     // --------------------------------------------------------------------------
@@ -515,95 +671,6 @@ class TenantReportController extends Controller
     // --------------------------------------------------------------------------
     // Metadata & Definitions
     // --------------------------------------------------------------------------
-
-    protected function reportCategories(): array
-    {
-        return [
-            [
-                'name' => 'Sales & Orders Reports',
-                'icon' => 'orders',
-                'reports' => [
-                    ['key' => 'sales_summary', 'label' => 'Sales Summary Report', 'favorite' => true],
-                    ['key' => 'orders_master', 'label' => 'Orders Master List', 'favorite' => true],
-                    ['key' => 'orders_by_status', 'label' => 'Orders by Status Breakdown', 'favorite' => false],
-                    ['key' => 'orders_cancelled', 'label' => 'Cancelled & Refunded Orders', 'favorite' => false],
-                    ['key' => 'fulfillment_delivery', 'label' => 'Fulfillment & Delivery List', 'favorite' => false],
-                    ['key' => 'discounts_coupons', 'label' => 'Discounts & Coupon Redemptions', 'favorite' => false],
-                    ['key' => 'geographic_sales', 'label' => 'Geographic & Regional Sales', 'favorite' => false],
-                ],
-            ],
-            [
-                'name' => 'Catalog & Inventory Reports',
-                'icon' => 'inventory',
-                'reports' => [
-                    ['key' => 'inventory_stock', 'label' => 'Stock On Hand & Availability', 'favorite' => true],
-                    ['key' => 'low_stock_alerts', 'label' => 'Low Stock & Reorder Alerts', 'favorite' => true],
-                    ['key' => 'inventory_valuation', 'label' => 'Inventory Valuation Report', 'favorite' => false],
-                    ['key' => 'best_sellers', 'label' => 'Best-Selling Products', 'favorite' => false],
-                    ['key' => 'slow_moving_stock', 'label' => 'Slow Moving & Aging Stock', 'favorite' => false],
-                    ['key' => 'category_performance', 'label' => 'Category & Collection Performance', 'favorite' => false],
-                ],
-            ],
-            [
-                'name' => 'Finance & Accounting Reports',
-                'icon' => 'finance',
-                'reports' => [
-                    ['key' => 'invoices_breakdown', 'label' => 'Customer Invoices Breakdown', 'favorite' => true],
-                    ['key' => 'expenses_bills', 'label' => 'Bills & Operating Expenses', 'favorite' => false],
-                    ['key' => 'payments_ledger', 'label' => 'Payments & Cash Movement Ledger', 'favorite' => false],
-                    ['key' => 'pnl_statement', 'label' => 'Profit & Loss Statement (P&L)', 'favorite' => true],
-                    ['key' => 'tax_summary', 'label' => 'Tax Summary & Collected Liability', 'favorite' => false],
-                    ['key' => 'settlements_payouts', 'label' => 'Platform Settlements & Payouts', 'favorite' => false],
-                ],
-            ],
-            [
-                'name' => 'Customers & Vendors Reports',
-                'icon' => 'users',
-                'reports' => [
-                    ['key' => 'customers_directory', 'label' => 'Customer Directory & Spending', 'favorite' => false],
-                    ['key' => 'repeat_buyers', 'label' => 'Repeat Buyers & Customer Retention', 'favorite' => false],
-                    ['key' => 'vendor_payables', 'label' => 'Vendor & Supplier Directory', 'favorite' => false],
-                ],
-            ],
-            [
-                'name' => 'Marketing & Advertising Reports',
-                'icon' => 'ads',
-                'reports' => [
-                    ['key' => 'ads_performance', 'label' => 'Ad Campaign Performance & ROI', 'favorite' => false],
-                    ['key' => 'traffic_funnel', 'label' => 'Storefront Traffic & Funnel', 'favorite' => false],
-                    ['key' => 'store_comparison', 'label' => 'Multi-Store Performance Comparison', 'favorite' => false],
-                ],
-            ],
-            [
-                'name' => 'Audit & Operations Reports',
-                'icon' => 'activity',
-                'reports' => [
-                    ['key' => 'audit_trail', 'label' => 'Tenant Activity Audit Trail', 'favorite' => false],
-                ],
-            ],
-        ];
-    }
-
-    protected function findReportMeta(string $key): array
-    {
-        foreach ($this->reportCategories() as $cat) {
-            foreach ($cat['reports'] as $rep) {
-                if ($rep['key'] === $key) {
-                    return [
-                        'key' => $rep['key'],
-                        'label' => $rep['label'],
-                        'category' => $cat['name'],
-                    ];
-                }
-            }
-        }
-
-        return [
-            'key' => 'sales_summary',
-            'label' => 'Sales Summary Report',
-            'category' => 'Sales & Orders Reports',
-        ];
-    }
 
     protected function reportHelpGuide(string $key): array
     {

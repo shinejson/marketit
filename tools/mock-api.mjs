@@ -14,6 +14,7 @@ import { handleCurrency } from './currency-mock.mjs';
 import { handleAccounting } from './accounting-mock.mjs';
 import { handleProducts } from './products-mock.mjs';
 import { handleAccess } from './access-mock.mjs';
+import { ALL_PERMISSIONS, handleReports } from './reports-mock.mjs';
 
 const PORT = process.env.PORT || 8001;
 
@@ -59,7 +60,17 @@ const adminDomains = [
   { id: 9, tenant_id: 4, tenant: { id: 4, name: 'SheaGold', business_name: 'SheaGold' }, domain: 'sheagold.co', status: 'failed', cert_status: 'failed', dns_verified_at: '2026-09-27T09:22:00Z', last_check_at: '2026-10-01T15:38:00Z', check_attempts: 5, updated_at: '2026-10-01T15:38:00Z' },
 ];
 
-const tenantUser = { id: 7, name: 'Nana Owusu', email: 'owner@northstar.test', role: 'tenant_owner', tenant_id: 1 };
+const tenantUser = {
+  id: 7,
+  name: 'Nana Owusu',
+  email: 'owner@northstar.test',
+  role: 'tenant_owner',
+  tenant_id: 1,
+  tenant_name: 'Northstar Gadgets',
+  // Owners resolve to the full catalogue server-side; the mock mirrors that so
+  // permission-gated console pages behave the same without PHP.
+  permissions: ALL_PERMISSIONS,
+};
 
 const adminUser = { id: 1, name: 'Super Admin', email: 'admin@markethub.test', role: 'super_admin' };
 
@@ -331,6 +342,9 @@ const server = http.createServer(async (req, res) => {
 
   // ---- tenant accounting and procurement
   if (await handleAccounting(req, res, url, method, readBody, json)) return;
+
+  // ---- tenant Report Center (/tenant/reports)
+  if (handleReports(req, res, url, method, readBody, json, tenantUser.permissions)) return;
 
   // ---- tenant console (dashboard + departments)
   if (handleTenant(req, res, url, method, readBody, json)) return;
