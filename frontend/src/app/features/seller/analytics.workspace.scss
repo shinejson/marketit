@@ -1,75 +1,10 @@
 @use 'workspace-kit' as kit;
+@use '../shared/report.workspace' as report;
 
 // Full tenant reporting workspace (/tenant/reports).
 app-seller-analytics {
   @include kit.base;
-
-  .report-facts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 1fr); margin: 0 0 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); overflow: hidden; }
-  .report-fact { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; padding: 12px 16px; border-right: 1px solid var(--line); }
-  .report-fact:last-child { border-right: 0; }
-  .report-fact > span { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
-  .report-fact strong { overflow-wrap: anywhere; font-size: 12px; }
-  .report-fact small { color: var(--muted); font-size: 10px; line-height: 1.4; }
-
-  .highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 18px; }
-  .highlight { padding: 13px 15px; border: 1px solid var(--line); border-left-width: 3px; border-radius: 13px; background: var(--card); }
-  .highlight strong { display: block; font-size: 13px; }
-  .highlight p { margin: 4px 0 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
-  .highlight.positive { border-left-color: var(--accent-2); }
-  .highlight.negative { border-left-color: var(--danger); }
-  .highlight.neutral { border-left-color: var(--line); }
-
-  .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
-  .split .panel + .panel { margin-top: 0; }
-  .panel-head a { color: var(--accent); font-size: 11.5px; font-weight: 700; text-decoration: none; }
-
-  .metric-switch { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--canvas); }
-  .metric-switch button { border: 0; border-radius: 8px; background: transparent; color: var(--muted); padding: 6px 11px; font-size: 11px; font-weight: 700; cursor: pointer; }
-  .metric-switch button.on { background: var(--ink); color: var(--card); }
-
-  .chart { padding: 16px 17px 12px; }
-  .chart svg { width: 100%; height: 190px; border-radius: 12px; background: linear-gradient(var(--canvas), color-mix(in srgb, var(--tint-subtle) 50%, var(--card))); }
-  .chart .axis { display: flex; justify-content: space-between; margin-top: 7px; color: var(--muted); font-size: 10px; }
-  .empty-state.small { padding: 40px 20px; }
-
-  .funnel { display: grid; gap: 14px; padding: 16px 17px 18px; }
-  .funnel-step small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
-  .funnel-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
-  .funnel-label b { font-size: 13px; }
-  .funnel-bar { height: 10px; border-radius: 999px; background: var(--tint-subtle); overflow: hidden; }
-  .funnel-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 55%, var(--gold))); }
-  .funnel-note { margin: 2px 0 0; color: var(--muted); font-size: 11.5px; }
-
-  .mix { display: grid; gap: 11px; padding: 16px 17px 18px; }
-  .mix-row { display: grid; grid-template-columns: 10px 128px minmax(0, 1fr) 34px 70px; gap: 9px; align-items: center; font-size: 11.5px; }
-  .mix-row .dot { width: 9px; height: 9px; border-radius: 50%; }
-  .mix-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mix-bar { height: 7px; border-radius: 999px; background: var(--tint-subtle); overflow: hidden; }
-  .mix-bar i { display: block; height: 100%; border-radius: 999px; }
-  .mix-row b { text-align: right; }
-  .mix-row .muted { text-align: right; font-size: 10.5px; }
-
-  .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); }
-  .stat-grid > div { padding: 14px 15px; background: var(--card); }
-  .stat-grid p { margin: 0 0 4px; color: var(--muted); font-size: 9.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
-  .stat-grid strong { font-size: 17px; }
-
-  .lifetime-note { margin: 18px 2px 0; color: var(--muted); font-size: 11.5px; }
-  .report-footer { display: flex; justify-content: space-between; gap: 12px; margin: 22px 2px 0; padding-top: 11px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
-
-  table { min-width: 440px; }
-
-  @media (max-width: 1040px) {
-    .split { grid-template-columns: 1fr; }
-    .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-
-  @media (max-width: 760px) {
-    .report-facts { grid-template-columns: 1fr; }
-    .report-fact { border-right: 0; border-bottom: 1px solid var(--line); padding: 10px 13px; }
-    .report-fact:last-child { border-bottom: 0; }
-    .report-footer { flex-direction: column; gap: 4px; }
-  }
+  @include report.report-panels;
 }
 
 // Browser PDF export: the on-screen data is printed as a report, without the
@@ -93,76 +28,7 @@ app-seller-analytics {
   app-seller-shell .content,
   app-seller-shell .body { display: block !important; width: auto !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; }
 
-  app-seller-analytics { max-width: none !important; margin: 0 !important; padding: 0 !important; color: #171717 !important; }
-  app-seller-analytics .head-actions,
-  app-seller-analytics .breadcrumbs,
-  app-seller-analytics button,
-  app-seller-analytics .panel-head a,
-  app-seller-analytics .error-banner,
-  app-seller-analytics .metric-switch { display: none !important; }
-  app-seller-analytics .page-head { align-items: flex-start !important; margin-bottom: 11px !important; padding-bottom: 11px; border-bottom: 2px solid #1f4b3a; }
-  app-seller-analytics .eyebrow { color: #1f4b3a !important; }
-  app-seller-analytics .page-head h1 { font-size: 24px !important; }
-  app-seller-analytics .intro { margin-top: 5px !important; color: #525252 !important; font-size: 10px !important; }
+  @include report.report-print('app-seller-analytics');
 
-  app-seller-analytics .report-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 1fr) !important; margin-bottom: 11px !important; border-color: #d1d5db !important; border-radius: 7px !important; background: #fff !important; }
-  app-seller-analytics .report-fact { padding: 8px 10px !important; border-color: #d1d5db !important; }
-  app-seller-analytics .report-fact > span,
-  app-seller-analytics .report-fact small { color: #525252 !important; font-size: 8px !important; }
-  app-seller-analytics .report-fact strong { color: #111 !important; font-size: 9px !important; }
-
-  app-seller-analytics .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 7px !important; margin-bottom: 10px !important; }
-  app-seller-analytics .metric-card,
-  app-seller-analytics .panel,
-  app-seller-analytics .highlight { overflow: visible !important; border-color: #d1d5db !important; border-radius: 7px !important; background: #fff !important; box-shadow: none !important; color: #171717 !important; }
-  app-seller-analytics .metric-card { padding: 9px 10px !important; }
-  app-seller-analytics .metric-card p { margin: 6px 0 3px !important; color: #525252 !important; font-size: 9px !important; }
-  app-seller-analytics .metric-card h2 { color: #111 !important; font-size: 17px !important; }
-  app-seller-analytics .metric-card small { color: #525252 !important; font-size: 8px !important; }
-  app-seller-analytics .metric-icon { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-
-  app-seller-analytics .highlights { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 6px !important; margin-bottom: 9px !important; }
-  app-seller-analytics .highlight { padding: 8px 10px !important; }
-  app-seller-analytics .highlight strong { font-size: 9px !important; }
-  app-seller-analytics .highlight p { color: #525252 !important; font-size: 8px !important; }
-
-  app-seller-analytics .split { grid-template-columns: 1fr !important; gap: 0 !important; margin-top: 9px !important; }
-  app-seller-analytics .split .panel + .panel { margin-top: 9px !important; }
-  app-seller-analytics .panel { margin-top: 9px !important; }
-  app-seller-analytics .panel-head { padding: 8px 10px !important; border-color: #e5e7eb !important; }
-  app-seller-analytics .panel-head h3 { color: #111 !important; font-size: 12px !important; }
-  app-seller-analytics .overline { color: #525252 !important; font-size: 7px !important; }
-  app-seller-analytics .chart { padding: 8px 10px !important; }
-  app-seller-analytics .chart svg { height: 125px !important; border-radius: 4px !important; }
-  app-seller-analytics .chart .axis { color: #525252 !important; font-size: 8px !important; }
-  app-seller-analytics .funnel,
-  app-seller-analytics .mix { padding: 9px 10px !important; }
-  app-seller-analytics .funnel { gap: 8px !important; }
-  app-seller-analytics .funnel-label,
-  app-seller-analytics .mix-row { font-size: 8px !important; }
-  app-seller-analytics .funnel-step small,
-  app-seller-analytics .funnel-note,
-  app-seller-analytics .mix-row .muted { color: #525252 !important; font-size: 7px !important; }
-  app-seller-analytics .table-wrap { overflow: visible !important; }
-  app-seller-analytics table { width: 100% !important; min-width: 0 !important; table-layout: auto !important; }
-  app-seller-analytics th,
-  app-seller-analytics td { padding: 6px 7px !important; font-size: 8px !important; }
-  app-seller-analytics th { background: #f3f4f6 !important; color: #525252 !important; }
-  app-seller-analytics td { border-color: #e5e7eb !important; }
-  app-seller-analytics td small { color: #525252 !important; font-size: 7px !important; }
-  app-seller-analytics .stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-  app-seller-analytics .stat-grid > div { padding: 8px !important; background: #fff !important; }
-  app-seller-analytics .stat-grid p { color: #525252 !important; font-size: 7px !important; }
-  app-seller-analytics .stat-grid strong { color: #111 !important; font-size: 11px !important; }
-  app-seller-analytics .lifetime-note { margin-top: 10px !important; color: #333 !important; font-size: 9px !important; }
-  app-seller-analytics .report-footer { margin-top: 12px !important; padding-top: 7px !important; border-color: #d1d5db !important; color: #525252 !important; font-size: 7px !important; }
-
-  app-seller-analytics .report-facts,
-  app-seller-analytics .report-fact,
-  app-seller-analytics .metric-card,
-  app-seller-analytics .panel,
-  app-seller-analytics .highlight,
-  app-seller-analytics tr,
-  app-seller-analytics .report-footer { break-inside: avoid; page-break-inside: avoid; }
   * { animation: none !important; transition: none !important; }
 }

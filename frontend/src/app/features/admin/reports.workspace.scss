@@ -1,0 +1,60 @@
+@use '../seller/workspace-kit' as kit;
+@use '../shared/report.workspace' as report;
+
+// Super-admin platform report (/admin/reports). Shares its panels, KPI cards,
+// tables and print layout with the tenant report; the rules below cover what
+// only the platform view needs.
+app-admin-reports {
+  @include kit.base;
+  @include report.report-panels;
+
+  .leaderboard table { min-width: 880px; }
+  .leaderboard .panel-head a { color: var(--accent); font-size: 11.5px; font-weight: 700; text-decoration: none; }
+
+  .share-cell { display: grid; gap: 5px; min-width: 150px; }
+  .share-cell .mix-bar { height: 6px; }
+  .share-cell .mix-bar i { display: block; height: 100%; border-radius: 999px; background: var(--accent-2); }
+  .share-cell small { font-size: 10px; }
+
+  .status-chip { display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 999px; background: var(--tint-subtle); font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
+
+  .status-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: var(--line); }
+  .status-tile { display: flex; align-items: center; gap: 9px; padding: 14px 16px; background: var(--card); font-size: 12px; }
+  .status-tile .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .status-tile strong { margin-left: auto; font-size: 17px; }
+
+  @media (max-width: 760px) {
+    .status-tile { font-size: 11px; }
+  }
+}
+
+// Browser PDF export for the platform report. Choose "Save as PDF" in the print dialog.
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+
+  html, body {
+    min-height: 0 !important;
+    background: #fff !important;
+    color: #171717 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  app-admin-shell .dash { display: block !important; min-height: 0 !important; background: #fff !important; }
+  app-admin-shell aside,
+  app-admin-shell .topnav,
+  app-admin-shell .backdrop { display: none !important; }
+  app-admin-shell .content,
+  app-admin-shell .body { display: block !important; width: auto !important; min-width: 0 !important; margin: 0 !important; padding: 0 !important; }
+
+  @include report.report-print('app-admin-reports');
+
+  app-admin-reports .leaderboard table { min-width: 0 !important; }
+  app-admin-reports .status-row { background: #fff !important; }
+  app-admin-reports .status-tile { padding: 6px 8px !important; background: #fff !important; font-size: 8px !important; }
+  app-admin-reports .status-tile strong { font-size: 10px !important; }
+  app-admin-reports .status-chip { font-size: 6.5px !important; margin-left: 4px !important; }
+  app-admin-reports .share-cell small { font-size: 7px !important; color: #525252 !important; }
+
+  * { animation: none !important; transition: none !important; }
+}

@@ -6,6 +6,7 @@
 @use "./app/features/seller/inventory.workspace";
 @use "./app/features/seller/ads.workspace";
 @use "./app/features/seller/analytics.workspace";
+@use "./app/features/admin/reports.workspace";
 @use "./app/features/seller/users.workspace";
 @use "./app/features/shared/commerce.workspace";
 @use "./app/layout/shell-footer";

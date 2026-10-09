@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\AdminMarketingController;
 use App\Http\Controllers\Api\AdminOverviewController;
 use App\Http\Controllers\Api\AdminPayoutController;
 use App\Http\Controllers\Api\AdminPhase3Controller;
+use App\Http\Controllers\Api\AdminReportController;
 use App\Http\Controllers\Api\AdminReviewController;
 use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AdminSettingController;
@@ -556,6 +557,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/audit-logs', [AdminController::class, 'auditLogs']);
         Route::get('/audit-logs/facets', [AdminController::class, 'auditLogFacets']);
         Route::get('/analytics', [AnalyticsController::class, 'platform']);
+        Route::get('/reports', [AdminReportController::class, 'index']);
         Route::get('/insights', [AnalyticsController::class, 'platformInsights']);
         Route::get('/domains', [AdminPhase3Controller::class, 'domains']);
         Route::post('/domains/{domain}/verify', [AdminPhase3Controller::class, 'forceVerifyDomain']);

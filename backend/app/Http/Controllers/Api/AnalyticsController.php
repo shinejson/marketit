@@ -23,7 +23,16 @@ class AnalyticsController extends Controller
      */
     public function tenant(Request $request): JsonResponse
     {
-        $tenantId = $request->user()->tenantId();
+        $user = $request->user();
+        $tenantId = $user->tenantId();
+
+        // Revenue and customer data: owners always see it, staff need analytics.view.
+        abort_unless(
+            $user->isTenantOwner() || $user->hasTenantPermission('analytics.view', $tenantId),
+            403,
+            'You do not have permission to view reports.'
+        );
+
         $days = max(1, min(365, $request->integer('days', 30)));
         $storeId = $request->filled('store_id') ? $request->integer('store_id') : null;
 

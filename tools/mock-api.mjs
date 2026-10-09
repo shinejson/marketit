@@ -5,7 +5,8 @@
  *
  * Covers just enough of the MarketHub API to log in to the super-admin
  * console and exercise the Ads & Marketing workspace (social accounts,
- * posts, campaigns). Data is kept in memory and resets on restart.
+ * posts, campaigns) plus the tenant and platform report pages (see
+ * tools/reports-mock.mjs). Data is kept in memory and resets on restart.
  */
 import http from 'node:http';
 import { handleSupport } from './support-mock.mjs';
@@ -14,6 +15,7 @@ import { handleCurrency } from './currency-mock.mjs';
 import { handleAccounting } from './accounting-mock.mjs';
 import { handleProducts } from './products-mock.mjs';
 import { handleAccess } from './access-mock.mjs';
+import { handleReports } from './reports-mock.mjs';
 
 const PORT = process.env.PORT || 8001;
 
@@ -325,6 +327,9 @@ const server = http.createServer(async (req, res) => {
   const method = req.method;
 
   if (method === 'OPTIONS') return json(res, 204, {});
+
+  // ---- tenant and platform report workspaces (/tenant/reports, /admin/reports)
+  if (await handleReports(req, res, url, method, readBody, json)) return;
 
   // ---- service desk (tickets, live chat, tasks, help centre)
   if (await handleSupport(req, res, url, method, readBody, json)) return;

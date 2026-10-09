@@ -152,7 +152,7 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
             </button>
             <div class="subnav grouped-subnav" [class.open]="commerceOpen()">
               <div class="flyout-header">Commerce</div>
-              @for (c of commerceItems; track c.key) {
+              @for (c of visibleCommerceItems(); track c.key) {
                 <a [routerLink]="tenantLink(c.key)" routerLinkActive="on" (click)="onNavigate()" [title]="collapsed() ? c.label : ''">
                   <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: c.icon }" />
                   <span>{{ c.label }}</span>
@@ -955,6 +955,13 @@ export class SellerShellComponent {
     { key: 'ads', label: 'Ads', icon: 'ads' },
     { key: 'reports', label: 'Tenant report', icon: 'analytics' },
   ];
+
+  /** Commerce entries this account may open. The tenant report needs analytics.view (owners always can). */
+  visibleCommerceItems(): NavEntry[] {
+    const user = this.auth.user();
+    const canViewReports = user?.role === 'tenant_owner' || (user?.permissions ?? []).includes('analytics.view');
+    return this.commerceItems.filter((c) => c.key !== 'reports' || canViewReports);
+  }
 
   readonly adminItems: NavEntry[] = [
     { key: 'users', label: 'Users & permissions', icon: 'users' },

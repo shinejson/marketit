@@ -1,14 +1,18 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { Subject, catchError, map, of, switchMap, tap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { AnalyticsKpi, TenantAnalyticsReport } from '../../core/models';
+import { toCsv } from '../../shared/csv.util';
 import { MoneyPipe } from '../../shared/money.pipe';
 
 type MetricKey = 'gmv' | 'orders' | 'views';
+
+type LoadResult = { report: TenantAnalyticsReport; store: string; days: number } | { message: string };
 
 const STATUS_LABELS: Record<string, string> = {
   awaiting_fulfillment: 'Awaiting fulfillment',
@@ -45,10 +49,11 @@ const STATUS_TONES: Record<string, string> = {
             based on this tenant's live marketplace data for the selected period.
           </p>
         </div>
+        @if (canView()) {
         <div class="head-actions">
           <select class="toolbar-select" [(ngModel)]="storeFilter" (change)="load()" aria-label="Filter by store">
             <option value="">All stores</option>
-            @for (s of report()?.stores || []; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+            @for (s of storeOptions(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
           </select>
           <select class="toolbar-select" [(ngModel)]="days" (change)="load()" aria-label="Reporting window">
             <option [ngValue]="7">Last 7 days</option>
@@ -64,13 +69,22 @@ const STATUS_TONES: Record<string, string> = {
             <span class="spin-icon" [class.spinning]="refreshing()">⟳</span> Refresh
           </button>
         </div>
+        }
       </header>
 
       @if (error()) {
         <div class="error-banner"><span>!</span><p>{{ error() }}</p><button type="button" (click)="error.set('')">Dismiss</button></div>
       }
 
-      @if (loading()) {
+      @if (!canView()) {
+        <section class="panel">
+          <div class="empty-state small">
+            <span class="empty-glyph">🔒</span>
+            <h3>Reports are not available to your account</h3>
+            <p>Ask a workspace owner to grant the View analytics permission under Users &amp; permissions.</p>
+          </div>
+        </section>
+      } @else if (loading()) {
         <div class="skeletons">@for (i of [1,2,3,4,5,6]; track i) { <div class="skeleton-row"></div> }</div>
       } @else if (report(); as r) {
         <section class="report-facts" aria-label="Report details">
@@ -94,8 +108,8 @@ const STATUS_TONES: Record<string, string> = {
         <section class="kpi-grid">
           <article class="metric-card value">
             <div class="metric-top"><span class="metric-icon gold">◈</span><span class="trend" [class.up]="r.kpis.gmv.direction === 'up'" [class.down]="r.kpis.gmv.direction === 'down'">{{ deltaChip(r.kpis.gmv) }}</span></div>
-            <p>Revenue</p><h2>{{ r.kpis.gmv.value | money:'':'symbol':'1.0-0' }}</h2>
-            <small>Previous {{ r.kpis.gmv.previous | money:'':'symbol':'1.0-0' }}</small>
+            <p>Revenue</p><h2>{{ r.kpis.gmv.value | money:currencyCode():'symbol':'1.0-0' }}</h2>
+            <small>Previous {{ r.kpis.gmv.previous | money:currencyCode():'symbol':'1.0-0' }}</small>
           </article>
           <article class="metric-card">
             <div class="metric-top"><span class="metric-icon blue">▦</span><span class="trend" [class.up]="r.kpis.orders.direction === 'up'" [class.down]="r.kpis.orders.direction === 'down'">{{ deltaChip(r.kpis.orders) }}</span></div>
@@ -104,8 +118,8 @@ const STATUS_TONES: Record<string, string> = {
           </article>
           <article class="metric-card">
             <div class="metric-top"><span class="metric-icon slate">⌀</span><span class="trend" [class.up]="r.kpis.aov.direction === 'up'" [class.down]="r.kpis.aov.direction === 'down'">{{ deltaChip(r.kpis.aov) }}</span></div>
-            <p>Average order value</p><h2>{{ r.kpis.aov.value | money }}</h2>
-            <small>Previous {{ r.kpis.aov.previous | money }}</small>
+            <p>Average order value</p><h2>{{ r.kpis.aov.value | money:currencyCode() }}</h2>
+            <small>Previous {{ r.kpis.aov.previous | money:currencyCode() }}</small>
           </article>
           <article class="metric-card">
             <div class="metric-top"><span class="metric-icon plum">👥</span><span class="trend" [class.up]="r.kpis.customers.direction === 'up'" [class.down]="r.kpis.customers.direction === 'down'">{{ deltaChip(r.kpis.customers) }}</span></div>
@@ -135,7 +149,7 @@ const STATUS_TONES: Record<string, string> = {
             <div><p class="overline">Trend</p><h3>{{ metricLabel() }} over time</h3></div>
             <div class="metric-switch" role="group" aria-label="Chart metric">
               @for (m of metricOptions; track m.key) {
-                <button type="button" [class.on]="metric() === m.key" (click)="metric.set(m.key)">{{ m.label }}</button>
+                <button type="button" [class.on]="metric() === m.key" [attr.aria-pressed]="metric() === m.key" (click)="metric.set(m.key)">{{ m.label }}</button>
               }
             </div>
           </div>
@@ -169,6 +183,9 @@ const STATUS_TONES: Record<string, string> = {
         <div class="split">
           <section class="panel">
             <div class="panel-head"><div><p class="overline">Journey</p><h3>Conversion funnel</h3></div></div>
+            @if (isTenantWide('funnel')) {
+              <p class="scope-note">Funnel events are not recorded per store, so these figures cover all stores.</p>
+            }
             <div class="funnel">
               @for (step of r.funnel.steps; track step.key) {
                 <div class="funnel-step">
@@ -193,7 +210,7 @@ const STATUS_TONES: Record<string, string> = {
                     <span class="mix-label">{{ statusLabel(s.status) }}</span>
                     <div class="mix-bar"><i [style.width.%]="sharePercent(s.count)" [style.background]="statusTone(s.status)"></i></div>
                     <b>{{ s.count }}</b>
-                    <span class="muted">{{ s.gmv | money:'':'symbol':'1.0-0' }}</span>
+                    <span class="muted">{{ s.gmv | money:currencyCode():'symbol':'1.0-0' }}</span>
                   </div>
                 }
               </div>
@@ -219,7 +236,7 @@ const STATUS_TONES: Record<string, string> = {
                         <td><strong>{{ p.name }}</strong>@if (p.sku) { <small class="mono">{{ p.sku }}</small> }</td>
                         <td class="right">{{ p.units | number }}</td>
                         <td class="right">{{ p.orders | number }}</td>
-                        <td class="right"><strong>{{ p.revenue | money }}</strong></td>
+                        <td class="right"><strong>{{ p.revenue | money:currencyCode() }}</strong></td>
                       </tr>
                     }
                   </tbody>
@@ -230,6 +247,9 @@ const STATUS_TONES: Record<string, string> = {
 
           <section class="panel">
             <div class="panel-head"><div><p class="overline">Channels</p><h3>Store performance</h3></div></div>
+            @if (appliedStore) {
+              <p class="scope-note">This table is not filtered. It lists every store with sales in the window.</p>
+            }
             @if (!r.stores.length) {
               <p class="muted pad">No store revenue in this window.</p>
             } @else {
@@ -239,10 +259,10 @@ const STATUS_TONES: Record<string, string> = {
                   <tbody>
                     @for (s of r.stores; track s.id) {
                       <tr>
-                        <td><strong>{{ s.name }}</strong><small>{{ s.currency }}</small></td>
+                        <td><strong>{{ s.name }}</strong></td>
                         <td class="right">{{ s.orders | number }}</td>
-                        <td class="right">{{ s.gmv | money }}</td>
-                        <td class="right"><strong>{{ s.net | money }}</strong></td>
+                        <td class="right">{{ s.gmv | money:currencyCode() }}</td>
+                        <td class="right"><strong>{{ s.net | money:currencyCode() }}</strong></td>
                       </tr>
                     }
                   </tbody>
@@ -258,13 +278,16 @@ const STATUS_TONES: Record<string, string> = {
               <div><p class="overline">Paid media</p><h3>Advertising</h3></div>
               <a routerLink="/tenant/ads">Manage ads →</a>
             </div>
+            @if (isTenantWide('ads')) {
+              <p class="scope-note">Campaigns are not tied to a store, so ad figures cover all stores.</p>
+            }
             <div class="stat-grid">
               <div><p>Impressions</p><strong>{{ r.ads.impressions | number }}</strong></div>
               <div><p>Clicks</p><strong>{{ r.ads.clicks | number }}</strong></div>
               <div><p>CTR</p><strong>{{ r.ads.ctr | number:'1.0-2' }}%</strong></div>
-              <div><p>Spend</p><strong>{{ r.ads.spend | money }}</strong></div>
-              <div><p>Avg CPC</p><strong>{{ r.ads.avg_cpc | money:'':'symbol':'1.2-4' }}</strong></div>
-              <div><p>Cost of revenue</p><strong>{{ adShare() }}%</strong></div>
+              <div><p>Spend</p><strong>{{ r.ads.spend | money:currencyCode() }}</strong></div>
+              <div><p>Avg CPC</p><strong>{{ r.ads.avg_cpc | money:currencyCode():'symbol':'1.2-4' }}</strong></div>
+              <div [attr.title]="isTenantWide('ads') ? 'Ad spend covers every store, so it is not divided by one store\u2019s revenue.' : null"><p>Ad spend ÷ revenue</p><strong>{{ adShareLabel() }}</strong></div>
             </div>
           </section>
 
@@ -274,17 +297,17 @@ const STATUS_TONES: Record<string, string> = {
               <div><p>Buyers</p><strong>{{ r.customers.buyers | number }}</strong></div>
               <div><p>Repeat buyers</p><strong>{{ r.customers.repeat_buyers | number }}</strong></div>
               <div><p>Repeat rate</p><strong>{{ r.customers.repeat_rate | number:'1.0-1' }}%</strong></div>
-              <div><p>Revenue per buyer</p><strong>{{ r.customers.revenue_per_buyer | money }}</strong></div>
-              <div><p>Commission</p><strong>{{ r.kpis.commission.value | money }}</strong></div>
-              <div><p>Net settlement</p><strong>{{ r.kpis.net.value | money }}</strong></div>
+              <div><p>Revenue per buyer</p><strong>{{ r.customers.revenue_per_buyer | money:currencyCode() }}</strong></div>
+              <div><p>Commission</p><strong>{{ r.kpis.commission.value | money:currencyCode() }}</strong></div>
+              <div><p>Net settlement</p><strong>{{ r.kpis.net.value | money:currencyCode() }}</strong></div>
             </div>
           </section>
         </div>
 
         @if (report()?.lifetime; as lifetime) {
           <p class="lifetime-note">
-            All time: <b>{{ +lifetime.gmv | money }}</b> revenue across {{ lifetime.orders }} orders ·
-            commission {{ +lifetime.commission | money }} ({{ lifetime.take_rate }}% take rate).
+            All time: <b>{{ +lifetime.gmv | money:currencyCode() }}</b> revenue across {{ lifetime.orders }} orders ·
+            commission {{ +lifetime.commission | money:currencyCode() }} ({{ lifetime.take_rate }}% take rate).
           </p>
         }
 
@@ -304,6 +327,17 @@ export class SellerAnalyticsComponent {
   tenantId = computed(() => this.auth.user()?.tenant_id ?? null);
   generatedAt = signal<Date | null>(null);
 
+  /** Owners always see the report; staff need analytics.view. The API enforces the same rule. */
+  canView = computed(() => {
+    const user = this.auth.user();
+    return user?.role === 'tenant_owner' || (user?.permissions ?? []).includes('analytics.view');
+  });
+
+  /** Denomination of every money figure on the page. Empty until a report loads (the pipe then uses the display currency). */
+  currencyCode(): string {
+    return this.report()?.currency ?? '';
+  }
+
   readonly metricOptions: { key: MetricKey; label: string }[] = [
     { key: 'gmv', label: 'Revenue' },
     { key: 'orders', label: 'Orders' },
@@ -319,33 +353,76 @@ export class SellerAnalyticsComponent {
   days = 30;
   storeFilter = '';
 
+  /** Store and window the visible report was built from; the selects revert to these on failure. */
+  private appliedStore = '';
+  private appliedDays = 30;
+  private reload$ = new Subject<void>();
+
+  /** Every store of the tenant, or null when the list could not be loaded. */
+  private storeList = signal<{ id: number; name: string }[] | null>(null);
+  storeOptions = computed(
+    () => this.storeList() ?? (this.report()?.stores ?? []).map((s) => ({ id: s.id, name: s.name })),
+  );
+
   series = computed(() => this.report()?.series ?? []);
   hasSeries = computed(() => this.series().some((d) => d.gmv > 0 || d.orders > 0 || d.views > 0));
 
   constructor() {
+    // Each request supersedes the one before it, so a slow response for an
+    // older store or window can never overwrite the current selection.
+    this.reload$
+      .pipe(
+        tap(() => {
+          this.error.set('');
+          if (this.report()) this.refreshing.set(true);
+        }),
+        switchMap(() => {
+          const store = this.storeFilter;
+          const days = this.days;
+          const params: Record<string, string | number> = { days };
+          if (store) params['store_id'] = store;
+          return this.api.sellerAnalytics(params).pipe(
+            map((res): LoadResult => ({ report: res.data, store, days })),
+            catchError((err) =>
+              of<LoadResult>({
+                message: err?.error?.message || 'We could not load your tenant report. Please try again.',
+              }),
+            ),
+          );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe((result) => {
+        this.loading.set(false);
+        this.refreshing.set(false);
+        if ('report' in result) {
+          this.report.set(result.report);
+          this.generatedAt.set(new Date());
+          this.appliedStore = result.store;
+          this.appliedDays = result.days;
+          return;
+        }
+        // Put the selects back to what the visible data was built from.
+        this.error.set(result.message);
+        this.storeFilter = this.appliedStore;
+        this.days = this.appliedDays;
+      });
+
+    if (this.canView()) this.api
+      .sellerStores()
+      .pipe(takeUntilDestroyed())
+      .subscribe({
+        next: (res) => this.storeList.set((res.data ?? []).map((s) => ({ id: Number(s.id), name: String(s.name ?? `Store #${s.id}`) }))),
+        // Keep the fallback: the stores that appear in the report.
+        error: () => this.storeList.set(null),
+      });
+
     this.load();
   }
 
   load(): void {
-    this.error.set('');
-    if (this.report()) this.refreshing.set(true);
-    const params: Record<string, string | number> = { days: this.days };
-    if (this.storeFilter) params['store_id'] = this.storeFilter;
-    this.api
-      .sellerAnalytics(params)
-      .pipe(finalize(() => {
-        this.loading.set(false);
-        this.refreshing.set(false);
-      }))
-      .subscribe({
-        next: (res) => {
-          this.report.set(res.data);
-          this.generatedAt.set(new Date());
-        },
-        error: (err) => {
-          this.error.set(err?.error?.message || 'We could not load your tenant report. Please try again.');
-        },
-      });
+    if (!this.canView()) return;
+    this.reload$.next();
   }
 
   // ----------------------------------------------------------------- chart
@@ -373,9 +450,10 @@ export class SellerAnalyticsComponent {
     return this.metricOptions.find((m) => m.key === this.metric())?.label ?? 'Revenue';
   }
 
+  /** Name of the store the visible figures belong to (not the dropdown, which may be mid-change). */
   selectedStoreName(): string {
-    if (!this.storeFilter) return 'All stores';
-    return this.report()?.stores.find((store) => store.id === Number(this.storeFilter))?.name ?? 'Selected store';
+    if (!this.appliedStore) return 'All stores';
+    return this.storeOptions().find((store) => store.id === Number(this.appliedStore))?.name ?? 'Selected store';
   }
 
   peakLabel(): string {
@@ -398,11 +476,20 @@ export class SellerAnalyticsComponent {
     return total > 0 ? Math.round((count / total) * 100) : 0;
   }
 
-  /** Ad spend as a share of revenue — the simplest efficiency read. */
-  adShare(): string {
+  /** True when a section ignores the store filter (see `scope` in the API payload). */
+  isTenantWide(section: 'funnel' | 'ads'): boolean {
+    return this.report()?.scope?.tenant_wide_sections?.includes(section) ?? false;
+  }
+
+  /**
+   * Ad spend as a share of revenue. Campaign spend covers every store, so the
+   * ratio is only meaningful when revenue covers every store too.
+   */
+  adShareLabel(): string {
     const r = this.report();
-    if (!r || !r.kpis.gmv.value) return '0.00';
-    return ((r.ads.spend / r.kpis.gmv.value) * 100).toFixed(2);
+    if (!r || this.isTenantWide('ads')) return '—';
+    if (!r.kpis.gmv.value) return '0.00%';
+    return `${((r.ads.spend / r.kpis.gmv.value) * 100).toFixed(2)}%`;
   }
 
   statusLabel(status: string): string {
@@ -437,6 +524,7 @@ export class SellerAnalyticsComponent {
     const rows: (string | number)[][] = [
       ['Tenant report', this.tenantName()],
       ['Tenant ID', this.tenantId() ?? ''],
+      ['Currency', r.currency],
       ['Reporting period', r.range.start, r.range.end],
       ['Comparison period', r.range.previous_start, r.range.previous_end],
       ['Store scope', this.selectedStoreName()],
@@ -464,8 +552,8 @@ export class SellerAnalyticsComponent {
       ...r.top_products.map((p) => [p.name, p.sku || '', p.units, p.orders, p.revenue]),
       [],
       ['Stores'],
-      ['Store', 'Currency', 'Orders', 'Revenue', 'Net payout'],
-      ...r.stores.map((store) => [store.name, store.currency, store.orders, store.gmv, store.net]),
+      ['Store', 'Orders', 'Revenue', 'Net payout'],
+      ...r.stores.map((store) => [store.name, store.orders, store.gmv, store.net]),
       [],
       ['Customers'],
       ['Buyers', 'Repeat buyers', 'Repeat rate (%)', 'Revenue per buyer'],
@@ -479,13 +567,17 @@ export class SellerAnalyticsComponent {
       rows.push([], ['Lifetime'], ['Revenue', 'Orders', 'Commission', 'Take rate (%)']);
       rows.push([r.lifetime.gmv, r.lifetime.orders, r.lifetime.commission, r.lifetime.take_rate]);
     }
-    const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const csv = toCsv(rows);
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
     link.href = url;
     const scopeSlug = this.selectedStoreName().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'all-stores';
     link.download = `tenant-report-${scopeSlug}-${r.range.start}-to-${r.range.end}.csv`;
+    // Attach the link and keep the URL alive briefly: some browsers (Safari)
+    // drop the download if the object URL is revoked synchronously.
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 }

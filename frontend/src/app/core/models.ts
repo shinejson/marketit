@@ -11,6 +11,8 @@ export interface User {
   department?: string | null;
   avatar_url?: string | null;
   roles: { role: string; tenant_id: number | null; store_id: number | null; department?: string | null }[];
+  /** Tenant console permissions for this account. Owners resolve to the full catalog. */
+  permissions?: string[];
 }
 
 export interface ChartSeries {
@@ -2092,6 +2094,8 @@ export interface AnalyticsKpi {
 }
 
 export interface TenantAnalyticsReport {
+  /** Currency every money figure in the report is denominated in (the tenant's base currency). */
+  currency: string;
   range: { days: number; start: string; end: string; previous_start: string; previous_end: string };
   kpis: Record<'gmv' | 'orders' | 'aov' | 'net' | 'units' | 'customers' | 'views' | 'conversion' | 'commission', AnalyticsKpi>;
   series: { day: string; gmv: number; orders: number; views: number }[];
@@ -2106,6 +2110,56 @@ export interface TenantAnalyticsReport {
   ads: { impressions: number; clicks: number; spend: number; ctr: number; avg_cpc: number; roas: number | null };
   highlights: { tone: 'positive' | 'negative' | 'neutral'; title: string; detail: string }[];
   lifetime?: { gmv: string; commission: string; orders: number; take_rate: string };
+  scope?: TenantAnalyticsScope;
+}
+
+export interface TenantAnalyticsScope {
+  store_id: number | null;
+  tenant_wide_sections: ('funnel' | 'ads')[];
+}
+
+// ---------------------------------------------------------------------------
+// Platform report workspace (/admin/reports) — super-admin, all tenants
+// ---------------------------------------------------------------------------
+
+export interface AdminReportTenantRow {
+  id: number;
+  name: string;
+  status: string;
+  stores: number;
+  orders: number;
+  gmv: number;
+  commission: number;
+  net: number;
+  take_rate: number;
+  share: number;
+}
+
+export interface AdminReport {
+  range: { days: number; start: string; end: string; previous_start: string; previous_end: string };
+  scope: { tenant_id: number | null; tenant_name: string | null };
+  kpis: Record<
+    'gmv' | 'commission' | 'net' | 'orders' | 'aov' | 'units' | 'buyers' | 'active_tenants' | 'new_tenants' | 'views' | 'conversion',
+    AnalyticsKpi
+  >;
+  series: { day: string; gmv: number; commission: number; orders: number; views: number }[];
+  funnel: {
+    steps: { key: string; label: string; value: number; rate: number }[];
+    cart_abandonment: number;
+  };
+  status_mix: { status: string; count: number; gmv: number }[];
+  top_products: { tenant: string; name: string; sku: string | null; units: number; revenue: number; orders: number }[];
+  tenants: AdminReportTenantRow[];
+  customers: { buyers: number; repeat_buyers: number; repeat_rate: number; revenue_per_buyer: number };
+  ads: { impressions: number; clicks: number; spend: number; ctr: number; avg_cpc: number };
+  billing: { mrr: number; active_subscriptions: number; open_invoices: number; open_amount: number };
+  payouts: {
+    by_status: { status: string; count: number; net: number }[];
+    on_hold: { count: number; net: number };
+  };
+  tenant_status: { status: string; count: number }[];
+  tenant_options: { id: number; name: string }[];
+  highlights: { tone: 'positive' | 'negative' | 'neutral'; title: string; detail: string }[];
 }
 
 // ---------------------------------------------------------------------------

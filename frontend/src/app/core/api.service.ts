@@ -111,6 +111,7 @@ import {
   StockMovementEntry,
   StockMovementType,
   TenantAnalyticsReport,
+  AdminReport,
   SettingsPayload,
   HeroSlide,
   HeroSlidesPayload,
@@ -1045,6 +1046,11 @@ export class ApiService {
 
   adminAnalytics(days = 30) {
     return this.http.get<{ data: AdminAnalytics }>('/api/admin/analytics', { params: { days } });
+  }
+
+  /** Platform-wide report for /admin/reports; `tenant_id` narrows it to one seller. */
+  adminReports(params: Record<string, string | number> = {}) {
+    return this.http.get<{ data: AdminReport }>('/api/admin/reports', { params });
   }
 
   adminInsights(days = 30) {

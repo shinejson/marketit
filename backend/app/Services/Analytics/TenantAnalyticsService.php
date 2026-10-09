@@ -40,6 +40,8 @@ class TenantAnalyticsService
             $previous = $this->totals($tenantId, $prevStart, $prevEnd, $storeId);
 
             return [
+                // Every money figure below is denominated in this currency.
+                'currency' => $this->baseCurrency($tenantId),
                 'range' => [
                     'days' => $days,
                     'start' => $start->toDateString(),
@@ -56,6 +58,12 @@ class TenantAnalyticsService
                 'customers' => $this->customers($tenantId, $start, $end, $storeId),
                 'ads' => $this->ads($tenantId, $start, $end),
                 'highlights' => $this->highlights($current, $previous),
+                // Storefront funnel steps and ad figures are recorded per tenant, not per
+                // store, so they stay tenant-wide when a store filter is applied.
+                'scope' => [
+                    'store_id' => $storeId,
+                    'tenant_wide_sections' => $storeId ? ['funnel', 'ads'] : [],
+                ],
             ];
         } finally {
             TenantContext::bypass($bypassed);
@@ -63,6 +71,14 @@ class TenantAnalyticsService
     }
 
     // ----------------------------------------------------------- internals
+
+    /** Currency that stored order amounts are denominated in (the tenant's base currency). */
+    protected function baseCurrency(int $tenantId): string
+    {
+        $code = DB::table('tenant_settings')->where('tenant_id', $tenantId)->value('base_currency');
+
+        return strtoupper((string) ($code ?: 'USD'));
+    }
 
     protected function orders(int $tenantId, Carbon $start, Carbon $end, ?int $storeId = null)
     {
@@ -96,6 +112,7 @@ class TenantAnalyticsService
         $views = AnalyticsEvent::query()
             ->where('tenant_id', $tenantId)
             ->where('type', 'product.viewed')
+            ->when($storeId, fn ($q) => $q->where('payload->store_id', $storeId))
             ->whereBetween('created_at', [$start, $end])
             ->count();
 
@@ -156,6 +173,7 @@ class TenantAnalyticsService
         $views = AnalyticsEvent::query()
             ->where('tenant_id', $tenantId)
             ->where('type', 'product.viewed')
+            ->when($storeId, fn ($q) => $q->where('payload->store_id', $storeId))
             ->where('created_at', '>=', $start)
             ->toBase()
             ->select(DB::raw('date(created_at) as day'), DB::raw('count(*) as total'))
@@ -196,7 +214,7 @@ class TenantAnalyticsService
             'steps' => [
                 ['key' => 'views', 'label' => 'Product views', 'value' => $views, 'rate' => 100.0],
                 ['key' => 'carts', 'label' => 'Added to cart', 'value' => $carts, 'rate' => $rate($carts, $views)],
-                ['key' => 'checkouts', 'label' => 'Checkout started', 'value' => $checkouts, 'rate' => $rate($checkouts, $views)],
+                ['key' => 'checkouts', 'label' => 'Order placed', 'value' => $checkouts, 'rate' => $rate($checkouts, $views)],
                 ['key' => 'paid', 'label' => 'Paid', 'value' => $paid, 'rate' => $rate($paid, $views)],
             ],
             'cart_abandonment' => $carts > 0 ? round((($carts - $paid) / $carts) * 100, 1) : 0.0,
@@ -282,11 +300,17 @@ class TenantAnalyticsService
         $rows = $this->orders($tenantId, $start, $end, $storeId)
             ->join('orders', 'orders.id', '=', 'seller_orders.order_id')
             ->toBase()
-            ->select('orders.user_id', DB::raw('count(*) as orders'), DB::raw('sum(seller_orders.subtotal) as gmv'))
+            ->whereNotNull('orders.user_id')
+            ->select(
+                'orders.user_id',
+                DB::raw('count(distinct seller_orders.order_id) as checkouts'),
+                DB::raw('sum(seller_orders.subtotal) as gmv'),
+            )
             ->groupBy('orders.user_id')
             ->get();
 
-        $repeat = $rows->filter(fn ($r) => (int) $r->orders > 1)->count();
+        // A single checkout split across two stores is one purchase, not a repeat.
+        $repeat = $rows->filter(fn ($r) => (int) $r->checkouts > 1)->count();
         $total = $rows->count();
         $gmv = (float) $rows->sum('gmv');
 
@@ -328,8 +352,8 @@ class TenantAnalyticsService
 
         $gmvDelta = $delta((float) $current['gmv'], (float) $previous['gmv']);
         $out[] = [
-            'tone' => $gmvDelta >= 0 ? 'positive' : 'negative',
-            'title' => 'Revenue '.($gmvDelta >= 0 ? 'up' : 'down').' '.abs($gmvDelta).'%',
+            'tone' => $gmvDelta > 0 ? 'positive' : ($gmvDelta < 0 ? 'negative' : 'neutral'),
+            'title' => $gmvDelta === 0.0 ? 'Revenue flat' : 'Revenue '.($gmvDelta > 0 ? 'up' : 'down').' '.abs($gmvDelta).'%',
             'detail' => 'Compared with the previous period of the same length.',
         ];
 

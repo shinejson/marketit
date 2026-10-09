@@ -8,7 +8,7 @@ import { CurrencyService } from '../core/currency.service';
 import { ThemeService } from '../core/theme.service';
 
 type IconName =
-  | 'dashboard' | 'analytics' | 'tenants' | 'stores' | 'store' | 'users' | 'subscriptions' | 'orders'
+  | 'dashboard' | 'analytics' | 'report' | 'tenants' | 'stores' | 'store' | 'users' | 'subscriptions' | 'orders'
   | 'domains' | 'ads' | 'audit' | 'settings' | 'shield' | 'logout' | 'search' | 'bell'
   | 'sun' | 'moon' | 'chevron' | 'menu'
   | 'lifebuoy' | 'ticket' | 'chat' | 'tasks' | 'guides'
@@ -226,6 +226,9 @@ const MOBILE_BREAKPOINT = 900;
           }
           @case ('analytics') {
             <line x1="4" y1="20" x2="20" y2="20" /><rect x="6" y="11" width="3" height="7" /><rect x="13" y="7" width="3" height="11" /><rect x="17.5" y="13" width="3" height="5" />
+          }
+          @case ('report') {
+            <path d="M6 3.5h8l4 4V20.5H6z" /><path d="M14 3.5v4h4" /><path d="M9 16.5v-3M12 16.5v-6M15 16.5v-4" />
           }
           @case ('tenants') {
             <path d="M3 9l1.5-5h15L21 9" /><path d="M5 9v11h14V9" /><path d="M9.5 20v-5.5h5V20" />
@@ -631,6 +634,7 @@ export class AdminShellComponent {
   readonly overviewItems: NavEntry[] = [
     { key: '', label: 'Dashboard', icon: 'dashboard', exact: true },
     { key: 'analytics', label: 'Analytics', icon: 'analytics' },
+    { key: 'reports', label: 'Reports', icon: 'report' },
   ];
 
   readonly manageItems: NavEntry[] = [
