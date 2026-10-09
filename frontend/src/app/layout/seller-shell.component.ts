@@ -6,6 +6,7 @@ import { AppNotification } from '../core/models';
 import { AuthService } from '../core/auth.service';
 import { CurrencyService } from '../core/currency.service';
 import { ThemeService } from '../core/theme.service';
+import { REPORT_VIEW_PERMISSIONS } from '../core/tenant-permissions';
 
 type IconName =
   | 'home' | 'finance' | 'sales' | 'operations' | 'marketing' | 'store' | 'orders' | 'products'
@@ -61,6 +62,7 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
             <span class="label-text">Dashboard</span>
           </a>
 
+          @if (canViewReports()) {
           <p class="section-label label-text">Reports</p>
           <a
             [routerLink]="tenantLink('reports')"
@@ -71,6 +73,7 @@ type SidebarSection = 'accounting' | 'sales' | 'operations' | 'marketing' | 'com
             <ng-container [ngTemplateOutlet]="navIcon" [ngTemplateOutletContext]="{ $implicit: 'analytics' }" />
             <span class="label-text">Reports</span>
           </a>
+          }
 
           @if (canViewAccounting()) {
           <p class="section-label label-text">Accounting</p>
@@ -913,6 +916,14 @@ export class SellerShellComponent {
   private router = inject(Router);
 
   isOwner = computed(() => this.auth.hasRole('tenant_owner'));
+  /**
+   * Whether to advertise the Report Center at all. Sessions signed in before the
+   * API returned permissions carry no list, so those fall back to showing the
+   * link and letting the server answer; the API is the real gate either way.
+   */
+  canViewReports = computed(
+    () => this.isOwner() || !this.auth.permissionsKnown() || this.auth.hasPermission(...REPORT_VIEW_PERMISSIONS),
+  );
   canViewAccounting = computed(() => this.isOwner() || this.auth.user()?.department === 'finance');
   canViewSales = computed(() => this.isOwner() || this.auth.user()?.department === 'sales');
   canViewOperations = computed(() => this.isOwner() || this.auth.user()?.department === 'operations');
@@ -1001,11 +1012,13 @@ export class SellerShellComponent {
   searchIndex = computed<SearchEntry[]>(() => {
     const items: SearchEntry[] = [
       { label: 'Dashboard', path: this.tenantLink(), icon: 'home', section: 'Overview' },
-      { label: 'Reports', path: this.tenantLink('reports'), icon: 'analytics', section: 'Reports' },
-      { label: 'Tenant report center', path: this.tenantLink('reports'), icon: 'analytics', section: 'Reports' },
       { label: 'My profile & activity', path: this.tenantLink('profile'), icon: 'users', section: 'Account' },
       { label: 'Notifications', path: this.tenantLink('notifications'), icon: 'bell', section: 'Account' },
     ];
+    if (this.canViewReports()) {
+      items.push({ label: 'Reports', path: this.tenantLink('reports'), icon: 'analytics', section: 'Reports' });
+      items.push({ label: 'Tenant report center', path: this.tenantLink('reports'), icon: 'analytics', section: 'Reports' });
+    }
     if (this.canViewAccounting()) {
       for (const a of this.accountingItems) {
         items.push({ label: a.label, path: this.tenantLink(a.key), icon: a.icon, section: 'Accounting' });
@@ -1023,6 +1036,7 @@ export class SellerShellComponent {
       for (const item of this.marketingItems) items.push({ label: item.label, path: this.tenantLink(item.key), icon: item.icon, section: 'Marketing' });
     }
     for (const c of this.commerceItems) {
+      if (c.key === 'reports' && !this.canViewReports()) continue;
       items.push({ label: c.label, path: this.tenantLink(c.key), icon: c.icon, section: 'Commerce' });
     }
     if (this.isOwner()) {
