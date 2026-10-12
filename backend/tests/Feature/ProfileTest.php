@@ -109,8 +109,49 @@ class ProfileTest extends TestCase
 
         $seller = User::query()->where('email', 'seller1@markethub.test')->first();
         $this->assertNotNull($seller->last_login_at);
+        $this->assertNotNull($seller->last_seen_at);
         $this->assertTrue(
             AuditLog::query()->where('actor_user_id', $seller->id)->where('action', 'auth.login')->exists()
         );
+    }
+
+    public function test_authenticated_api_activity_is_refreshed(): void
+    {
+        $seller = User::query()->where('email', 'seller1@markethub.test')->firstOrFail();
+        $previousActivity = now()->subMinutes(10)->startOfSecond();
+        $seller->forceFill(['last_seen_at' => $previousActivity])->saveQuietly();
+        $token = $seller->createToken('web:tenant')->plainTextToken;
+
+        $this->withToken($token)->getJson('/api/auth/me')->assertOk();
+
+        $this->assertTrue($seller->fresh()->last_seen_at->greaterThan($previousActivity));
+    }
+
+    public function test_logout_is_the_last_audit_event_but_does_not_replace_last_activity(): void
+    {
+        $seller = User::query()->where('email', 'seller1@markethub.test')->firstOrFail();
+        $lastActivity = now()->subMinutes(5)->startOfSecond();
+        $seller->forceFill(['last_seen_at' => $lastActivity])->saveQuietly();
+        $token = $seller->createToken('web:tenant')->plainTextToken;
+
+        $this->withToken($token)->postJson('/api/auth/logout')->assertOk();
+
+        $seller->refresh();
+        $logout = AuditLog::query()
+            ->where('actor_user_id', $seller->id)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->firstOrFail();
+
+        $this->assertSame('auth.logout', $logout->action);
+        $this->assertSame($lastActivity->toIso8601String(), $seller->last_seen_at->toIso8601String());
+        $this->assertTrue($logout->created_at->greaterThan($seller->last_seen_at));
+
+        // The personal activity feed puts the session's sign-out at the top.
+        $feed = $this->actingAs($seller, 'sanctum')
+            ->getJson('/api/profile/activity')
+            ->assertOk()
+            ->json('data');
+        $this->assertSame('auth.logout', $feed[0]['action']);
     }
 }

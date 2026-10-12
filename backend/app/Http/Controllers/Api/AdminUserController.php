@@ -286,6 +286,8 @@ class AdminUserController extends Controller
             'status' => $user->status ?? 'active',
             'primary_role' => $user->primaryRole(),
             'last_login_at' => $user->last_login_at,
+            // A separate heartbeat; session sign-outs remain audit events.
+            'last_activity_at' => $user->last_seen_at?->toIso8601String(),
             'created_at' => $user->created_at,
             'roles' => $user->roles->map(function (UserRole $role) use ($definitions) {
                 /** @var RoleDefinition|null $definition */

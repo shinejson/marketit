@@ -390,6 +390,8 @@ class TenantUserController extends Controller
             'custom_permissions' => $assignment->hasCustomPermissions(),
             'is_owner' => $assignment->role === 'tenant_owner',
             'last_login_at' => $user?->last_login_at?->toIso8601String(),
+            // Distinct from sign-in; logout is recorded separately in the audit trail.
+            'last_activity_at' => $user?->last_seen_at?->toIso8601String(),
             'invited_at' => $assignment->invited_at?->toIso8601String(),
             'created_at' => $assignment->created_at?->toIso8601String(),
         ];

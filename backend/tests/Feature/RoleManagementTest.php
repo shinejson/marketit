@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\RoleDefinition;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class RoleManagementTest extends TestCase
@@ -56,6 +57,27 @@ class RoleManagementTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.deleted', true);
         $this->assertDatabaseMissing('roles', ['id' => $created['id']]);
+    }
+
+    public function test_admin_user_list_includes_activity_separately_from_last_sign_in(): void
+    {
+        $admin = User::query()->where('email', 'admin@markethub.test')->firstOrFail();
+        $lastLogin = now()->subDays(3)->startOfSecond();
+        $lastActivity = now()->subSeconds(30)->startOfSecond();
+        $admin->forceFill([
+            'last_login_at' => $lastLogin,
+            'last_seen_at' => $lastActivity,
+        ])->saveQuietly();
+
+        $users = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/admin/users')
+            ->assertOk()
+            ->json('data');
+        $adminRow = collect($users)->firstWhere('id', $admin->id);
+
+        $this->assertNotNull($adminRow);
+        $this->assertSame($lastLogin->toIso8601String(), Carbon::parse($adminRow['last_login_at'])->toIso8601String());
+        $this->assertSame($lastActivity->toIso8601String(), Carbon::parse($adminRow['last_activity_at'])->toIso8601String());
     }
 
     public function test_user_can_be_created_with_multiple_managed_role_assignments(): void

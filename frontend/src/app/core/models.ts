@@ -965,6 +965,7 @@ export interface TenantSystemUser {
   custom_permissions: boolean;
   is_owner: boolean;
   last_login_at?: string | null;
+  last_activity_at?: string | null;
   invited_at?: string | null;
   created_at?: string | null;
 }
@@ -1086,6 +1087,7 @@ export interface AdminUser {
   status: 'active' | 'suspended';
   primary_role: string;
   last_login_at?: string | null;
+  last_activity_at?: string | null;
   created_at: string;
   roles: AdminUserRole[];
   orders_count?: number;

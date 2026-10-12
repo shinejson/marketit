@@ -87,7 +87,7 @@ type RoleEditor = {
       <div class="card table-wrap">
         <table>
           <thead>
-            <tr><th>User</th><th>Roles</th><th>Status</th><th>Last login</th><th>Joined</th><th><span class="sr-only">Actions</span></th></tr>
+            <tr><th>User</th><th>Roles</th><th>Status</th><th>Last sign-in</th><th>Last activity</th><th>Joined</th><th><span class="sr-only">Actions</span></th></tr>
           </thead>
           <tbody>
             @for (u of users(); track u.id) {
@@ -102,7 +102,18 @@ type RoleEditor = {
                   }
                 </td>
                 <td><span class="pill" [class]="'pill ' + u.status">{{ u.status | titlecase }}</span></td>
-                <td class="muted small">{{ u.last_login_at ? (u.last_login_at | date: 'MMM d, y') : 'Never' }}</td>
+                <td class="muted small">
+                  @if (u.last_login_at) {
+                    <span>{{ u.last_login_at | date: 'MMM d, y' }}</span>
+                    <small>{{ u.last_login_at | date: 'HH:mm' }}</small>
+                  } @else { Never }
+                </td>
+                <td class="muted small">
+                  @if (u.last_activity_at) {
+                    <span>{{ u.last_activity_at | date: 'MMM d, y' }}</span>
+                    <small>{{ u.last_activity_at | date: 'HH:mm' }}</small>
+                  } @else { Never }
+                </td>
                 <td class="muted small">{{ u.created_at | date: 'MMM d, y' }}</td>
                 <td class="actions">
                   <button class="icon-btn" type="button" (click)="startEdit(u)" title="Edit {{ u.name }}" [attr.aria-label]="'Edit ' + u.name">
@@ -350,9 +361,10 @@ type RoleEditor = {
     .toolbar input { flex: 1; min-width: 200px; }
     .toolbar input, .toolbar select { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--card); color: var(--ink); }
     .table-wrap { overflow-x: auto; }
-    table { width: 100%; min-width: 780px; border-collapse: collapse; font-size: 14px; }
+    table { width: 100%; min-width: 880px; border-collapse: collapse; font-size: 14px; }
     th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); padding: 14px 16px; }
     td { padding: 12px 16px; border-top: 1px solid var(--line); vertical-align: top; }
+    td small { display: block; margin-top: 3px; color: var(--ink-soft); }
     td p { margin: 2px 0 0; }
     .small { font-size: 12px; }
     .pill { margin: 0 4px 4px 0; }
