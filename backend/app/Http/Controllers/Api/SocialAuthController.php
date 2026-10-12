@@ -118,7 +118,7 @@ class SocialAuthController extends Controller
             ]);
         }
 
-        $user->forceFill(['last_login_at' => now()])->saveQuietly();
+        $user->forceFill(['last_login_at' => now(), 'last_seen_at' => now()])->saveQuietly();
         $user->load('roles', 'socialIdentities');
 
         return response()->json([

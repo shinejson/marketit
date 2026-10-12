@@ -237,8 +237,11 @@ from the avatar menu):
 Model writes were already audited through the `Auditable` trait; `ActivityLogger`
 now adds the non-model events — `auth.login`, `auth.logout`, `auth.registered`,
 `profile.updated`, `profile.password_changed`, `profile.avatar_updated` and
-`currency.changed` — to the same `audit_logs` stream, and the
-`TrackUserActivity` middleware keeps `users.last_seen_at` fresh. Endpoints:
+`currency.changed` — to the same `audit_logs` stream. `TrackUserActivity`
+updates `users.last_seen_at` for authenticated tenant and admin API requests;
+the user-management screens expose that timestamp separately from last sign-in.
+Logout does not overwrite it: each `auth.logout` is a separate, timestamped
+final event for that session in the activity timeline. Endpoints:
 `GET/PATCH /api/profile`, `POST /api/profile/password`,
 `POST /api/profile/avatar`, `GET /api/profile/activity`,
 `GET /api/profile/sessions`.

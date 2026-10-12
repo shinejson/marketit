@@ -66,6 +66,7 @@ use App\Http\Controllers\Api\TenantReviewController;
 use App\Http\Controllers\Api\TenantReportController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\WishlistController;
+use App\Http\Middleware\TrackUserActivity;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:login')->group(function () {
@@ -108,8 +109,8 @@ Route::get('/payments/methods', [PaymentController::class, 'methods'])->middlewa
 Route::get('/payments/mock/pay', [PaymentController::class, 'mockPay']);
 Route::get('/payments/mock/template-pay', [PaymentController::class, 'mockTemplatePay']);
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
+Route::middleware(['auth:sanctum', TrackUserActivity::class])->group(function () {
+    Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
     Route::get('/auth/sessions', [AuthController::class, 'sessions']);
     Route::delete('/auth/sessions', [AuthController::class, 'revokeOtherSessions']);
     Route::delete('/auth/sessions/{token}', [AuthController::class, 'revokeSession']);

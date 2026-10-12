@@ -206,6 +206,7 @@ const PROVIDER_GLYPHS: Record<string, string> = {
                     <th>Assignment</th>
                     <th>Status</th>
                     <th>Last sign-in</th>
+                    <th>Last activity</th>
                     <th class="right">Actions</th>
                   </tr>
                 </thead>
@@ -252,6 +253,12 @@ const PROVIDER_GLYPHS: Record<string, string> = {
                         @if (user.last_login_at) {
                           <strong>{{ user.last_login_at | date: 'd MMM y' }}</strong>
                           <small>{{ user.last_login_at | date: 'HH:mm' }}</small>
+                        } @else { <small>Never</small> }
+                      </td>
+                      <td>
+                        @if (user.last_activity_at) {
+                          <strong>{{ user.last_activity_at | date: 'd MMM y' }}</strong>
+                          <small>{{ user.last_activity_at | date: 'HH:mm' }}</small>
                         } @else { <small>Never</small> }
                       </td>
                       <td class="right">
@@ -1418,7 +1425,7 @@ export class SellerUsersComponent {
           ]),
         ]
       : [
-          ['Name', 'Email', 'Access', 'Role', 'Department', 'Status', 'Permissions'],
+          ['Name', 'Email', 'Access', 'Role', 'Department', 'Status', 'Last sign-in', 'Last activity', 'Permissions'],
           ...this.users().map((user) => [
             user.name,
             user.email,
@@ -1426,6 +1433,8 @@ export class SellerUsersComponent {
             user.tenant_role?.name ?? '',
             user.department ?? '',
             user.status,
+            user.last_login_at ?? '',
+            user.last_activity_at ?? '',
             user.permissions.join(' | '),
           ]),
         ];

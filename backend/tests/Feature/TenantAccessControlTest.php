@@ -10,6 +10,7 @@ use App\Models\UserRole;
 use App\Support\TenantAccess;
 use App\Support\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
@@ -58,6 +59,27 @@ class TenantAccessControlTest extends TestCase
         $this->assertSame('tenant_owner', $owner['role']);
         $this->assertEqualsCanonicalizing(TenantRole::permissionKeys(), $owner['permissions']);
         $this->assertTrue($response->json('meta.can_manage'));
+    }
+
+    public function test_tenant_users_include_activity_separately_from_last_sign_in(): void
+    {
+        $owner = $this->owner();
+        $lastLogin = now()->subDays(3)->startOfSecond();
+        $lastActivity = now()->subSeconds(30)->startOfSecond();
+        $owner->forceFill([
+            'last_login_at' => $lastLogin,
+            'last_seen_at' => $lastActivity,
+        ])->saveQuietly();
+
+        $users = $this->actingAs($owner, 'sanctum')
+            ->getJson('/api/tenant/users')
+            ->assertOk()
+            ->json('data');
+        $ownerRow = collect($users)->firstWhere('user_id', $owner->id);
+
+        $this->assertNotNull($ownerRow);
+        $this->assertSame($lastLogin->toIso8601String(), Carbon::parse($ownerRow['last_login_at'])->toIso8601String());
+        $this->assertSame($lastActivity->toIso8601String(), Carbon::parse($ownerRow['last_activity_at'])->toIso8601String());
     }
 
     public function test_invite_creates_a_staff_account_with_the_assigned_role(): void

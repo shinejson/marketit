@@ -16,7 +16,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         $middleware->append(\App\Http\Middleware\ForceJsonResponse::class);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
-        $middleware->append(\App\Http\Middleware\TrackUserActivity::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
             'tenant' => \App\Http\Middleware\SetTenantContext::class,
