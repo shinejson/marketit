@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\User;
 use App\Support\TenantContext;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -177,6 +180,40 @@ class TenantProductCatalogTest extends TestCase
         foreach ($lowStock as $row) {
             $this->assertSame('low_stock', $row['stock_state']);
         }
+    }
+
+    public function test_product_gallery_allows_up_to_four_images_only(): void
+    {
+        Storage::fake('public');
+        $seller = $this->seller();
+        $product = Product::query()->withoutGlobalScopes()
+            ->where('tenant_id', $seller->tenantId())
+            ->firstOrFail();
+        ProductImage::query()->withoutGlobalScopes()->where('product_id', $product->id)->delete();
+
+        for ($index = 1; $index <= 4; $index++) {
+            $this->actingAs($seller, 'sanctum')
+                ->post('/api/tenant/products/'.$product->id.'/images', [
+                    'image' => UploadedFile::fake()->image("gallery-{$index}.jpg"),
+                ])
+                ->assertCreated();
+        }
+
+        $this->assertSame(4, $product->fresh()->images()->count());
+
+        $this->actingAs($seller, 'sanctum')
+            ->post('/api/tenant/products/'.$product->id.'/images', [
+                'image' => UploadedFile::fake()->image('gallery-5.jpg'),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('image');
+
+        $this->actingAs($seller, 'sanctum')
+            ->patchJson('/api/tenant/products/'.$product->id, [
+                'image_urls' => array_fill(0, 5, '/storage/too-many-images.jpg'),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('image_urls');
     }
 
     public function test_updating_a_product_syncs_variant_inventory(): void
